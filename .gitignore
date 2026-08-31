@@ -1,5 +1,14 @@
-﻿# Generated / large
+# Generated / large
 __pycache__/
 *.pyc
 .venv/
-# Keep the API inventory - it is a deliverable, not a build artifact.
+
+# Synthetic datasets: the .gwy pairs are large (~1 MB per sample) and fully
+# reproducible from tools/make_dataset.py given the seed recorded in
+# summary.json. Track the labels and the summary, not the pixels.
+data/**/clean/
+data/**/degraded/
+data/smoketest/
+
+# Keep the API inventory and the data survey - they are deliverables,
+# not build artifacts.

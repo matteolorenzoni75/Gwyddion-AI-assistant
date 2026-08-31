@@ -1,0 +1,23 @@
+{
+  "artifact_counts": {
+    "bow": 222, 
+    "hum": 225, 
+    "line_noise": 225, 
+    "row_offsets": 212, 
+    "scars": 229, 
+    "spikes": 211, 
+    "tilt": 218
+  }, 
+  "n_samples": 500, 
+  "n_with_real_periodicity": 169, 
+  "seed": 20260831, 
+  "size_px": 256, 
+  "surface_kinds": {
+    "grating": 90, 
+    "lattice": 79, 
+    "particles": 87, 
+    "rough": 85, 
+    "smooth": 69, 
+    "terraces": 90
+  }
+}
