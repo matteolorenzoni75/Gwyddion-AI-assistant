@@ -1,7 +1,9 @@
-# Generated / large
+﻿# Generated / large
 __pycache__/
 *.pyc
 .venv/
+out/
+*.egg-info/
 
 # Synthetic datasets: the .gwy pairs are large (~1 MB per sample) and fully
 # reproducible from tools/make_dataset.py given the seed recorded in
