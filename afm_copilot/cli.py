@@ -1,4 +1,4 @@
-"""
+﻿"""
 Command line entry point.
 
     python -m afm_copilot selftest
@@ -19,6 +19,7 @@ from afm_copilot import __version__
 from afm_copilot.bridge import BridgeError, GwyBridge
 from afm_copilot.gwy_io import Channel, load_channels, load_height
 from afm_copilot.ops import RECIPES, get_recipe
+from afm_copilot.report import build_thickness_report
 from afm_copilot.render import (RenderStyle, group_by_scale, group_label,
                                 render_batch)
 
@@ -28,7 +29,7 @@ RAW_SUFFIXES = {".ibw", ".tiff", ".tif", ".spm", ".jpk", ".sxm", ".top",
 
 def _parse_length(text: str) -> float:
     """Accept '5um', '500nm', '1.2e-5' and return metres."""
-    t = text.strip().lower().replace("µ", "u")
+    t = text.strip().lower().replace("µ", "u").replace("μ", "u")
     for suffix, factor in (("nm", 1e-9), ("um", 1e-6), ("mm", 1e-3), ("m", 1.0)):
         if t.endswith(suffix):
             return float(t[: -len(suffix)]) * factor
@@ -271,6 +272,69 @@ def cmd_process(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_thickness(args: argparse.Namespace) -> int:
+    """Measure a film step across several images and report the pooled value."""
+    gwy_files, raw_files = _collect_inputs(args.inputs)
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if raw_files:
+        print(f"Converting {len(raw_files)} raw file(s) through Gwyddion...")
+        try:
+            report = GwyBridge().convert_raw(raw_files, out_dir / "_gwy")
+        except BridgeError as exc:
+            print(f"Conversion failed: {exc}", file=sys.stderr)
+            return 1
+        gwy_files.extend(Path(r["gwy"]) for r in report["results"] if r["ok"])
+        print(f"  {report['n_ok']}/{report['n_total']} converted\n")
+
+    # A step measurement on an unlevelled image is rejected by design, so level
+    # first unless the caller has already done it. The default recipe is the
+    # feature-aware one: an image with a step by definition contains a raised
+    # region, and levelling that fits *through* it leaves enough residual
+    # curvature to merge the two height populations.
+    if not args.no_level:
+        recipe = get_recipe(args.recipe)
+        print(f"Levelling first with '{recipe.key}' -- an unlevelled image has "
+              f"no measurable\nstep, because tilt and bow spread the two height "
+              f"populations until they merge.\n")
+        try:
+            result = GwyBridge().run_recipe(recipe,
+                                            sorted(set(gwy_files)),
+                                            out_dir / "levelled")
+        except BridgeError as exc:
+            print(f"Levelling failed: {exc}", file=sys.stderr)
+            return 1
+        gwy_files = [Path(r["output"]) for r in result["results"] if r["ok"]]
+
+    channels = []
+    for path in sorted(set(gwy_files)):
+        try:
+            channels.append(load_height(path))
+        except (ValueError, OSError) as exc:
+            print(f"  ! {path.name}: {exc}", file=sys.stderr)
+
+    if not channels:
+        print("No height channels to measure.", file=sys.stderr)
+        return 1
+
+    out_pdf = out_dir / args.name
+    summary = build_thickness_report(channels, out_pdf, title=args.title,
+                                     band_px=args.band,
+                                     profile_axis=args.axis,
+                                     png_dir=out_dir / "pages")
+
+    print(summary["summary"])
+    print(f"\nMeasured {summary['n_measured']} of {summary['n_images']} image(s).")
+    print(f"Report: {out_pdf}")
+
+    json_path = out_dir / "thickness_summary.json"
+    json_path.write_text(json.dumps(summary, indent=2, default=str),
+                         encoding="utf-8")
+    print(f"Numbers: {json_path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="afm-copilot",
@@ -346,6 +410,36 @@ def build_parser() -> argparse.ArgumentParser:
     p_proc.add_argument("--out", required=True, help="output directory")
     p_proc.set_defaults(func=cmd_process)
 
+    p_thick = sub.add_parser(
+        "thickness",
+        help="measure a film step across images and write a PDF report",
+        description=(
+            "For a scratch experiment: the scratch exposes the substrate and "
+            "the rest of the frame is intact film, so the height histogram has "
+            "two levels and the thickness is the distance between them. Images "
+            "with no measurable step are reported as such rather than given a "
+            "plausible-looking number."))
+    p_thick.add_argument("inputs", nargs="+",
+                         help="files or folders (.gwy or raw formats)")
+    p_thick.add_argument("--out", required=True, help="output directory")
+    p_thick.add_argument("--name", default="thickness_report.pdf",
+                         help="report filename (default: thickness_report.pdf)")
+    p_thick.add_argument("--title", default="Film thickness",
+                         help="title shown on the report")
+    p_thick.add_argument("--band", type=int, default=16,
+                         help="rows to average for the profile (default: 16)")
+    p_thick.add_argument("--axis", default="horizontal",
+                         choices=["horizontal", "vertical"],
+                         help="profile direction (default: horizontal)")
+    p_thick.add_argument("--recipe", default="clean-with-features",
+                         help="recipe used to level before measuring "
+                              "(default: clean-with-features, which masks the "
+                              "raised region so it does not bias the fit)")
+    p_thick.add_argument("--no-level", action="store_true",
+                         help="skip levelling; use if the files are already "
+                              "processed")
+    p_thick.set_defaults(func=cmd_thickness)
+
     return parser
 
 
@@ -357,3 +451,4 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
