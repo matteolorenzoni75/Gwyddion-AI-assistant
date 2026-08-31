@@ -32,6 +32,50 @@ untouched. Nothing there has been modified or deleted.
 
 ---
 
+## Using it
+
+Set up once:
+
+```bash
+C:\Users\MLorenzoni\AppData\Local\Programs\Python\Python313\python.exe -m venv .venv
+```
+
+```bash
+.venv\Scripts\python.exe -m pip install -e .
+```
+
+Check that Gwyddion can be driven headlessly:
+
+```bash
+.venv\Scripts\python.exe -m afm_copilot selftest
+```
+
+**See what the one-click recipes do, and why:**
+
+```bash
+.venv\Scripts\python.exe -m afm_copilot recipes
+```
+
+```bash
+.venv\Scripts\python.exe -m afm_copilot recipes clean-with-features
+```
+
+**Process a folder** — raw instrument files are converted automatically. Every
+step reports what it changed, so the processing is auditable rather than a
+black box:
+
+```bash
+.venv\Scripts\python.exe -m afm_copilot process "D:\scans" --recipe quick-clean --out results
+```
+
+**Render a batch as comparable images** — one shared colour scale, scale bar,
+fixed DPI. `--auto-group` splits a mixed folder into scale groups so shallow
+scans are not flattened by deep ones:
+
+```bash
+.venv\Scripts\python.exe -m afm_copilot batch-images "D:\scans" --out figures --dpi 300 --auto-group
+```
+
 ## The API inventory
 
 Gwyddion's processing power is the point of this project, and the inventory is

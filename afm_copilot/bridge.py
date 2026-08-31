@@ -154,6 +154,35 @@ class GwyBridge:
         args = ["--out", str(out_dir), *[str(p) for p in paths]]
         return self.run_script("convert_raw.py", args, timeout=timeout)
 
+    def run_recipe(
+        self,
+        recipe,
+        paths: list[str | Path],
+        out_dir: str | Path,
+        timeout: float = 900.0,
+    ) -> dict:
+        """
+        Apply a Recipe to a list of .gwy files.
+
+        The recipe is serialised to a job file rather than passed on the command
+        line, because settings dictionaries do not survive shell quoting and
+        because the job file is then a record of exactly what was run.
+        """
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        job = {
+            "recipe": recipe.key,
+            "out_dir": str(out_dir),
+            "steps": recipe.to_job(),
+            "files": [str(p) for p in paths],
+        }
+        job_path = out_dir / "_job.json"
+        job_path.write_text(json.dumps(job, indent=2), encoding="utf-8")
+        result = self.run_script("run_recipe.py", ["--job", str(job_path)],
+                                 timeout=timeout)
+        result["recipe"] = recipe.key
+        return result
+
     def self_test(self) -> dict:
         """Confirm the Python 2.7 side can import gwy and see its modules."""
         return self.run_script("selftest.py", timeout=120.0)

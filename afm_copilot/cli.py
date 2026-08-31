@@ -18,6 +18,7 @@ from pathlib import Path
 from afm_copilot import __version__
 from afm_copilot.bridge import BridgeError, GwyBridge
 from afm_copilot.gwy_io import Channel, load_channels, load_height
+from afm_copilot.ops import RECIPES, get_recipe
 from afm_copilot.render import (RenderStyle, group_by_scale, group_label,
                                 render_batch)
 
@@ -176,6 +177,100 @@ def cmd_batch_images(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_recipes(args: argparse.Namespace) -> int:
+    """List the recipes, or explain one in full."""
+    if args.name:
+        try:
+            recipe = get_recipe(args.name)
+        except KeyError as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        print(recipe.explain())
+        return 0
+
+    print("Available recipes -- each bundles the operations that are normally "
+          "run together:\n")
+    for key in sorted(RECIPES):
+        r = RECIPES[key]
+        print(f"  {key:<22} {r.title}")
+        print(f"  {'':<22} {r.purpose}")
+        print(f"  {'':<22} {len(r.steps)} steps: "
+              f"{' -> '.join(o.title for o in r.operations)}")
+        print()
+    print("Run `afm-copilot recipes <name>` for the full explanation of any "
+          "one of them.")
+    return 0
+
+
+def cmd_process(args: argparse.Namespace) -> int:
+    try:
+        recipe = get_recipe(args.recipe)
+    except KeyError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    gwy_files, raw_files = _collect_inputs(args.inputs)
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        bridge = GwyBridge()
+    except BridgeError as exc:
+        print(f"Cannot reach Gwyddion: {exc}", file=sys.stderr)
+        return 1
+
+    if raw_files:
+        print(f"Converting {len(raw_files)} raw file(s) through Gwyddion...")
+        try:
+            report = bridge.convert_raw(raw_files, out_dir / "_gwy")
+        except BridgeError as exc:
+            print(f"Conversion failed: {exc}", file=sys.stderr)
+            return 1
+        gwy_files.extend(Path(r["gwy"]) for r in report["results"] if r["ok"])
+        print(f"  {report['n_ok']}/{report['n_total']} converted\n")
+
+    if not gwy_files:
+        print("Nothing to process.", file=sys.stderr)
+        return 1
+
+    print(f"Applying recipe '{recipe.key}' to {len(gwy_files)} file(s).\n")
+    print(recipe.explain())
+    print()
+
+    try:
+        result = bridge.run_recipe(recipe, sorted(set(gwy_files)),
+                                   out_dir / "processed")
+    except BridgeError as exc:
+        print(f"Processing failed: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"Processed {result['n_ok']}/{result['n_total']} file(s).\n")
+    print("What changed, per file (RMS is the roughness measure):\n")
+    for rec in result["results"]:
+        if not rec["ok"]:
+            print(f"  {rec['stem']}: FAILED -- {rec['error']}")
+            continue
+        initial = rec["initial"]["rms"]
+        final = rec["final"]["rms"]
+        print(f"  {rec['stem']}")
+        print(f"     RMS {initial:.4g} -> {final:.4g} m")
+        for step in rec["steps"]:
+            if step["applied"] and "rms_change_percent" in step:
+                print(f"       {step['title']:<34} "
+                      f"{step['rms_change_percent']:+7.2f}% RMS")
+            elif step["note"]:
+                print(f"       {step['title']:<34} {step['note']}")
+
+    json_path = out_dir / "process_summary.json"
+    json_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(f"\nProcessed files: {out_dir / 'processed'}")
+    print(f"Full record:     {json_path}")
+    print("\nA large negative RMS change is not automatically good -- levelling "
+          "always\nremoves some real roughness along with the artifact. See "
+          "docs/research/QUALITY_METRICS.md.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="afm-copilot",
@@ -226,6 +321,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_img.add_argument("--no-colorbar", action="store_true")
     p_img.add_argument("--no-scalebar", action="store_true")
     p_img.set_defaults(func=cmd_batch_images)
+
+    p_rec = sub.add_parser(
+        "recipes",
+        help="list the one-click processing recipes, or explain one",
+        description=(
+            "Recipes bundle the four or five Gwyddion operations that are "
+            "normally run together. Each one explains what it does, why, and "
+            "when it is the wrong choice."))
+    p_rec.add_argument("name", nargs="?", help="recipe to explain in full")
+    p_rec.set_defaults(func=cmd_recipes)
+
+    p_proc = sub.add_parser(
+        "process",
+        help="apply a recipe to files",
+        description=(
+            "Runs a named recipe through Gwyddion and reports what each step "
+            "changed, so the processing is auditable rather than a black box."))
+    p_proc.add_argument("inputs", nargs="+",
+                        help="files or folders (.gwy or raw formats)")
+    p_proc.add_argument("--recipe", default="quick-clean",
+                        help="recipe name (default: quick-clean). "
+                             "See `afm-copilot recipes`.")
+    p_proc.add_argument("--out", required=True, help="output directory")
+    p_proc.set_defaults(func=cmd_process)
 
     return parser
 

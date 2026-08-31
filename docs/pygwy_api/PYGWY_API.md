@@ -19,278 +19,278 @@ Every process/file function below was confirmed through the live API (`gwy_proce
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `cc_view` | /Cali_bration/_Apply to Data... | RUN_IMMEDIATE | 3D calibration and uncertainty |
-| `cload` | /Cali_bration/_Load From Text File... | RUN_IMMEDIATE | Load calibration data from text file. |
-| `cnew` | /Cali_bration/_Create... | RUN_IMMEDIATE | Specify simple calibration data. |
-| `simple` | /Cali_bration/_Get Simple Errop Map... | RUN_IMMEDIATE | Simple error mapping |
+| `cc_view` | /Cali_bration/_Apply to Data... | RUN_INTERACTIVE | 3D calibration and uncertainty |
+| `cload` | /Cali_bration/_Load From Text File... | RUN_INTERACTIVE, RUN_IMMEDIATE | Load calibration data from text file. |
+| `cnew` | /Cali_bration/_Create... | RUN_INTERACTIVE, RUN_IMMEDIATE | Specify simple calibration data. |
+| `simple` | /Cali_bration/_Get Simple Errop Map... | RUN_INTERACTIVE | Simple error mapping |
 
 ### M_ultidata  (14)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `arithmetic` | /M_ultidata/_Arithmetic... | RUN_IMMEDIATE | Arithmetic operations on data |
-| `classify` | /M_ultidata/_Classify... | RUN_IMMEDIATE | Classify data sets |
-| `convolve` | /M_ultidata/_Convolve... | RUN_IMMEDIATE | Convolve two images |
-| `crosscor` | /M_ultidata/_Cross-Correlation... | RUN_IMMEDIATE | Cross-correlate two data fields |
-| `deconvolve` | /M_ultidata/_Deconvolve... | RUN_IMMEDIATE | Deconvolve image |
-| `immerse` | /M_ultidata/_Immerse Detail... | RUN_IMMEDIATE | Immerse a detail into image |
-| `maskcor` | /M_ultidata/Correlation _Search... | RUN_IMMEDIATE | Search for a detail using correlation |
-| `mcrop` | /M_ultidata/Mutual C_rop... | RUN_IMMEDIATE | Crop non-intersecting regions of two images |
-| `merge` | /M_ultidata/_Merge... | RUN_IMMEDIATE | Merge two images |
-| `multiprofile` | /M_ultidata/_Multiprofile... | RUN_IMMEDIATE | Read lines from multiple images simultaneously |
-| `neural_apply` | /M_ultidata/Apply _Neural Network... | RUN_IMMEDIATE | Process data using a trained neural network |
-| `neural_train` | /M_ultidata/Neural Network _Training... | RUN_IMMEDIATE | Train a neural network for image processing |
-| `stitch` | /M_ultidata/_Stitch... | RUN_IMMEDIATE | Stitch images using offsets |
-| `xydenoise` | /M_ultidata/_XY Denoise... | RUN_IMMEDIATE | Denoises horizontal/vertical measurement. |
+| `arithmetic` | /M_ultidata/_Arithmetic... | RUN_INTERACTIVE | Arithmetic operations on data |
+| `classify` | /M_ultidata/_Classify... | RUN_INTERACTIVE | Classify data sets |
+| `convolve` | /M_ultidata/_Convolve... | RUN_INTERACTIVE | Convolve two images |
+| `crosscor` | /M_ultidata/_Cross-Correlation... | RUN_INTERACTIVE | Cross-correlate two data fields |
+| `deconvolve` | /M_ultidata/_Deconvolve... | RUN_INTERACTIVE | Deconvolve image |
+| `immerse` | /M_ultidata/_Immerse Detail... | RUN_INTERACTIVE | Immerse a detail into image |
+| `maskcor` | /M_ultidata/Correlation _Search... | RUN_INTERACTIVE | Search for a detail using correlation |
+| `mcrop` | /M_ultidata/Mutual C_rop... | RUN_INTERACTIVE | Crop non-intersecting regions of two images |
+| `merge` | /M_ultidata/_Merge... | RUN_INTERACTIVE | Merge two images |
+| `multiprofile` | /M_ultidata/_Multiprofile... | RUN_INTERACTIVE | Read lines from multiple images simultaneously |
+| `neural_apply` | /M_ultidata/Apply _Neural Network... | RUN_INTERACTIVE | Process data using a trained neural network |
+| `neural_train` | /M_ultidata/Neural Network _Training... | RUN_INTERACTIVE | Train a neural network for image processing |
+| `stitch` | /M_ultidata/_Stitch... | RUN_INTERACTIVE | Stitch images using offsets |
+| `xydenoise` | /M_ultidata/_XY Denoise... | RUN_INTERACTIVE | Denoises horizontal/vertical measurement. |
 
 ### Measure _Features  (6)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `curvature` | /Measure _Features/_Curvature... | RUN_IMMEDIATE | Calculate overall curvature |
-| `facet_analysis` | /Measure _Features/Facet _Analysis... | RUN_IMMEDIATE | Mark areas by 2D slope |
-| `facet_measure` | /Measure _Features/Facet _Measurement... | RUN_IMMEDIATE | Measure facet angles |
-| `fit_shape` | /Measure _Features/_Fit Shape... | RUN_IMMEDIATE | Fit geometrical shapes |
-| `measure_lattice` | /Measure _Features/_Lattice... | RUN_IMMEDIATE | Measure lattice |
-| `terracefit` | /Measure _Features/_Terraces... | RUN_IMMEDIATE | Fit terraces with polynomial background |
+| `curvature` | /Measure _Features/_Curvature... | RUN_INTERACTIVE, RUN_IMMEDIATE | Calculate overall curvature |
+| `facet_analysis` | /Measure _Features/Facet _Analysis... | RUN_INTERACTIVE, RUN_IMMEDIATE | Mark areas by 2D slope |
+| `facet_measure` | /Measure _Features/Facet _Measurement... | RUN_INTERACTIVE | Measure facet angles |
+| `fit_shape` | /Measure _Features/_Fit Shape... | RUN_INTERACTIVE | Fit geometrical shapes |
+| `measure_lattice` | /Measure _Features/_Lattice... | RUN_INTERACTIVE | Measure lattice |
+| `terracefit` | /Measure _Features/_Terraces... | RUN_INTERACTIVE | Fit terraces with polynomial background |
 
 ### SPM M_odes  (16)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `hertz_modulus` | /SPM M_odes/_Force and Indentation/_Hertz contact... | RUN_IMMEDIATE | Hertzian contact theory |
-| `indent_analyze` | /SPM M_odes/_Force and Indentation/_Analyze Imprint... | RUN_IMMEDIATE | Analyze indentation imprint |
-| `latsim` | /SPM M_odes/_Force and Indentation/_Lateral Force... | RUN_IMMEDIATE | Simulate topography artifacts in lateral force channels |
-| `mfm_current` | /SPM M_odes/_Magnetic/_Current Line Field... | RUN_IMMEDIATE | Simulate stray field above current line |
-| `mfm_field` | /SPM M_odes/_Magnetic/_Perpendicular Media Field... | RUN_IMMEDIATE | Compute stray field above perpendicular magnetic medium |
-| `mfm_findshift` | /SPM M_odes/_Magnetic/_Estimate Shift in Z... | RUN_IMMEDIATE | Estimate lift height difference in MFM data |
-| `mfm_parallel` | /SPM M_odes/_Magnetic/Para_llel Media Field... | RUN_IMMEDIATE | Simulate stray field above parallel magnetic medium |
-| `mfm_recalc` | /SPM M_odes/_Magnetic/_Recalculate to Force Gradient... | RUN_IMMEDIATE | Recalculate to force gradient |
-| `mfm_shift` | /SPM M_odes/_Magnetic/_Field Shift in Z... | RUN_IMMEDIATE | Compute stray field shift for another z level |
-| `pid` | /SPM M_odes/_Force and Indentation/_PID Simulation... | RUN_IMMEDIATE | Simulate PID effects on measurement |
-| `tip_blind` | /SPM M_odes/_Tip/_Blind Estimation... | RUN_IMMEDIATE | Blind tip estimation |
-| `tip_dilation` | /SPM M_odes/_Tip/_Dilation... | RUN_IMMEDIATE | Surface dilation by defined tip |
-| `tip_map` | /SPM M_odes/_Tip/_Certainty Map... | RUN_IMMEDIATE | Tip certainty map |
-| `tip_model` | /SPM M_odes/_Tip/_Model Tip... | RUN_IMMEDIATE | Model AFM tip |
-| `tip_reconstruction` | /SPM M_odes/_Tip/_Surface Reconstruction... | RUN_IMMEDIATE | Surface reconstruction by defined tip |
-| `tipshape` | /SPM M_odes/_Force and Indentation/_Area function... | RUN_IMMEDIATE | Calculate tip area function. |
+| `hertz_modulus` | /SPM M_odes/_Force and Indentation/_Hertz contact... | RUN_INTERACTIVE, RUN_IMMEDIATE | Hertzian contact theory |
+| `indent_analyze` | /SPM M_odes/_Force and Indentation/_Analyze Imprint... | RUN_INTERACTIVE | Analyze indentation imprint |
+| `latsim` | /SPM M_odes/_Force and Indentation/_Lateral Force... | RUN_INTERACTIVE, RUN_IMMEDIATE | Simulate topography artifacts in lateral force channels |
+| `mfm_current` | /SPM M_odes/_Magnetic/_Current Line Field... | RUN_INTERACTIVE, RUN_IMMEDIATE | Simulate stray field above current line |
+| `mfm_field` | /SPM M_odes/_Magnetic/_Perpendicular Media Field... | RUN_INTERACTIVE, RUN_IMMEDIATE | Compute stray field above perpendicular magnetic medium |
+| `mfm_findshift` | /SPM M_odes/_Magnetic/_Estimate Shift in Z... | RUN_INTERACTIVE, RUN_IMMEDIATE | Estimate lift height difference in MFM data |
+| `mfm_parallel` | /SPM M_odes/_Magnetic/Para_llel Media Field... | RUN_INTERACTIVE, RUN_IMMEDIATE | Simulate stray field above parallel magnetic medium |
+| `mfm_recalc` | /SPM M_odes/_Magnetic/_Recalculate to Force Gradient... | RUN_INTERACTIVE, RUN_IMMEDIATE | Recalculate to force gradient |
+| `mfm_shift` | /SPM M_odes/_Magnetic/_Field Shift in Z... | RUN_INTERACTIVE, RUN_IMMEDIATE | Compute stray field shift for another z level |
+| `pid` | /SPM M_odes/_Force and Indentation/_PID Simulation... | RUN_INTERACTIVE, RUN_IMMEDIATE | Simulate PID effects on measurement |
+| `tip_blind` | /SPM M_odes/_Tip/_Blind Estimation... | RUN_INTERACTIVE | Blind tip estimation |
+| `tip_dilation` | /SPM M_odes/_Tip/_Dilation... | RUN_INTERACTIVE | Surface dilation by defined tip |
+| `tip_map` | /SPM M_odes/_Tip/_Certainty Map... | RUN_INTERACTIVE | Tip certainty map |
+| `tip_model` | /SPM M_odes/_Tip/_Model Tip... | RUN_INTERACTIVE | Model AFM tip |
+| `tip_reconstruction` | /SPM M_odes/_Tip/_Surface Reconstruction... | RUN_INTERACTIVE | Surface reconstruction by defined tip |
+| `tipshape` | /SPM M_odes/_Force and Indentation/_Area function... | RUN_INTERACTIVE, RUN_IMMEDIATE | Calculate tip area function. |
 
 ### S_ynthetic  (24)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `anneal_synth` | /S_ynthetic/_Order and Disorder/_Anneal... | RUN_IMMEDIATE | Generate image by annealing a lattice gas |
-| `bdep_synth` | /S_ynthetic/_Deposition/_Ballistic... | RUN_IMMEDIATE | Generate surface by ballistic deposition |
-| `col_synth` | /S_ynthetic/_Deposition/_Columnar... | RUN_IMMEDIATE | Generate columnar surface |
-| `cpde_synth` | /S_ynthetic/_Order and Disorder/Coupled PD_Es... | RUN_IMMEDIATE | Generate image by coupled PDEs |
-| `deposit_synth` | /S_ynthetic/_Deposition/_Particles... | RUN_IMMEDIATE | Generate particles using dynamical model |
-| `diff_synth` | /S_ynthetic/_Deposition/_Diffusion... | RUN_IMMEDIATE | Generate surface by diffusion limited aggregation |
-| `disc_synth` | /S_ynthetic/D_iscs... | RUN_IMMEDIATE | Generate surface of random discs |
-| `domain_synth` | /S_ynthetic/_Order and Disorder/_Domains... | RUN_IMMEDIATE | Generate image with domains |
-| `dune_synth` | /S_ynthetic/_Deposition/_Dunes... | RUN_IMMEDIATE | Generate image by transporting sand |
-| `fbm_synth` | /S_ynthetic/_Noise/_Brownian... | RUN_IMMEDIATE | Generate fractional Brownian motion-like surface |
-| `fft_synth` | /S_ynthetic/_Noise/_Spectral... | RUN_IMMEDIATE | Generate surface using spectral synthesis |
-| `fibre_synth` | /S_ynthetic/_Deposition/_Fibers... | RUN_IMMEDIATE | Generate surface of randomly placed fibers |
-| `lat_synth` | /S_ynthetic/_Lattice... | RUN_IMMEDIATE | Generate lattice based surface |
-| `lno_synth` | /S_ynthetic/_Noise/_Line Noise... | RUN_IMMEDIATE | Generate line noise |
-| `noise_synth` | /S_ynthetic/_Noise/_Noise... | RUN_IMMEDIATE | Generate surface of uncorrelated noise |
-| `obj_synth` | /S_ynthetic/_Deposition/_Objects... | RUN_IMMEDIATE | Generate surface of randomly placed objects |
-| `pat_synth` | /S_ynthetic/_Pattern... | RUN_IMMEDIATE | Generate patterned surface |
-| `phase_synth` | /S_ynthetic/_Order and Disorder/P_hases... | RUN_IMMEDIATE | Generate surface with separated phases |
-| `pileup_synth` | /S_ynthetic/_Deposition/_Pile Up... | RUN_IMMEDIATE | Generate surface of randomly piled up shapes |
-| `plateau_synth` | /S_ynthetic/_Deposition/_Plateaus... | RUN_IMMEDIATE | Generate image with random plateaus |
-| `residue_synth` | /S_ynthetic/_Deposition/_Residue... | RUN_IMMEDIATE | Generate image of film residue |
-| `rod_deposit_synth` | /S_ynthetic/_Deposition/_Rods... | RUN_IMMEDIATE | Generate rod-like particles using dynamical model |
-| `wave_synth` | /S_ynthetic/_Waves... | RUN_IMMEDIATE | Generate waves |
-| `wfr_synth` | /S_ynthetic/_Wetting... | RUN_IMMEDIATE | Generate image by propagating wetting front |
+| `anneal_synth` | /S_ynthetic/_Order and Disorder/_Anneal... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate image by annealing a lattice gas |
+| `bdep_synth` | /S_ynthetic/_Deposition/_Ballistic... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate surface by ballistic deposition |
+| `col_synth` | /S_ynthetic/_Deposition/_Columnar... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate columnar surface |
+| `cpde_synth` | /S_ynthetic/_Order and Disorder/Coupled PD_Es... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate image by coupled PDEs |
+| `deposit_synth` | /S_ynthetic/_Deposition/_Particles... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate particles using dynamical model |
+| `diff_synth` | /S_ynthetic/_Deposition/_Diffusion... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate surface by diffusion limited aggregation |
+| `disc_synth` | /S_ynthetic/D_iscs... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate surface of random discs |
+| `domain_synth` | /S_ynthetic/_Order and Disorder/_Domains... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate image with domains |
+| `dune_synth` | /S_ynthetic/_Deposition/_Dunes... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate image by transporting sand |
+| `fbm_synth` | /S_ynthetic/_Noise/_Brownian... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate fractional Brownian motion-like surface |
+| `fft_synth` | /S_ynthetic/_Noise/_Spectral... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate surface using spectral synthesis |
+| `fibre_synth` | /S_ynthetic/_Deposition/_Fibers... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate surface of randomly placed fibers |
+| `lat_synth` | /S_ynthetic/_Lattice... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate lattice based surface |
+| `lno_synth` | /S_ynthetic/_Noise/_Line Noise... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate line noise |
+| `noise_synth` | /S_ynthetic/_Noise/_Noise... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate surface of uncorrelated noise |
+| `obj_synth` | /S_ynthetic/_Deposition/_Objects... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate surface of randomly placed objects |
+| `pat_synth` | /S_ynthetic/_Pattern... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate patterned surface |
+| `phase_synth` | /S_ynthetic/_Order and Disorder/P_hases... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate surface with separated phases |
+| `pileup_synth` | /S_ynthetic/_Deposition/_Pile Up... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate surface of randomly piled up shapes |
+| `plateau_synth` | /S_ynthetic/_Deposition/_Plateaus... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate image with random plateaus |
+| `residue_synth` | /S_ynthetic/_Deposition/_Residue... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate image of film residue |
+| `rod_deposit_synth` | /S_ynthetic/_Deposition/_Rods... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate rod-like particles using dynamical model |
+| `wave_synth` | /S_ynthetic/_Waves... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate waves |
+| `wfr_synth` | /S_ynthetic/_Wetting... | RUN_INTERACTIVE, RUN_IMMEDIATE | Generate image by propagating wetting front |
 
 ### _Basic Operations  (22)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `binning` | /_Basic Operations/_Binning... | RUN_IMMEDIATE | Reduce size by binning |
-| `calibrate` | /_Basic Operations/_Dimensions and Units... | RUN_IMMEDIATE | Change physical dimensions, units or value scale |
-| `extend` | /_Basic Operations/E_xtend... | RUN_IMMEDIATE | Extend by adding borders |
-| `flip_diagonally` | /_Basic Operations/Flip Dia_gonally | UNKNOWN(4) | Flip data diagonally |
-| `flip_horizontally` | /_Basic Operations/Flip _Horizontally | UNKNOWN(4) | Flip data horizontally |
-| `flip_vertically` | /_Basic Operations/Flip _Vertically | UNKNOWN(4) | Flip data vertically |
-| `invert_value` | /_Basic Operations/_Invert Value | UNKNOWN(4) | Invert values about mean |
-| `null_offsets` | /_Basic Operations/_Null Offsets | UNKNOWN(4) | Null horizontal offsets, moving the origin to the upper left corner |
-| `resample` | /_Basic Operations/_Resample... | RUN_IMMEDIATE | Resample to pixel size |
-| `rotate` | /_Basic Operations/Rotate by _Angle... | RUN_IMMEDIATE | Rotate by arbitrary angle |
-| `rotate_180` | /_Basic Operations/Flip _Both | UNKNOWN(4) | Flip data both horizontally and vertically |
-| `rotate_90_ccw` | /_Basic Operations/Rotate _Counterclockwise | UNKNOWN(4) | Rotate data 90 degrees counterclockwise |
-| `rotate_90_cw` | /_Basic Operations/Rotate C_lockwise | UNKNOWN(4) | Rotate data 90 degrees clockwise |
-| `scale` | /_Basic Operations/_Scale... | RUN_IMMEDIATE | Scale data |
-| `square_samples` | /_Basic Operations/S_quare Samples | UNKNOWN(4) | Resample data with non-1:1 aspect ratio to square samples |
-| `threshold` | /_Basic Operations/Li_mit Range... | RUN_IMMEDIATE | Limit data range |
-| `tilt` | /_Basic Operations/_Tilt... | RUN_IMMEDIATE | Tilt by specified amount |
-| `volumize` | /_Basic Operations/Volumize | UNKNOWN(4) | Convert datafield to 3D data |
-| `volumize_layers` | /_Basic Operations/Volumize Layers... | RUN_IMMEDIATE | Convert all datafields to 3D data |
-| `wrapvalue` | /_Basic Operations/_Wrap Value... | RUN_IMMEDIATE | Rewrap periodic values |
-| `xyz_channels` | /_Basic Operations/XYZ from C_hannels... | RUN_IMMEDIATE | Convert three channels to XYZ data |
-| `xyzize` | /_Basic Operations/_XYZize | UNKNOWN(4) | Convert to XYZ data |
+| `binning` | /_Basic Operations/_Binning... | RUN_INTERACTIVE, RUN_IMMEDIATE | Reduce size by binning |
+| `calibrate` | /_Basic Operations/_Dimensions and Units... | RUN_INTERACTIVE, RUN_IMMEDIATE | Change physical dimensions, units or value scale |
+| `extend` | /_Basic Operations/E_xtend... | RUN_INTERACTIVE, RUN_IMMEDIATE | Extend by adding borders |
+| `flip_diagonally` | /_Basic Operations/Flip Dia_gonally | RUN_IMMEDIATE | Flip data diagonally |
+| `flip_horizontally` | /_Basic Operations/Flip _Horizontally | RUN_IMMEDIATE | Flip data horizontally |
+| `flip_vertically` | /_Basic Operations/Flip _Vertically | RUN_IMMEDIATE | Flip data vertically |
+| `invert_value` | /_Basic Operations/_Invert Value | RUN_IMMEDIATE | Invert values about mean |
+| `null_offsets` | /_Basic Operations/_Null Offsets | RUN_IMMEDIATE | Null horizontal offsets, moving the origin to the upper left corner |
+| `resample` | /_Basic Operations/_Resample... | RUN_INTERACTIVE, RUN_IMMEDIATE | Resample to pixel size |
+| `rotate` | /_Basic Operations/Rotate by _Angle... | RUN_INTERACTIVE, RUN_IMMEDIATE | Rotate by arbitrary angle |
+| `rotate_180` | /_Basic Operations/Flip _Both | RUN_IMMEDIATE | Flip data both horizontally and vertically |
+| `rotate_90_ccw` | /_Basic Operations/Rotate _Counterclockwise | RUN_IMMEDIATE | Rotate data 90 degrees counterclockwise |
+| `rotate_90_cw` | /_Basic Operations/Rotate C_lockwise | RUN_IMMEDIATE | Rotate data 90 degrees clockwise |
+| `scale` | /_Basic Operations/_Scale... | RUN_INTERACTIVE, RUN_IMMEDIATE | Scale data |
+| `square_samples` | /_Basic Operations/S_quare Samples | RUN_IMMEDIATE | Resample data with non-1:1 aspect ratio to square samples |
+| `threshold` | /_Basic Operations/Li_mit Range... | RUN_INTERACTIVE, RUN_IMMEDIATE | Limit data range |
+| `tilt` | /_Basic Operations/_Tilt... | RUN_INTERACTIVE, RUN_IMMEDIATE | Tilt by specified amount |
+| `volumize` | /_Basic Operations/Volumize | RUN_IMMEDIATE | Convert datafield to 3D data |
+| `volumize_layers` | /_Basic Operations/Volumize Layers... | RUN_INTERACTIVE, RUN_IMMEDIATE | Convert all datafields to 3D data |
+| `wrapvalue` | /_Basic Operations/_Wrap Value... | RUN_INTERACTIVE, RUN_IMMEDIATE | Rewrap periodic values |
+| `xyz_channels` | /_Basic Operations/XYZ from C_hannels... | RUN_INTERACTIVE | Convert three channels to XYZ data |
+| `xyzize` | /_Basic Operations/_XYZize | RUN_IMMEDIATE | Convert to XYZ data |
 
 ### _Correct Data  (17)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `align_rows` | /_Correct Data/_Align Rows... | RUN_IMMEDIATE | Align rows using various methods |
-| `averaging` | /_Correct Data/_Correlation Averaging... | RUN_IMMEDIATE | Averaging of similar structures |
-| `block_correct_step` | /_Correct Data/Ste_p Block Correction | RUN_IMMEDIATE | Correct steps without any line correction |
-| `fft_filter_1d` | /_Correct Data/1D _FFT Filtering... | RUN_IMMEDIATE | 1D FFT Filtering |
-| `fft_filter_2d` | /_Correct Data/_2D FFT Filtering... | RUN_IMMEDIATE | Two-dimensional FFT filtering |
-| `fraccor` | /_Correct Data/_Fractal Correction | UNKNOWN(4) | Interpolate data under mask with fractal interpolation |
-| `good_profile` | /_Correct Data/_Good Mean Profile... | RUN_IMMEDIATE | Calculate good mean profile |
-| `laplace` | /_Correct Data/_Interpolate Data Under Mask | UNKNOWN(4) | Interpolate data under mask by solution of Laplace equation |
-| `line_correct_inverted` | /_Correct Data/Mark _Inverted Rows | UNKNOWN(4) | Mark lines with inverted sign |
-| `line_correct_step` | /_Correct Data/Ste_p Line Correction | UNKNOWN(4) | Correct steps in lines |
-| `mark_disconn` | /_Correct Data/Mask of _Disconnected... | RUN_IMMEDIATE | Mark data disconnected from other values |
-| `outliers` | /_Correct Data/Mask of _Outliers | UNKNOWN(4) | Mark data farther than 3σ from mean value |
-| `periodic_translate` | /_Correct Data/_Translate Periodically... | RUN_IMMEDIATE | Move data in XY plane, treating it as periodic |
-| `scars_mark` | /_Correct Data/M_ark Scars... | RUN_IMMEDIATE | Mark horizontal scars (strokes) |
-| `scars_remove` | /_Correct Data/Remove _Scars | UNKNOWN(4) | Correct horizontal scars (strokes) |
-| `unrotate` | /_Correct Data/_Unrotate... | RUN_IMMEDIATE | Automatically correct rotation in horizontal plane |
-| `zeromasked` | /_Correct Data/_Zero Data Under Mask | UNKNOWN(4) | Fill data under mask with zeros |
+| `align_rows` | /_Correct Data/_Align Rows... | RUN_INTERACTIVE, RUN_IMMEDIATE | Align rows using various methods |
+| `averaging` | /_Correct Data/_Correlation Averaging... | RUN_INTERACTIVE | Averaging of similar structures |
+| `block_correct_step` | /_Correct Data/Ste_p Block Correction | RUN_INTERACTIVE, RUN_IMMEDIATE | Correct steps without any line correction |
+| `fft_filter_1d` | /_Correct Data/1D _FFT Filtering... | RUN_INTERACTIVE | 1D FFT Filtering |
+| `fft_filter_2d` | /_Correct Data/_2D FFT Filtering... | RUN_INTERACTIVE, RUN_IMMEDIATE | Two-dimensional FFT filtering |
+| `fraccor` | /_Correct Data/_Fractal Correction | RUN_IMMEDIATE | Interpolate data under mask with fractal interpolation |
+| `good_profile` | /_Correct Data/_Good Mean Profile... | RUN_INTERACTIVE, RUN_IMMEDIATE | Calculate good mean profile |
+| `laplace` | /_Correct Data/_Interpolate Data Under Mask | RUN_IMMEDIATE | Interpolate data under mask by solution of Laplace equation |
+| `line_correct_inverted` | /_Correct Data/Mark _Inverted Rows | RUN_IMMEDIATE | Mark lines with inverted sign |
+| `line_correct_step` | /_Correct Data/Ste_p Line Correction | RUN_IMMEDIATE | Correct steps in lines |
+| `mark_disconn` | /_Correct Data/Mask of _Disconnected... | RUN_INTERACTIVE, RUN_IMMEDIATE | Mark data disconnected from other values |
+| `outliers` | /_Correct Data/Mask of _Outliers | RUN_IMMEDIATE | Mark data farther than 3σ from mean value |
+| `periodic_translate` | /_Correct Data/_Translate Periodically... | RUN_INTERACTIVE, RUN_IMMEDIATE | Move data in XY plane, treating it as periodic |
+| `scars_mark` | /_Correct Data/M_ark Scars... | RUN_INTERACTIVE, RUN_IMMEDIATE | Mark horizontal scars (strokes) |
+| `scars_remove` | /_Correct Data/Remove _Scars | RUN_IMMEDIATE | Correct horizontal scars (strokes) |
+| `unrotate` | /_Correct Data/_Unrotate... | RUN_INTERACTIVE, RUN_IMMEDIATE | Automatically correct rotation in horizontal plane |
+| `zeromasked` | /_Correct Data/_Zero Data Under Mask | RUN_IMMEDIATE | Fill data under mask with zeros |
 
 ### _Distortion  (10)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `coerce` | /_Distortion/Co_erce... | RUN_IMMEDIATE | Enforce prescribed statistical properties |
-| `correct_affine` | /_Distortion/_Affine... | RUN_IMMEDIATE | Correct affine distortion |
-| `correct_perspective` | /_Distortion/_Perspective... | RUN_IMMEDIATE | Correct perspective distortion |
-| `displfield` | /_Distortion/Displacement _Field... | RUN_IMMEDIATE | Deform image or scan lines in plane |
-| `drift` | /_Distortion/Compensate _Drift... | RUN_IMMEDIATE | Evaluate/correct thermal drift in fast scan axis |
-| `extract_path` | /_Distortion/Extract _Path Selection... | RUN_IMMEDIATE | Extract path selection data |
-| `polydistort` | /_Distortion/Pol_ynomial... | RUN_IMMEDIATE | Applies polynomial distortion in the horizontal plane |
-| `raveraging` | /_Distortion/_Radial Smoothing... | RUN_IMMEDIATE | Smooth image in polar coordinates |
-| `reorder` | /_Distortion/_Reorder... | RUN_IMMEDIATE | Reorder image data |
-| `straighten_path` | /_Distortion/Straighten _Path... | RUN_IMMEDIATE | Straighten along a path |
+| `coerce` | /_Distortion/Co_erce... | RUN_INTERACTIVE, RUN_IMMEDIATE | Enforce prescribed statistical properties |
+| `correct_affine` | /_Distortion/_Affine... | RUN_INTERACTIVE | Correct affine distortion |
+| `correct_perspective` | /_Distortion/_Perspective... | RUN_INTERACTIVE | Correct perspective distortion |
+| `displfield` | /_Distortion/Displacement _Field... | RUN_INTERACTIVE, RUN_IMMEDIATE | Deform image or scan lines in plane |
+| `drift` | /_Distortion/Compensate _Drift... | RUN_INTERACTIVE, RUN_IMMEDIATE | Evaluate/correct thermal drift in fast scan axis |
+| `extract_path` | /_Distortion/Extract _Path Selection... | RUN_INTERACTIVE, RUN_IMMEDIATE | Extract path selection data |
+| `polydistort` | /_Distortion/Pol_ynomial... | RUN_INTERACTIVE, RUN_IMMEDIATE | Applies polynomial distortion in the horizontal plane |
+| `raveraging` | /_Distortion/_Radial Smoothing... | RUN_INTERACTIVE, RUN_IMMEDIATE | Smooth image in polar coordinates |
+| `reorder` | /_Distortion/_Reorder... | RUN_INTERACTIVE, RUN_IMMEDIATE | Reorder image data |
+| `straighten_path` | /_Distortion/Straighten _Path... | RUN_INTERACTIVE | Straighten along a path |
 
 ### _Grains  (17)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `grain_cross` | /_Grains/_Correlate... | RUN_IMMEDIATE | Correlate grain characteristics |
-| `grain_dist` | /_Grains/_Distributions... | RUN_IMMEDIATE | Distributions of various grain characteristics |
-| `grain_edge` | /_Grains/Mark by _Edge Detection... | RUN_IMMEDIATE | Mark grains with edge detection mechanism |
-| `grain_exscribe_bboxes` | /_Grains/Select _Bounding Boxes | UNKNOWN(4) | Create a selection visualizing grain bounding boxes |
-| `grain_exscribe_circles` | /_Grains/Select _Circumscribed Circles | UNKNOWN(4) | Create a selection visualizing grain circumcircles |
-| `grain_extract_numbers` | /_Grains/_Extract Numbers | UNKNOWN(4) | Extract grain numbers to a new image |
-| `grain_filter` | /_Grains/_Filter... | RUN_IMMEDIATE | Filter grains by their properties |
-| `grain_inscribe_discs` | /_Grains/Select _Inscribed Discs | UNKNOWN(4) | Create a selection visualizing discs inscribed into grains |
-| `grain_inscribe_rects` | /_Grains/Select Inscribed _Rectangles | UNKNOWN(4) | Create a selection visualizing rectangles inscribed into grains |
-| `grain_mark` | /_Grains/_Mark by Threshold... | RUN_IMMEDIATE | Mark grains by threshold |
-| `grain_rem_touching` | /_Grains/_Remove Edge-Touching | UNKNOWN(4) | Remove grains touching image edges |
-| `grain_stat` | /_Grains/S_tatistics... | RUN_IMMEDIATE | Grain property statistics |
-| `grain_summary` | /_Grains/S_ummary... | RUN_IMMEDIATE | Grain summary information |
-| `grain_wshed` | /_Grains/Mark by _Watershed... | RUN_IMMEDIATE | Mark grains by watershed |
-| `level_grains` | /_Grains/_Level Grains... | RUN_IMMEDIATE | Level individual grains, interpolating the shifts between using Laplacian interpolation |
-| `logistic_regression` | /_Grains/Logistic _Regression... | RUN_IMMEDIATE | Mark grains with logistic regression |
-| `wpour_mark` | /_Grains/_Mark by Segmentation... | RUN_IMMEDIATE | Segment using watershed  |
+| `grain_cross` | /_Grains/_Correlate... | RUN_INTERACTIVE, RUN_IMMEDIATE | Correlate grain characteristics |
+| `grain_dist` | /_Grains/_Distributions... | RUN_INTERACTIVE, RUN_IMMEDIATE | Distributions of various grain characteristics |
+| `grain_edge` | /_Grains/Mark by _Edge Detection... | RUN_INTERACTIVE, RUN_IMMEDIATE | Mark grains with edge detection mechanism |
+| `grain_exscribe_bboxes` | /_Grains/Select _Bounding Boxes | RUN_IMMEDIATE | Create a selection visualizing grain bounding boxes |
+| `grain_exscribe_circles` | /_Grains/Select _Circumscribed Circles | RUN_IMMEDIATE | Create a selection visualizing grain circumcircles |
+| `grain_extract_numbers` | /_Grains/_Extract Numbers | RUN_IMMEDIATE | Extract grain numbers to a new image |
+| `grain_filter` | /_Grains/_Filter... | RUN_INTERACTIVE, RUN_IMMEDIATE | Filter grains by their properties |
+| `grain_inscribe_discs` | /_Grains/Select _Inscribed Discs | RUN_IMMEDIATE | Create a selection visualizing discs inscribed into grains |
+| `grain_inscribe_rects` | /_Grains/Select Inscribed _Rectangles | RUN_IMMEDIATE | Create a selection visualizing rectangles inscribed into grains |
+| `grain_mark` | /_Grains/_Mark by Threshold... | RUN_INTERACTIVE, RUN_IMMEDIATE | Mark grains by threshold |
+| `grain_rem_touching` | /_Grains/_Remove Edge-Touching | RUN_IMMEDIATE | Remove grains touching image edges |
+| `grain_stat` | /_Grains/S_tatistics... | RUN_INTERACTIVE | Grain property statistics |
+| `grain_summary` | /_Grains/S_ummary... | RUN_INTERACTIVE | Grain summary information |
+| `grain_wshed` | /_Grains/Mark by _Watershed... | RUN_INTERACTIVE, RUN_IMMEDIATE | Mark grains by watershed |
+| `level_grains` | /_Grains/_Level Grains... | RUN_INTERACTIVE, RUN_IMMEDIATE | Level individual grains, interpolating the shifts between using Laplacian interpolation |
+| `logistic_regression` | /_Grains/Logistic _Regression... | RUN_INTERACTIVE | Mark grains with logistic regression |
+| `wpour_mark` | /_Grains/_Mark by Segmentation... | RUN_INTERACTIVE, RUN_IMMEDIATE | Segment using watershed  |
 
 ### _Integral Transforms  (8)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `convolution_filter` | /_Integral Transforms/Con_volution Filter... | RUN_IMMEDIATE | General convolution filter |
-| `cwt` | /_Integral Transforms/2D _CWT... | RUN_IMMEDIATE | Compute continuous wavelet transform |
-| `dwt` | /_Integral Transforms/2D _DWT... | RUN_IMMEDIATE | Compute Discrete Wavelet Transform |
-| `dwtanisotropy` | /_Integral Transforms/DWT _Anisotropy... | RUN_IMMEDIATE | DWT anisotropy detection |
-| `fft` | /_Integral Transforms/2D _FFT... | RUN_IMMEDIATE | Compute Fast Fourier Transform |
-| `hough` | /_Integral Transforms/_Hough... | RUN_IMMEDIATE | Compute Hough transform |
-| `rank_filter` | /_Integral Transforms/_Rank Filter... | RUN_IMMEDIATE | K-th rank filter |
-| `slope_map` | /_Integral Transforms/Local Slope | UNKNOWN(4) | First derivative slope transformation |
+| `convolution_filter` | /_Integral Transforms/Con_volution Filter... | RUN_INTERACTIVE, RUN_IMMEDIATE | General convolution filter |
+| `cwt` | /_Integral Transforms/2D _CWT... | RUN_INTERACTIVE, RUN_IMMEDIATE | Compute continuous wavelet transform |
+| `dwt` | /_Integral Transforms/2D _DWT... | RUN_INTERACTIVE, RUN_IMMEDIATE | Compute Discrete Wavelet Transform |
+| `dwtanisotropy` | /_Integral Transforms/DWT _Anisotropy... | RUN_INTERACTIVE, RUN_IMMEDIATE | DWT anisotropy detection |
+| `fft` | /_Integral Transforms/2D _FFT... | RUN_INTERACTIVE, RUN_IMMEDIATE | Compute Fast Fourier Transform |
+| `hough` | /_Integral Transforms/_Hough... | RUN_INTERACTIVE, RUN_IMMEDIATE | Compute Hough transform |
+| `rank_filter` | /_Integral Transforms/_Rank Filter... | RUN_INTERACTIVE, RUN_IMMEDIATE | K-th rank filter |
+| `slope_map` | /_Integral Transforms/Local Slope | RUN_IMMEDIATE | First derivative slope transformation |
 
 ### _Level  (11)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `arc_revolve` | /_Level/Revolve _Arc... | RUN_IMMEDIATE | Level data by arc revolution |
-| `fix_zero` | /_Level/Fix _Zero | RUN_IMMEDIATE | Shift minimum data value to zero |
-| `flatten_base` | /_Level/Flatten _Base | RUN_IMMEDIATE | Flatten base of surface with positive features |
-| `freq_split` | /_Level/_Frequency Split... | RUN_IMMEDIATE | Split into low and high frequencies |
-| `level` | /_Level/Plane _Level | RUN_IMMEDIATE | Level data by mean plane subtraction |
-| `level_rotate` | /_Level/Level _Rotate | RUN_IMMEDIATE | Automatically level data by plane rotation |
-| `polylevel` | /_Level/_Polynomial Background... | RUN_IMMEDIATE | Remove polynomial background |
-| `sphere_revolve` | /_Level/Revolve _Sphere... | RUN_IMMEDIATE | Level data by sphere revolution |
-| `trimmed_mean` | /_Level/_Trimmed Mean... | RUN_IMMEDIATE | Trimmed mean leveling and filter |
-| `zero_max` | /_Level/Zero Ma_ximum Value | RUN_IMMEDIATE | Shift maximum data value to zero |
-| `zero_mean` | /_Level/Zero _Mean Value | RUN_IMMEDIATE | Shift mean data value to zero |
+| `arc_revolve` | /_Level/Revolve _Arc... | RUN_INTERACTIVE, RUN_IMMEDIATE | Level data by arc revolution |
+| `fix_zero` | /_Level/Fix _Zero | RUN_INTERACTIVE, RUN_IMMEDIATE | Shift minimum data value to zero |
+| `flatten_base` | /_Level/Flatten _Base | RUN_INTERACTIVE, RUN_IMMEDIATE | Flatten base of surface with positive features |
+| `freq_split` | /_Level/_Frequency Split... | RUN_INTERACTIVE, RUN_IMMEDIATE | Split into low and high frequencies |
+| `level` | /_Level/Plane _Level | RUN_INTERACTIVE, RUN_IMMEDIATE | Level data by mean plane subtraction |
+| `level_rotate` | /_Level/Level _Rotate | RUN_INTERACTIVE, RUN_IMMEDIATE | Automatically level data by plane rotation |
+| `polylevel` | /_Level/_Polynomial Background... | RUN_INTERACTIVE, RUN_IMMEDIATE | Remove polynomial background |
+| `sphere_revolve` | /_Level/Revolve _Sphere... | RUN_INTERACTIVE, RUN_IMMEDIATE | Level data by sphere revolution |
+| `trimmed_mean` | /_Level/_Trimmed Mean... | RUN_INTERACTIVE, RUN_IMMEDIATE | Trimmed mean leveling and filter |
+| `zero_max` | /_Level/Zero Ma_ximum Value | RUN_INTERACTIVE, RUN_IMMEDIATE | Shift maximum data value to zero |
+| `zero_mean` | /_Level/Zero _Mean Value | RUN_INTERACTIVE, RUN_IMMEDIATE | Shift mean data value to zero |
 
 ### _Mask  (10)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `mark_with` | /_Mask/Mark _With... | RUN_IMMEDIATE | Mask combining and modification |
-| `mask_distribute` | /_Mask/_Distribute... | RUN_IMMEDIATE | Distribute mask to other channels |
-| `mask_edt` | /_Mask/Distanc_e Transform... | RUN_IMMEDIATE | Distance transform of mask |
-| `mask_extract` | /_Mask/_Extract Mask | UNKNOWN(4) | Extract mask to a new image |
-| `mask_invert` | /_Mask/_Invert Mask | UNKNOWN(4) | Invert mask |
-| `mask_morph` | /_Mask/Morpho_logical Operation... | RUN_IMMEDIATE | Morphological operation with mask |
-| `mask_noisify` | /_Mask/_Noisify... | RUN_IMMEDIATE | Add noise to mask |
-| `mask_remove` | /_Mask/_Remove Mask | UNKNOWN(4) | Remove mask from data |
-| `mask_shift` | /_Mask/_Shift... | RUN_IMMEDIATE | Shift mask |
-| `mask_thin` | /_Mask/Thi_n | UNKNOWN(4) | Thin mask |
+| `mark_with` | /_Mask/Mark _With... | RUN_INTERACTIVE | Mask combining and modification |
+| `mask_distribute` | /_Mask/_Distribute... | RUN_INTERACTIVE, RUN_IMMEDIATE | Distribute mask to other channels |
+| `mask_edt` | /_Mask/Distanc_e Transform... | RUN_INTERACTIVE, RUN_IMMEDIATE | Distance transform of mask |
+| `mask_extract` | /_Mask/_Extract Mask | RUN_IMMEDIATE | Extract mask to a new image |
+| `mask_invert` | /_Mask/_Invert Mask | RUN_IMMEDIATE | Invert mask |
+| `mask_morph` | /_Mask/Morpho_logical Operation... | RUN_INTERACTIVE, RUN_IMMEDIATE | Morphological operation with mask |
+| `mask_noisify` | /_Mask/_Noisify... | RUN_INTERACTIVE, RUN_IMMEDIATE | Add noise to mask |
+| `mask_remove` | /_Mask/_Remove Mask | RUN_IMMEDIATE | Remove mask from data |
+| `mask_shift` | /_Mask/_Shift... | RUN_INTERACTIVE, RUN_IMMEDIATE | Shift mask |
+| `mask_thin` | /_Mask/Thi_n | RUN_IMMEDIATE | Thin mask |
 
 ### _Multidata  (1)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `relate` | /_Multidata/_Relation... | RUN_IMMEDIATE | Find simple relations between data |
+| `relate` | /_Multidata/_Relation... | RUN_INTERACTIVE | Find simple relations between data |
 
 ### _Presentation  (26)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `azimuth` | /_Presentation/_Gradient/_Azimuth | UNKNOWN(4) | Local slope azimuth presentation |
-| `edge_canny` | /_Presentation/_Edge Detection/_Canny | UNKNOWN(4) | Canny edge detection presentation |
-| `edge_harris` | /_Presentation/_Edge Detection/_Harris Corner | UNKNOWN(4) | Harris corner presentation |
-| `edge_hough_lines` | /_Presentation/_Edge Detection/_Hough Lines | UNKNOWN(4) | Hough lines presentation |
-| `edge_inclination` | /_Presentation/_Edge Detection/_Inclination | UNKNOWN(4) | Local inclination visualization presentation |
-| `edge_laplacian` | /_Presentation/_Edge Detection/_Laplacian of Gaussian | UNKNOWN(4) | Laplacian of Gaussian step detection presentation |
-| `edge_nonlinearity` | /_Presentation/_Edge Detection/Local _Nonlinearity | UNKNOWN(4) | Local nonlinearity based edge detection presentation |
-| `edge_prewitt` | /_Presentation/_Edge Detection/_Prewitt | UNKNOWN(4) | Prewitt edge presentation |
-| `edge_rms` | /_Presentation/_Edge Detection/_RMS | UNKNOWN(4) | Local RMS value based step detection presentation |
-| `edge_rms_edge` | /_Presentation/_Edge Detection/RMS _Edge | UNKNOWN(4) | Local RMS value based step detection with postprocessing |
-| `edge_sobel` | /_Presentation/_Edge Detection/_Sobel | UNKNOWN(4) | Sobel edge presentation |
-| `edge_step` | /_Presentation/_Edge Detection/_Step | UNKNOWN(4) | Fine step detection presentation |
-| `gaussian_step` | /_Presentation/_Edge Detection/_Gaussian Step... | RUN_IMMEDIATE | Detect edges using Gaussian step filter |
-| `local_contrast` | /_Presentation/Local _Contrast... | RUN_IMMEDIATE | Presentation with maximized local contrast |
-| `presentation_attach` | /_Presentation/_Attach Presentation... | RUN_IMMEDIATE | Attach another data field as presentation |
-| `presentation_extract` | /_Presentation/E_xtract Presentation | UNKNOWN(4) | Extract presentation to a new image |
-| `presentation_logscale` | /_Presentation/_Logscale | UNKNOWN(4) | Creates a presentation with logarithmic color scale |
-| `presentation_remove` | /_Presentation/_Remove Presentation | UNKNOWN(4) | Remove presentation from data |
-| `prewitt_horizontal` | /_Presentation/_Gradient/_Prewitt (horizontal) | UNKNOWN(4) | Horizontal Prewitt gradient presentation |
-| `prewitt_vertical` | /_Presentation/_Gradient/_Prewitt (vertical) | UNKNOWN(4) | Vertical Prewitt gradient presentation |
-| `rank` | /_Presentation/_Rank... | RUN_IMMEDIATE | Presentation with local contrast ehnanced using a rank transform |
-| `semsim` | /_Presentation/_SEM Image... | RUN_IMMEDIATE | Simple SEM simulation from topography |
-| `shade` | /_Presentation/_Shading... | RUN_IMMEDIATE | Shade data |
-| `sobel_horizontal` | /_Presentation/_Gradient/_Sobel (horizontal) | UNKNOWN(4) | Horizontal Sobel gradient presentation |
-| `sobel_vertical` | /_Presentation/_Gradient/_Sobel (vertical) | UNKNOWN(4) | Vertical Sobel gradient presentation |
-| `zero_crossing` | /_Presentation/_Edge Detection/_Zero Crossing... | RUN_IMMEDIATE | Zero crossing step detection presentation |
+| `azimuth` | /_Presentation/_Gradient/_Azimuth | RUN_IMMEDIATE | Local slope azimuth presentation |
+| `edge_canny` | /_Presentation/_Edge Detection/_Canny | RUN_IMMEDIATE | Canny edge detection presentation |
+| `edge_harris` | /_Presentation/_Edge Detection/_Harris Corner | RUN_IMMEDIATE | Harris corner presentation |
+| `edge_hough_lines` | /_Presentation/_Edge Detection/_Hough Lines | RUN_IMMEDIATE | Hough lines presentation |
+| `edge_inclination` | /_Presentation/_Edge Detection/_Inclination | RUN_IMMEDIATE | Local inclination visualization presentation |
+| `edge_laplacian` | /_Presentation/_Edge Detection/_Laplacian of Gaussian | RUN_IMMEDIATE | Laplacian of Gaussian step detection presentation |
+| `edge_nonlinearity` | /_Presentation/_Edge Detection/Local _Nonlinearity | RUN_IMMEDIATE | Local nonlinearity based edge detection presentation |
+| `edge_prewitt` | /_Presentation/_Edge Detection/_Prewitt | RUN_IMMEDIATE | Prewitt edge presentation |
+| `edge_rms` | /_Presentation/_Edge Detection/_RMS | RUN_IMMEDIATE | Local RMS value based step detection presentation |
+| `edge_rms_edge` | /_Presentation/_Edge Detection/RMS _Edge | RUN_IMMEDIATE | Local RMS value based step detection with postprocessing |
+| `edge_sobel` | /_Presentation/_Edge Detection/_Sobel | RUN_IMMEDIATE | Sobel edge presentation |
+| `edge_step` | /_Presentation/_Edge Detection/_Step | RUN_IMMEDIATE | Fine step detection presentation |
+| `gaussian_step` | /_Presentation/_Edge Detection/_Gaussian Step... | RUN_INTERACTIVE, RUN_IMMEDIATE | Detect edges using Gaussian step filter |
+| `local_contrast` | /_Presentation/Local _Contrast... | RUN_INTERACTIVE, RUN_IMMEDIATE | Presentation with maximized local contrast |
+| `presentation_attach` | /_Presentation/_Attach Presentation... | RUN_INTERACTIVE | Attach another data field as presentation |
+| `presentation_extract` | /_Presentation/E_xtract Presentation | RUN_IMMEDIATE | Extract presentation to a new image |
+| `presentation_logscale` | /_Presentation/_Logscale | RUN_IMMEDIATE | Creates a presentation with logarithmic color scale |
+| `presentation_remove` | /_Presentation/_Remove Presentation | RUN_IMMEDIATE | Remove presentation from data |
+| `prewitt_horizontal` | /_Presentation/_Gradient/_Prewitt (horizontal) | RUN_IMMEDIATE | Horizontal Prewitt gradient presentation |
+| `prewitt_vertical` | /_Presentation/_Gradient/_Prewitt (vertical) | RUN_IMMEDIATE | Vertical Prewitt gradient presentation |
+| `rank` | /_Presentation/_Rank... | RUN_INTERACTIVE, RUN_IMMEDIATE | Presentation with local contrast ehnanced using a rank transform |
+| `semsim` | /_Presentation/_SEM Image... | RUN_INTERACTIVE, RUN_IMMEDIATE | Simple SEM simulation from topography |
+| `shade` | /_Presentation/_Shading... | RUN_INTERACTIVE, RUN_IMMEDIATE | Shade data |
+| `sobel_horizontal` | /_Presentation/_Gradient/_Sobel (horizontal) | RUN_IMMEDIATE | Horizontal Sobel gradient presentation |
+| `sobel_vertical` | /_Presentation/_Gradient/_Sobel (vertical) | RUN_IMMEDIATE | Vertical Sobel gradient presentation |
+| `zero_crossing` | /_Presentation/_Edge Detection/_Zero Crossing... | RUN_INTERACTIVE, RUN_IMMEDIATE | Zero crossing step detection presentation |
 
 ### _SPM Modes  (3)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `pfm` | /_SPM Modes/_Electrical/_PFM... | RUN_IMMEDIATE | Processes PFM data from multiple rotations |
-| `smm` | /_SPM Modes/_Electrical/_SMM Calibration... | RUN_IMMEDIATE | Calibrate SMM using capacitors calibration sample |
-| `smm_apply` | /_SPM Modes/_Electrical/_Apply SMM Calibration... | RUN_IMMEDIATE | Apply SMM calibration coefficients |
+| `pfm` | /_SPM Modes/_Electrical/_PFM... | RUN_INTERACTIVE | Processes PFM data from multiple rotations |
+| `smm` | /_SPM Modes/_Electrical/_SMM Calibration... | RUN_INTERACTIVE | Calibrate SMM using capacitors calibration sample |
+| `smm_apply` | /_SPM Modes/_Electrical/_Apply SMM Calibration... | RUN_INTERACTIVE | Apply SMM calibration coefficients |
 
 ### _Statistics  (8)
 
 | name | menu path | run types | tooltip |
 |---|---|---|---|
-| `acf2d` | /_Statistics/2D Auto_correlation... | RUN_IMMEDIATE | Calculate 2D autocorrelation function |
-| `angle_dist` | /_Statistics/An_gle Distribution... | RUN_IMMEDIATE | Calculate two-dimensional angle distribution |
-| `entropy` | /_Statistics/_Entropy... | RUN_IMMEDIATE | Calculate entropy of value and slope distributions |
-| `fractal` | /_Statistics/_Fractal Dimension... | RUN_IMMEDIATE | Calculate fractal dimension |
-| `psdf2d` | /_Statistics/2D _PSDF... | RUN_IMMEDIATE | Calculate 2D power spectrum density |
-| `psdf_logphi` | /_Statistics/_Log-Phi PSDF... | RUN_IMMEDIATE | Compute PSDF in Log-Phi coordinates |
-| `psf` | /_Statistics/_Transfer Function Guess... | RUN_IMMEDIATE | Estimate transfer function from known data and ideal image |
-| `slope_dist` | /_Statistics/_Slope Distribution... | RUN_IMMEDIATE | Calculate angular slope distribution |
+| `acf2d` | /_Statistics/2D Auto_correlation... | RUN_INTERACTIVE, RUN_IMMEDIATE | Calculate 2D autocorrelation function |
+| `angle_dist` | /_Statistics/An_gle Distribution... | RUN_INTERACTIVE, RUN_IMMEDIATE | Calculate two-dimensional angle distribution |
+| `entropy` | /_Statistics/_Entropy... | RUN_INTERACTIVE | Calculate entropy of value and slope distributions |
+| `fractal` | /_Statistics/_Fractal Dimension... | RUN_INTERACTIVE | Calculate fractal dimension |
+| `psdf2d` | /_Statistics/2D _PSDF... | RUN_INTERACTIVE, RUN_IMMEDIATE | Calculate 2D power spectrum density |
+| `psdf_logphi` | /_Statistics/_Log-Phi PSDF... | RUN_INTERACTIVE, RUN_IMMEDIATE | Compute PSDF in Log-Phi coordinates |
+| `psf` | /_Statistics/_Transfer Function Guess... | RUN_INTERACTIVE | Estimate transfer function from known data and ideal image |
+| `slope_dist` | /_Statistics/_Slope Distribution... | RUN_INTERACTIVE, RUN_IMMEDIATE | Calculate angular slope distribution |
 
 ## File functions
 

@@ -46684,6 +46684,7 @@
       "menu_path": "/_Statistics/2D Auto_correlation...", 
       "name": "acf2d", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -46693,6 +46694,7 @@
       "menu_path": "/_Correct Data/_Align Rows...", 
       "name": "align_rows", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_line_level", 
@@ -46702,6 +46704,7 @@
       "menu_path": "/_Statistics/An_gle Distribution...", 
       "name": "angle_dist", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_distribution_angle", 
@@ -46711,6 +46714,7 @@
       "menu_path": "/S_ynthetic/_Order and Disorder/_Anneal...", 
       "name": "anneal_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_anneal", 
@@ -46720,6 +46724,7 @@
       "menu_path": "/_Level/Revolve _Arc...", 
       "name": "arc_revolve", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_revolve_arc", 
@@ -46729,7 +46734,7 @@
       "menu_path": "/M_ultidata/_Arithmetic...", 
       "name": "arithmetic", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_arithmetic", 
       "tooltip": "Arithmetic operations on data"
@@ -46738,7 +46743,7 @@
       "menu_path": "/_Correct Data/_Correlation Averaging...", 
       "name": "averaging", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Averaging of similar structures"
@@ -46747,7 +46752,7 @@
       "menu_path": "/_Presentation/_Gradient/_Azimuth", 
       "name": "azimuth", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Local slope azimuth presentation"
@@ -46756,6 +46761,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Ballistic...", 
       "name": "bdep_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_ballistic_deposition", 
@@ -46765,6 +46771,7 @@
       "menu_path": "/_Basic Operations/_Binning...", 
       "name": "binning", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_binning", 
@@ -46774,6 +46781,7 @@
       "menu_path": "/_Correct Data/Ste_p Block Correction", 
       "name": "block_correct_step", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -46783,6 +46791,7 @@
       "menu_path": "/_Basic Operations/_Dimensions and Units...", 
       "name": "calibrate", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_data_measure", 
@@ -46792,7 +46801,7 @@
       "menu_path": "/Cali_bration/_Apply to Data...", 
       "name": "cc_view", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "3D calibration and uncertainty"
@@ -46801,7 +46810,7 @@
       "menu_path": "/M_ultidata/_Classify...", 
       "name": "classify", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Classify data sets"
@@ -46810,6 +46819,7 @@
       "menu_path": "/Cali_bration/_Load From Text File...", 
       "name": "cload", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -46819,6 +46829,7 @@
       "menu_path": "/Cali_bration/_Create...", 
       "name": "cnew", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -46828,6 +46839,7 @@
       "menu_path": "/_Distortion/Co_erce...", 
       "name": "coerce", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_enforce_distribution", 
@@ -46837,6 +46849,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Columnar...", 
       "name": "col_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_columnar", 
@@ -46846,6 +46859,7 @@
       "menu_path": "/_Integral Transforms/Con_volution Filter...", 
       "name": "convolution_filter", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_convolution", 
@@ -46855,7 +46869,7 @@
       "menu_path": "/M_ultidata/_Convolve...", 
       "name": "convolve", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_convolve", 
       "tooltip": "Convolve two images"
@@ -46864,7 +46878,7 @@
       "menu_path": "/_Distortion/_Affine...", 
       "name": "correct_affine", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_correct_affine", 
       "tooltip": "Correct affine distortion"
@@ -46873,7 +46887,7 @@
       "menu_path": "/_Distortion/_Perspective...", 
       "name": "correct_perspective", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_perspective_distort", 
       "tooltip": "Correct perspective distortion"
@@ -46882,6 +46896,7 @@
       "menu_path": "/S_ynthetic/_Order and Disorder/Coupled PD_Es...", 
       "name": "cpde_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_turing_pattern", 
@@ -46891,7 +46906,7 @@
       "menu_path": "/M_ultidata/_Cross-Correlation...", 
       "name": "crosscor", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Cross-correlate two data fields"
@@ -46900,6 +46915,7 @@
       "menu_path": "/Measure _Features/_Curvature...", 
       "name": "curvature", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_curvature", 
@@ -46909,6 +46925,7 @@
       "menu_path": "/_Integral Transforms/2D _CWT...", 
       "name": "cwt", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_cwt", 
@@ -46918,7 +46935,7 @@
       "menu_path": "/M_ultidata/_Deconvolve...", 
       "name": "deconvolve", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_deconvolve", 
       "tooltip": "Deconvolve image"
@@ -46927,6 +46944,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Particles...", 
       "name": "deposit_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_particles", 
@@ -46936,6 +46954,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Diffusion...", 
       "name": "diff_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_diffusion", 
@@ -46945,6 +46964,7 @@
       "menu_path": "/S_ynthetic/D_iscs...", 
       "name": "disc_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_discs", 
@@ -46954,6 +46974,7 @@
       "menu_path": "/_Distortion/Displacement _Field...", 
       "name": "displfield", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_displacement_field", 
@@ -46963,6 +46984,7 @@
       "menu_path": "/S_ynthetic/_Order and Disorder/_Domains...", 
       "name": "domain_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_domains", 
@@ -46972,6 +46994,7 @@
       "menu_path": "/_Distortion/Compensate _Drift...", 
       "name": "drift", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_drift", 
@@ -46981,6 +47004,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Dunes...", 
       "name": "dune_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_dunes", 
@@ -46990,6 +47014,7 @@
       "menu_path": "/_Integral Transforms/2D _DWT...", 
       "name": "dwt", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_dwt", 
@@ -46999,6 +47024,7 @@
       "menu_path": "/_Integral Transforms/DWT _Anisotropy...", 
       "name": "dwtanisotropy", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -47008,7 +47034,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Canny", 
       "name": "edge_canny", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Canny edge detection presentation"
@@ -47017,7 +47043,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Harris Corner", 
       "name": "edge_harris", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Harris corner presentation"
@@ -47026,7 +47052,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Hough Lines", 
       "name": "edge_hough_lines", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Hough lines presentation"
@@ -47035,7 +47061,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Inclination", 
       "name": "edge_inclination", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Local inclination visualization presentation"
@@ -47044,7 +47070,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Laplacian of Gaussian", 
       "name": "edge_laplacian", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Laplacian of Gaussian step detection presentation"
@@ -47053,7 +47079,7 @@
       "menu_path": "/_Presentation/_Edge Detection/Local _Nonlinearity", 
       "name": "edge_nonlinearity", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Local nonlinearity based edge detection presentation"
@@ -47062,7 +47088,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Prewitt", 
       "name": "edge_prewitt", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Prewitt edge presentation"
@@ -47071,7 +47097,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_RMS", 
       "name": "edge_rms", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Local RMS value based step detection presentation"
@@ -47080,7 +47106,7 @@
       "menu_path": "/_Presentation/_Edge Detection/RMS _Edge", 
       "name": "edge_rms_edge", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Local RMS value based step detection with postprocessing"
@@ -47089,7 +47115,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Sobel", 
       "name": "edge_sobel", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Sobel edge presentation"
@@ -47098,7 +47124,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Step", 
       "name": "edge_step", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Fine step detection presentation"
@@ -47107,7 +47133,7 @@
       "menu_path": "/_Statistics/_Entropy...", 
       "name": "entropy", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_entropy", 
       "tooltip": "Calculate entropy of value and slope distributions"
@@ -47116,6 +47142,7 @@
       "menu_path": "/_Basic Operations/E_xtend...", 
       "name": "extend", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_extend", 
@@ -47125,6 +47152,7 @@
       "menu_path": "/_Distortion/Extract _Path Selection...", 
       "name": "extract_path", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_extract_path", 
@@ -47134,6 +47162,7 @@
       "menu_path": "/Measure _Features/Facet _Analysis...", 
       "name": "facet_analysis", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_facet_analysis", 
@@ -47143,7 +47172,7 @@
       "menu_path": "/Measure _Features/Facet _Measurement...", 
       "name": "facet_measure", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_facet_measure", 
       "tooltip": "Measure facet angles"
@@ -47152,6 +47181,7 @@
       "menu_path": "/S_ynthetic/_Noise/_Brownian...", 
       "name": "fbm_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_brownian_motion", 
@@ -47161,6 +47191,7 @@
       "menu_path": "/_Integral Transforms/2D _FFT...", 
       "name": "fft", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_fft", 
@@ -47170,7 +47201,7 @@
       "menu_path": "/_Correct Data/1D _FFT Filtering...", 
       "name": "fft_filter_1d", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_fft_filter_1d", 
       "tooltip": "1D FFT Filtering"
@@ -47179,6 +47210,7 @@
       "menu_path": "/_Correct Data/_2D FFT Filtering...", 
       "name": "fft_filter_2d", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_fft_filter_2d", 
@@ -47188,6 +47220,7 @@
       "menu_path": "/S_ynthetic/_Noise/_Spectral...", 
       "name": "fft_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_spectral", 
@@ -47197,6 +47230,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Fibers...", 
       "name": "fibre_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_fibres", 
@@ -47206,7 +47240,7 @@
       "menu_path": "/Measure _Features/_Fit Shape...", 
       "name": "fit_shape", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_fit_shape", 
       "tooltip": "Fit geometrical shapes"
@@ -47215,6 +47249,7 @@
       "menu_path": "/_Level/Fix _Zero", 
       "name": "fix_zero", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_fix_zero", 
@@ -47224,6 +47259,7 @@
       "menu_path": "/_Level/Flatten _Base", 
       "name": "flatten_base", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_level_flatten_base", 
@@ -47233,7 +47269,7 @@
       "menu_path": "/_Basic Operations/Flip Dia_gonally", 
       "name": "flip_diagonally", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_flip_diagonally", 
       "tooltip": "Flip data diagonally"
@@ -47242,7 +47278,7 @@
       "menu_path": "/_Basic Operations/Flip _Horizontally", 
       "name": "flip_horizontally", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_flip_horizontally", 
       "tooltip": "Flip data horizontally"
@@ -47251,7 +47287,7 @@
       "menu_path": "/_Basic Operations/Flip _Vertically", 
       "name": "flip_vertically", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_flip_vertically", 
       "tooltip": "Flip data vertically"
@@ -47260,7 +47296,7 @@
       "menu_path": "/_Correct Data/_Fractal Correction", 
       "name": "fraccor", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_fractal_correction", 
       "tooltip": "Interpolate data under mask with fractal interpolation"
@@ -47269,7 +47305,7 @@
       "menu_path": "/_Statistics/_Fractal Dimension...", 
       "name": "fractal", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_fractal_measure", 
       "tooltip": "Calculate fractal dimension"
@@ -47278,6 +47314,7 @@
       "menu_path": "/_Level/_Frequency Split...", 
       "name": "freq_split", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_frequency_split", 
@@ -47287,6 +47324,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Gaussian Step...", 
       "name": "gaussian_step", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -47296,6 +47334,7 @@
       "menu_path": "/_Correct Data/_Good Mean Profile...", 
       "name": "good_profile", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -47305,6 +47344,7 @@
       "menu_path": "/_Grains/_Correlate...", 
       "name": "grain_cross", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grain_correlation", 
@@ -47314,6 +47354,7 @@
       "menu_path": "/_Grains/_Distributions...", 
       "name": "grain_dist", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grains_graph", 
@@ -47323,6 +47364,7 @@
       "menu_path": "/_Grains/Mark by _Edge Detection...", 
       "name": "grain_edge", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grains_edge", 
@@ -47332,7 +47374,7 @@
       "menu_path": "/_Grains/Select _Bounding Boxes", 
       "name": "grain_exscribe_bboxes", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grain_bounding_box", 
       "tooltip": "Create a selection visualizing grain bounding boxes"
@@ -47341,7 +47383,7 @@
       "menu_path": "/_Grains/Select _Circumscribed Circles", 
       "name": "grain_exscribe_circles", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grain_exscribed_circle", 
       "tooltip": "Create a selection visualizing grain circumcircles"
@@ -47350,7 +47392,7 @@
       "menu_path": "/_Grains/_Extract Numbers", 
       "name": "grain_extract_numbers", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Extract grain numbers to a new image"
@@ -47359,6 +47401,7 @@
       "menu_path": "/_Grains/_Filter...", 
       "name": "grain_filter", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grains_remove", 
@@ -47368,7 +47411,7 @@
       "menu_path": "/_Grains/Select _Inscribed Discs", 
       "name": "grain_inscribe_discs", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grain_inscribed_circle", 
       "tooltip": "Create a selection visualizing discs inscribed into grains"
@@ -47377,7 +47420,7 @@
       "menu_path": "/_Grains/Select Inscribed _Rectangles", 
       "name": "grain_inscribe_rects", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grain_inscribed_box", 
       "tooltip": "Create a selection visualizing rectangles inscribed into grains"
@@ -47386,6 +47429,7 @@
       "menu_path": "/_Grains/_Mark by Threshold...", 
       "name": "grain_mark", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grains", 
@@ -47395,7 +47439,7 @@
       "menu_path": "/_Grains/_Remove Edge-Touching", 
       "name": "grain_rem_touching", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grains_edge_remove", 
       "tooltip": "Remove grains touching image edges"
@@ -47404,7 +47448,7 @@
       "menu_path": "/_Grains/S_tatistics...", 
       "name": "grain_stat", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_grains_statistics", 
       "tooltip": "Grain property statistics"
@@ -47413,7 +47457,7 @@
       "menu_path": "/_Grains/S_ummary...", 
       "name": "grain_summary", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Grain summary information"
@@ -47422,6 +47466,7 @@
       "menu_path": "/_Grains/Mark by _Watershed...", 
       "name": "grain_wshed", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grains_water", 
@@ -47431,6 +47476,7 @@
       "menu_path": "/SPM M_odes/_Force and Indentation/_Hertz contact...", 
       "name": "hertz_modulus", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -47440,6 +47486,7 @@
       "menu_path": "/_Integral Transforms/_Hough...", 
       "name": "hough", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_hough", 
@@ -47449,7 +47496,7 @@
       "menu_path": "/M_ultidata/_Immerse Detail...", 
       "name": "immerse", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_immerse", 
       "tooltip": "Immerse a detail into image"
@@ -47458,7 +47505,7 @@
       "menu_path": "/SPM M_odes/_Force and Indentation/_Analyze Imprint...", 
       "name": "indent_analyze", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_tip_indent_analyze", 
       "tooltip": "Analyze indentation imprint"
@@ -47467,7 +47514,7 @@
       "menu_path": "/_Basic Operations/_Invert Value", 
       "name": "invert_value", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_value_invert", 
       "tooltip": "Invert values about mean"
@@ -47476,7 +47523,7 @@
       "menu_path": "/_Correct Data/_Interpolate Data Under Mask", 
       "name": "laplace", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_remove_under_mask", 
       "tooltip": "Interpolate data under mask by solution of Laplace equation"
@@ -47485,6 +47532,7 @@
       "menu_path": "/S_ynthetic/_Lattice...", 
       "name": "lat_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_lattice", 
@@ -47494,6 +47542,7 @@
       "menu_path": "/SPM M_odes/_Force and Indentation/_Lateral Force...", 
       "name": "latsim", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_tip_lateral_force", 
@@ -47503,6 +47552,7 @@
       "menu_path": "/_Level/Plane _Level", 
       "name": "level", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_level", 
@@ -47512,6 +47562,7 @@
       "menu_path": "/_Grains/_Level Grains...", 
       "name": "level_grains", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -47521,6 +47572,7 @@
       "menu_path": "/_Level/Level _Rotate", 
       "name": "level_rotate", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -47530,7 +47582,7 @@
       "menu_path": "/_Correct Data/Mark _Inverted Rows", 
       "name": "line_correct_inverted", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Mark lines with inverted sign"
@@ -47539,7 +47591,7 @@
       "menu_path": "/_Correct Data/Ste_p Line Correction", 
       "name": "line_correct_step", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_line_level", 
       "tooltip": "Correct steps in lines"
@@ -47548,6 +47600,7 @@
       "menu_path": "/S_ynthetic/_Noise/_Line Noise...", 
       "name": "lno_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_line_noise", 
@@ -47557,6 +47610,7 @@
       "menu_path": "/_Presentation/Local _Contrast...", 
       "name": "local_contrast", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -47566,7 +47620,7 @@
       "menu_path": "/_Grains/Logistic _Regression...", 
       "name": "logistic_regression", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_grains", 
       "tooltip": "Mark grains with logistic regression"
@@ -47575,6 +47629,7 @@
       "menu_path": "/_Correct Data/Mask of _Disconnected...", 
       "name": "mark_disconn", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_disconnected", 
@@ -47584,7 +47639,7 @@
       "menu_path": "/_Mask/Mark _With...", 
       "name": "mark_with", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_mark_with", 
       "tooltip": "Mask combining and modification"
@@ -47593,6 +47648,7 @@
       "menu_path": "/_Mask/_Distribute...", 
       "name": "mask_distribute", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mask_distribute", 
@@ -47602,6 +47658,7 @@
       "menu_path": "/_Mask/Distanc_e Transform...", 
       "name": "mask_edt", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_distance_transform", 
@@ -47611,7 +47668,7 @@
       "menu_path": "/_Mask/_Extract Mask", 
       "name": "mask_extract", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mask_extract", 
       "tooltip": "Extract mask to a new image"
@@ -47620,7 +47677,7 @@
       "menu_path": "/_Mask/_Invert Mask", 
       "name": "mask_invert", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mask_invert", 
       "tooltip": "Invert mask"
@@ -47629,6 +47686,7 @@
       "menu_path": "/_Mask/Morpho_logical Operation...", 
       "name": "mask_morph", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mask_morph", 
@@ -47638,6 +47696,7 @@
       "menu_path": "/_Mask/_Noisify...", 
       "name": "mask_noisify", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mask_noisify", 
@@ -47647,7 +47706,7 @@
       "menu_path": "/_Mask/_Remove Mask", 
       "name": "mask_remove", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mask_remove", 
       "tooltip": "Remove mask from data"
@@ -47656,6 +47715,7 @@
       "menu_path": "/_Mask/_Shift...", 
       "name": "mask_shift", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mask_shift", 
@@ -47665,7 +47725,7 @@
       "menu_path": "/_Mask/Thi_n", 
       "name": "mask_thin", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mask_thin", 
       "tooltip": "Thin mask"
@@ -47674,7 +47734,7 @@
       "menu_path": "/M_ultidata/Correlation _Search...", 
       "name": "maskcor", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_correlation_mask", 
       "tooltip": "Search for a detail using correlation"
@@ -47683,7 +47743,7 @@
       "menu_path": "/M_ultidata/Mutual C_rop...", 
       "name": "mcrop", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_mutual_crop", 
       "tooltip": "Crop non-intersecting regions of two images"
@@ -47692,7 +47752,7 @@
       "menu_path": "/Measure _Features/_Lattice...", 
       "name": "measure_lattice", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_measure_lattice", 
       "tooltip": "Measure lattice"
@@ -47701,7 +47761,7 @@
       "menu_path": "/M_ultidata/_Merge...", 
       "name": "merge", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_merge", 
       "tooltip": "Merge two images"
@@ -47710,6 +47770,7 @@
       "menu_path": "/SPM M_odes/_Magnetic/_Current Line Field...", 
       "name": "mfm_current", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mfm_current_line", 
@@ -47719,6 +47780,7 @@
       "menu_path": "/SPM M_odes/_Magnetic/_Perpendicular Media Field...", 
       "name": "mfm_field", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mfm_perpendicular", 
@@ -47728,6 +47790,7 @@
       "menu_path": "/SPM M_odes/_Magnetic/_Estimate Shift in Z...", 
       "name": "mfm_findshift", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mfm_field_find_shift", 
@@ -47737,6 +47800,7 @@
       "menu_path": "/SPM M_odes/_Magnetic/Para_llel Media Field...", 
       "name": "mfm_parallel", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mfm_parallel", 
@@ -47746,6 +47810,7 @@
       "menu_path": "/SPM M_odes/_Magnetic/_Recalculate to Force Gradient...", 
       "name": "mfm_recalc", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mfm_convert_to_force", 
@@ -47755,6 +47820,7 @@
       "menu_path": "/SPM M_odes/_Magnetic/_Field Shift in Z...", 
       "name": "mfm_shift", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mfm_field_shift", 
@@ -47764,7 +47830,7 @@
       "menu_path": "/M_ultidata/_Multiprofile...", 
       "name": "multiprofile", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_profile_multiple", 
       "tooltip": "Read lines from multiple images simultaneously"
@@ -47773,7 +47839,7 @@
       "menu_path": "/M_ultidata/Apply _Neural Network...", 
       "name": "neural_apply", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_neural_apply", 
       "tooltip": "Process data using a trained neural network"
@@ -47782,7 +47848,7 @@
       "menu_path": "/M_ultidata/Neural Network _Training...", 
       "name": "neural_train", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_neural_train", 
       "tooltip": "Train a neural network for image processing"
@@ -47791,6 +47857,7 @@
       "menu_path": "/S_ynthetic/_Noise/_Noise...", 
       "name": "noise_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_noise", 
@@ -47800,7 +47867,7 @@
       "menu_path": "/_Basic Operations/_Null Offsets", 
       "name": "null_offsets", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_null_offsets", 
       "tooltip": "Null horizontal offsets, moving the origin to the upper left corner"
@@ -47809,6 +47876,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Objects...", 
       "name": "obj_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_objects", 
@@ -47818,7 +47886,7 @@
       "menu_path": "/_Correct Data/Mask of _Outliers", 
       "name": "outliers", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mark_outliers", 
       "tooltip": "Mark data farther than 3\u03c3 from mean value"
@@ -47827,6 +47895,7 @@
       "menu_path": "/S_ynthetic/_Pattern...", 
       "name": "pat_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_pattern", 
@@ -47836,6 +47905,7 @@
       "menu_path": "/_Correct Data/_Translate Periodically...", 
       "name": "periodic_translate", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_translate_periodically", 
@@ -47845,7 +47915,7 @@
       "menu_path": "/_SPM Modes/_Electrical/_PFM...", 
       "name": "pfm", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Processes PFM data from multiple rotations"
@@ -47854,6 +47924,7 @@
       "menu_path": "/S_ynthetic/_Order and Disorder/P_hases...", 
       "name": "phase_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_phases", 
@@ -47863,6 +47934,7 @@
       "menu_path": "/SPM M_odes/_Force and Indentation/_PID Simulation...", 
       "name": "pid", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_tip_pid", 
@@ -47872,6 +47944,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Pile Up...", 
       "name": "pileup_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_pileup", 
@@ -47881,6 +47954,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Plateaus...", 
       "name": "plateau_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_plateaus", 
@@ -47890,6 +47964,7 @@
       "menu_path": "/_Distortion/Pol_ynomial...", 
       "name": "polydistort", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_poly_distort", 
@@ -47899,6 +47974,7 @@
       "menu_path": "/_Level/_Polynomial Background...", 
       "name": "polylevel", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_polynom_level", 
@@ -47908,7 +47984,7 @@
       "menu_path": "/_Presentation/_Attach Presentation...", 
       "name": "presentation_attach", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Attach another data field as presentation"
@@ -47917,7 +47993,7 @@
       "menu_path": "/_Presentation/E_xtract Presentation", 
       "name": "presentation_extract", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Extract presentation to a new image"
@@ -47926,7 +48002,7 @@
       "menu_path": "/_Presentation/_Logscale", 
       "name": "presentation_logscale", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Creates a presentation with logarithmic color scale"
@@ -47935,7 +48011,7 @@
       "menu_path": "/_Presentation/_Remove Presentation", 
       "name": "presentation_remove", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Remove presentation from data"
@@ -47944,7 +48020,7 @@
       "menu_path": "/_Presentation/_Gradient/_Prewitt (horizontal)", 
       "name": "prewitt_horizontal", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Horizontal Prewitt gradient presentation"
@@ -47953,7 +48029,7 @@
       "menu_path": "/_Presentation/_Gradient/_Prewitt (vertical)", 
       "name": "prewitt_vertical", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Vertical Prewitt gradient presentation"
@@ -47962,6 +48038,7 @@
       "menu_path": "/_Statistics/2D _PSDF...", 
       "name": "psdf2d", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -47971,6 +48048,7 @@
       "menu_path": "/_Statistics/_Log-Phi PSDF...", 
       "name": "psdf_logphi", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_psdf_log_phi", 
@@ -47980,7 +48058,7 @@
       "menu_path": "/_Statistics/_Transfer Function Guess...", 
       "name": "psf", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Estimate transfer function from known data and ideal image"
@@ -47989,6 +48067,7 @@
       "menu_path": "/_Presentation/_Rank...", 
       "name": "rank", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_rank_filter", 
@@ -47998,6 +48077,7 @@
       "menu_path": "/_Integral Transforms/_Rank Filter...", 
       "name": "rank_filter", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48007,6 +48087,7 @@
       "menu_path": "/_Distortion/_Radial Smoothing...", 
       "name": "raveraging", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48016,7 +48097,7 @@
       "menu_path": "/_Multidata/_Relation...", 
       "name": "relate", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_image_relation", 
       "tooltip": "Find simple relations between data"
@@ -48025,6 +48106,7 @@
       "menu_path": "/_Distortion/_Reorder...", 
       "name": "reorder", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48034,6 +48116,7 @@
       "menu_path": "/_Basic Operations/_Resample...", 
       "name": "resample", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48043,6 +48126,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Residue...", 
       "name": "residue_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48052,6 +48136,7 @@
       "menu_path": "/S_ynthetic/_Deposition/_Rods...", 
       "name": "rod_deposit_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48061,6 +48146,7 @@
       "menu_path": "/_Basic Operations/Rotate by _Angle...", 
       "name": "rotate", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_rotate", 
@@ -48070,7 +48156,7 @@
       "menu_path": "/_Basic Operations/Flip _Both", 
       "name": "rotate_180", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_rotate_180", 
       "tooltip": "Flip data both horizontally and vertically"
@@ -48079,7 +48165,7 @@
       "menu_path": "/_Basic Operations/Rotate _Counterclockwise", 
       "name": "rotate_90_ccw", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_rotate_90_ccw", 
       "tooltip": "Rotate data 90 degrees counterclockwise"
@@ -48088,7 +48174,7 @@
       "menu_path": "/_Basic Operations/Rotate C_lockwise", 
       "name": "rotate_90_cw", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_rotate_90_cw", 
       "tooltip": "Rotate data 90 degrees clockwise"
@@ -48097,6 +48183,7 @@
       "menu_path": "/_Basic Operations/_Scale...", 
       "name": "scale", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_scale", 
@@ -48106,6 +48193,7 @@
       "menu_path": "/_Correct Data/M_ark Scars...", 
       "name": "scars_mark", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_mark_scars", 
@@ -48115,7 +48203,7 @@
       "menu_path": "/_Correct Data/Remove _Scars", 
       "name": "scars_remove", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_scars", 
       "tooltip": "Correct horizontal scars (strokes)"
@@ -48124,6 +48212,7 @@
       "menu_path": "/_Presentation/_SEM Image...", 
       "name": "semsim", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48133,6 +48222,7 @@
       "menu_path": "/_Presentation/_Shading...", 
       "name": "shade", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_shader", 
@@ -48142,7 +48232,7 @@
       "menu_path": "/Cali_bration/_Get Simple Errop Map...", 
       "name": "simple", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Simple error mapping"
@@ -48151,6 +48241,7 @@
       "menu_path": "/_Statistics/_Slope Distribution...", 
       "name": "slope_dist", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_distribution_slope", 
@@ -48160,7 +48251,7 @@
       "menu_path": "/_Integral Transforms/Local Slope", 
       "name": "slope_map", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "First derivative slope transformation"
@@ -48169,7 +48260,7 @@
       "menu_path": "/_SPM Modes/_Electrical/_SMM Calibration...", 
       "name": "smm", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Calibrate SMM using capacitors calibration sample"
@@ -48178,7 +48269,7 @@
       "menu_path": "/_SPM Modes/_Electrical/_Apply SMM Calibration...", 
       "name": "smm_apply", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Apply SMM calibration coefficients"
@@ -48187,7 +48278,7 @@
       "menu_path": "/_Presentation/_Gradient/_Sobel (horizontal)", 
       "name": "sobel_horizontal", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Horizontal Sobel gradient presentation"
@@ -48196,7 +48287,7 @@
       "menu_path": "/_Presentation/_Gradient/_Sobel (vertical)", 
       "name": "sobel_vertical", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
       "tooltip": "Vertical Sobel gradient presentation"
@@ -48205,6 +48296,7 @@
       "menu_path": "/_Level/Revolve _Sphere...", 
       "name": "sphere_revolve", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_revolve_sphere", 
@@ -48214,7 +48306,7 @@
       "menu_path": "/_Basic Operations/S_quare Samples", 
       "name": "square_samples", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_square_samples", 
       "tooltip": "Resample data with non-1:1 aspect ratio to square samples"
@@ -48223,7 +48315,7 @@
       "menu_path": "/M_ultidata/_Stitch...", 
       "name": "stitch", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_stitch", 
       "tooltip": "Stitch images using offsets"
@@ -48232,7 +48324,7 @@
       "menu_path": "/_Distortion/Straighten _Path...", 
       "name": "straighten_path", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_straighten_path", 
       "tooltip": "Straighten along a path"
@@ -48241,7 +48333,7 @@
       "menu_path": "/Measure _Features/_Terraces...", 
       "name": "terracefit", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_terrace_measure", 
       "tooltip": "Fit terraces with polynomial background"
@@ -48250,6 +48342,7 @@
       "menu_path": "/_Basic Operations/Li_mit Range...", 
       "name": "threshold", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_limit_range", 
@@ -48259,6 +48352,7 @@
       "menu_path": "/_Basic Operations/_Tilt...", 
       "name": "tilt", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_tilt", 
@@ -48268,7 +48362,7 @@
       "menu_path": "/SPM M_odes/_Tip/_Blind Estimation...", 
       "name": "tip_blind", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_tip_estimation", 
       "tooltip": "Blind tip estimation"
@@ -48277,7 +48371,7 @@
       "menu_path": "/SPM M_odes/_Tip/_Dilation...", 
       "name": "tip_dilation", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_tip_dilation", 
       "tooltip": "Surface dilation by defined tip"
@@ -48286,7 +48380,7 @@
       "menu_path": "/SPM M_odes/_Tip/_Certainty Map...", 
       "name": "tip_map", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_tip_map", 
       "tooltip": "Tip certainty map"
@@ -48295,7 +48389,7 @@
       "menu_path": "/SPM M_odes/_Tip/_Model Tip...", 
       "name": "tip_model", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_tip_model", 
       "tooltip": "Model AFM tip"
@@ -48304,7 +48398,7 @@
       "menu_path": "/SPM M_odes/_Tip/_Surface Reconstruction...", 
       "name": "tip_reconstruction", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_tip_erosion", 
       "tooltip": "Surface reconstruction by defined tip"
@@ -48313,6 +48407,7 @@
       "menu_path": "/SPM M_odes/_Force and Indentation/_Area function...", 
       "name": "tipshape", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48322,6 +48417,7 @@
       "menu_path": "/_Level/_Trimmed Mean...", 
       "name": "trimmed_mean", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48331,6 +48427,7 @@
       "menu_path": "/_Correct Data/_Unrotate...", 
       "name": "unrotate", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_unrotate", 
@@ -48340,7 +48437,7 @@
       "menu_path": "/_Basic Operations/Volumize", 
       "name": "volumize", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_volumize", 
       "tooltip": "Convert datafield to 3D data"
@@ -48349,6 +48446,7 @@
       "menu_path": "/_Basic Operations/Volumize Layers...", 
       "name": "volumize_layers", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_volumize_layers", 
@@ -48358,6 +48456,7 @@
       "menu_path": "/S_ynthetic/_Waves...", 
       "name": "wave_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_synthetic_waves", 
@@ -48367,6 +48466,7 @@
       "menu_path": "/S_ynthetic/_Wetting...", 
       "name": "wfr_synth", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48376,6 +48476,7 @@
       "menu_path": "/_Grains/_Mark by Segmentation...", 
       "name": "wpour_mark", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_grains_water", 
@@ -48385,6 +48486,7 @@
       "menu_path": "/_Basic Operations/_Wrap Value...", 
       "name": "wrapvalue", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_wrap_value", 
@@ -48394,7 +48496,7 @@
       "menu_path": "/M_ultidata/_XY Denoise...", 
       "name": "xydenoise", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": "gwy_xy_denoise", 
       "tooltip": "Denoises horizontal/vertical measurement."
@@ -48403,7 +48505,7 @@
       "menu_path": "/_Basic Operations/XYZ from C_hannels...", 
       "name": "xyz_channels", 
       "run_types": [
-        "RUN_IMMEDIATE"
+        "RUN_INTERACTIVE"
       ], 
       "stock_id": null, 
       "tooltip": "Convert three channels to XYZ data"
@@ -48412,7 +48514,7 @@
       "menu_path": "/_Basic Operations/_XYZize", 
       "name": "xyzize", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_xyzize", 
       "tooltip": "Convert to XYZ data"
@@ -48421,6 +48523,7 @@
       "menu_path": "/_Presentation/_Edge Detection/_Zero Crossing...", 
       "name": "zero_crossing", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": null, 
@@ -48430,6 +48533,7 @@
       "menu_path": "/_Level/Zero Ma_ximum Value", 
       "name": "zero_max", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_zero_maximum", 
@@ -48439,6 +48543,7 @@
       "menu_path": "/_Level/Zero _Mean Value", 
       "name": "zero_mean", 
       "run_types": [
+        "RUN_INTERACTIVE", 
         "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_zero_mean", 
@@ -48448,7 +48553,7 @@
       "menu_path": "/_Correct Data/_Zero Data Under Mask", 
       "name": "zeromasked", 
       "run_types": [
-        "UNKNOWN(4)"
+        "RUN_IMMEDIATE"
       ], 
       "stock_id": "gwy_zero_under_mask", 
       "tooltip": "Fill data under mask with zeros"

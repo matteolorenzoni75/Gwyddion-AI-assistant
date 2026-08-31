@@ -47,11 +47,14 @@ MODULE_DIR = os.path.join(GWY_ROOT, "lib", "gwyddion", "modules")
 # Identifiers Gwyddion uses for registered functions: lowercase, digits, underscore.
 IDENT_RE = re.compile(r"[a-z][a-z0-9_]{2,63}")
 
-# Run-type flags, for decoding gwy_process_func_get_run_types().
-RUN_TYPE_FLAGS = [
-    ("RUN_NONE", 0),
-    ("RUN_INTERACTIVE", 1),
-    ("RUN_IMMEDIATE", 2),
+# Run-type flag names, resolved from the gwy module rather than hardcoded.
+# Hardcoding these was wrong: the real values are NONINTERACTIVE=1,
+# INTERACTIVE=2, IMMEDIATE=4, so an assumed 1/2 mislabelled every function
+# and reported the genuinely immediate ones as "UNKNOWN(4)".
+RUN_TYPE_NAMES = [
+    "RUN_NONINTERACTIVE",
+    "RUN_INTERACTIVE",
+    "RUN_IMMEDIATE",
 ]
 
 # File-operation flag names, resolved from the gwy module so we never hardcode
@@ -111,14 +114,25 @@ def harvest_all_candidates():
 
 def decode_run_types(value):
     """Turn the run-type bitmask into a readable list."""
-    if not value:
+    try:
+        raw = int(value)
+    except (TypeError, ValueError):
+        return ["RUN_NONE"]
+    if not raw:
         return ["RUN_NONE"]
     out = []
-    for name, bit in RUN_TYPE_FLAGS:
-        if bit and (value & bit):
-            out.append(name)
+    for const in RUN_TYPE_NAMES:
+        bit = getattr(gwy, const, None)
+        if bit is None:
+            continue
+        try:
+            bit = int(bit)
+        except (TypeError, ValueError):
+            continue
+        if bit and (raw & bit):
+            out.append(const)
     if not out:
-        out.append("UNKNOWN(%d)" % value)
+        out.append("UNKNOWN(%d)" % raw)
     return out
 
 
