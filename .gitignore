@@ -1,0 +1,5 @@
+﻿# Generated / large
+__pycache__/
+*.pyc
+.venv/
+# Keep the API inventory - it is a deliverable, not a build artifact.
