@@ -14,7 +14,8 @@ import pytest
 
 from afm_copilot.analysis import (MAX_PLANE_FRACTION, MIN_SEPARABILITY,
                                   aggregate, measure_film_thickness,
-                                  measure_step, measure_step_iso5436)
+                                  measure_step, measure_step_between,
+                                  measure_step_iso5436)
 from afm_copilot.gwy_io import Channel
 from afm_copilot.profile import extract_profile, profile_across
 
@@ -162,6 +163,74 @@ def test_band_averaging_reduces_noise():
     # scatter -- roughly by sqrt(16), so require at least a factor of two.
     tail = slice(int(0.6 * single.n_points), None)
     assert np.std(banded.height[tail]) < np.std(single.height[tail]) / 2
+
+
+def test_manual_regions_recover_the_step():
+    """Measuring between two chosen regions is the cursor workflow."""
+    truth = 25e-9
+    channel = make_film_with_scratch(thickness=truth, roughness=0.5e-9,
+                                     scratch_fraction=0.4)
+    prof = profile_across(channel, "horizontal", band_px=8)
+
+    n = prof.n_points
+    lower = prof.height[int(0.05 * n):int(0.30 * n)]   # inside the scratch
+    upper = prof.height[int(0.60 * n):int(0.95 * n)]   # on the film
+
+    result = measure_step_between(lower, upper, source="synthetic")
+
+    assert result.ok, result.warnings
+    assert result.value == pytest.approx(truth, rel=0.05)
+    assert result.confidence == "good"
+
+
+def test_manual_and_automatic_agree_on_a_clean_step():
+    """
+    Two independent methods on the same data should land in the same place.
+
+    If they diverge, one of them is wrong -- this is the cross-check that
+    catches a regression in either.
+    """
+    channel = make_film_with_scratch(thickness=30e-9, roughness=0.5e-9,
+                                     scratch_fraction=0.4)
+    prof = profile_across(channel, "horizontal", band_px=8)
+    n = prof.n_points
+
+    automatic = measure_step_iso5436(prof, source="synthetic")
+    manual = measure_step_between(prof.height[int(0.05 * n):int(0.30 * n)],
+                                  prof.height[int(0.60 * n):int(0.95 * n)],
+                                  source="synthetic")
+
+    assert automatic.ok and manual.ok
+    assert manual.value == pytest.approx(automatic.value, rel=0.05)
+
+
+def test_manual_warns_when_a_region_straddles_the_edge():
+    """
+    The failure mode a cursor measurement actually has.
+
+    Nothing can tell the user their region is badly placed except the scatter
+    inside it, so that has to be reported.
+    """
+    channel = make_film_with_scratch(thickness=30e-9, roughness=0.5e-9,
+                                     scratch_fraction=0.4)
+    prof = profile_across(channel, "horizontal", band_px=8)
+    n = prof.n_points
+
+    # This region spans the edge: half substrate, half film.
+    straddling = prof.height[int(0.25 * n):int(0.55 * n)]
+    clean = prof.height[int(0.60 * n):int(0.95 * n)]
+
+    result = measure_step_between(straddling, clean, source="synthetic")
+
+    assert result.ok  # it still reports a number -- the user asked for one
+    assert result.confidence == "marginal"
+    assert any("straddling" in w or "scatter" in w for w in result.warnings)
+
+
+def test_manual_refuses_an_empty_region():
+    result = measure_step_between(np.array([1e-9]), np.array([2e-9, 3e-9]))
+    assert not result.ok
+    assert "three points" in result.warnings[0]
 
 
 def test_aggregate_pools_and_reports_rejections():

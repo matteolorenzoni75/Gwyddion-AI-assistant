@@ -97,8 +97,14 @@ class StepResult:
             f"{self.uncertainty / factor:.3f} {unit}"
             + ("   [MARGINAL]" if self.confidence == "marginal" else ""),
             f"  Method: {self.method}",
-            f"  Lower level covers {self.lower_fraction * 100:.0f}% of the "
-            f"frame, upper level {self.upper_fraction * 100:.0f}%.",
+            # For a manual measurement the fractions describe the points the
+            # user selected, not the image -- saying "of the frame" there would
+            # be wrong.
+            (f"  Lower region has {self.lower_fraction * 100:.0f}% of the "
+             f"selected points, upper region {self.upper_fraction * 100:.0f}%."
+             if self.method.startswith("manual") else
+             f"  Lower level covers {self.lower_fraction * 100:.0f}% of the "
+             f"frame, upper level {self.upper_fraction * 100:.0f}%."),
             f"  The two levels are separated by "
             f"{self.separation_ratio:.1f}x their own scatter"
             f" -- {'clearly distinct' if self.separation_ratio > 4 else 'distinguishable but close'}.",
@@ -360,6 +366,66 @@ def measure_step_iso5436(profile: Profile, source: str = "") -> StepResult:
         result.warnings.append(
             "the two plateaux overlap too much to call this a step")
         return result
+
+    result.ok = True
+    return result
+
+
+def measure_step_between(
+    lower: np.ndarray,
+    upper: np.ndarray,
+    source: str = "",
+) -> StepResult:
+    """
+    Step height between two regions the user chose by hand.
+
+    This is the measurement someone makes with cursors: pick a stretch of the
+    lower surface, pick a stretch of the upper one, take the difference of the
+    means. Nothing is inferred -- if the regions are placed badly the answer is
+    wrong, and that is the operator's call to make.
+
+    No bimodality or tilt test applies here: the user has asserted that these
+    two stretches are the two levels. What is still reported is the scatter
+    within each region, because a region straddling an edge shows it
+    immediately as a large standard deviation.
+    """
+    lower = np.asarray(lower, dtype=float).ravel()
+    upper = np.asarray(upper, dtype=float).ravel()
+    lower = lower[np.isfinite(lower)]
+    upper = upper[np.isfinite(upper)]
+
+    result = StepResult(ok=False, method="manual: mean of two chosen regions",
+                        source=source)
+    if lower.size < 3 or upper.size < 3:
+        result.warnings.append(
+            "each region needs at least three points -- drag them wider")
+        return result
+
+    result.lower_level = float(np.mean(lower))
+    result.upper_level = float(np.mean(upper))
+    result.lower_std = float(np.std(lower))
+    result.upper_std = float(np.std(upper))
+    result.lower_fraction = lower.size / (lower.size + upper.size)
+    result.upper_fraction = upper.size / (lower.size + upper.size)
+    result.value = result.upper_level - result.lower_level
+
+    # Standard error of a difference of two means.
+    result.uncertainty = float(np.hypot(result.lower_std / np.sqrt(lower.size),
+                                        result.upper_std / np.sqrt(upper.size)))
+    pooled = float(np.hypot(result.lower_std, result.upper_std)) / np.sqrt(2)
+    result.separation_ratio = (float(abs(result.value) / pooled) if pooled > 0
+                               else float("inf"))
+    result.confidence = "good" if result.separation_ratio >= 3 else "marginal"
+
+    if result.value < 0:
+        result.warnings.append(
+            "the second region sits lower than the first, so this step is "
+            "negative -- swap them if that was not intended")
+    if result.separation_ratio < 3:
+        result.warnings.append(
+            f"the step is only {result.separation_ratio:.1f}x the scatter "
+            f"inside the regions. Either the surfaces are rough compared with "
+            f"the step, or a region is straddling an edge.")
 
     result.ok = True
     return result
