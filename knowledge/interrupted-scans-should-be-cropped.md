@@ -14,6 +14,20 @@ half the frame is empty.
 any other scan**, at the user's instruction. Not to discard it: the measured
 part is good data, and throwing away half a pool this size is not affordable.
 
+## But there is a point where cropping is not worth it
+
+Reviewing the six, the user cropped five and discarded one. The one discarded
+(`Silaver Film - Kiril 20nm001`) has **89% of the frame empty** — a few rows
+survive. The ones kept were 68%, 56%, 38%, 31% and 27% empty, including two
+that carry a film-thickness scratch worth measuring.
+
+So the rule is not "always crop". It is: crop while enough of the frame
+survives to contain something measurable, discard when it does not. On this
+evidence the boundary sits somewhere between 68% and 89% empty; **keep when at
+least about a third of the frame survives** is a defensible working rule, and
+the decision should be shown to the user rather than taken silently — the
+question "is what is left worth measuring" depends on what is in it.
+
 ## Why it mattered here
 
 Before this was noticed, the empty half was being measured as though it were
