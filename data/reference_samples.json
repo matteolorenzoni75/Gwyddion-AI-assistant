@@ -1,0 +1,150 @@
+{
+  "about": "The user's own AFM sample library, with the values they measured and certified. These are ACCEPTANCE TESTS: numbers the software must reproduce, not training data. Source: 'SAMPLE CATALOG Layout2.docx', AFM Sample DATABASE, Matteo Lorenzoni (IIT), read 2026-09-02.",
+  "note_on_channels": "Several entries were measured on non-height channels (KPFM potential, Young modulus, current, phase). Only the height-channel numbers are usable as tests today; the others are recorded so the value is not lost when other channels are added.",
+  "caveat": "The catalog carries exported figures, not raw files. To run these as automated tests the raw scans are needed -- expected in the 13 GB batch.",
+  "samples": [
+    {
+      "id": "001", "name": "HOPG", "full_name": "Highly oriented pyrolytic graphite",
+      "scope": "KPFM reference / low roughness benchmark",
+      "instrument": "Asylum MFP-3D", "mode": "KPFM, Pt/Ir coated tip",
+      "probe": "SCM-PIT Bruker, k~2.8 N/m, f0~75 kHz",
+      "scan_um": [5, 5],
+      "morphology": "atomically flat terraces separated by steps",
+      "reference_values": {
+        "work_function_eV": 4.6, "work_function_tolerance_eV": 0.03,
+        "tip_work_function_eV": 4.73,
+        "tip_radius_nm": 25
+      },
+      "height_test": null
+    },
+    {
+      "id": "002", "name": "Teflon", "full_name": "Polytetrafluoroethylene",
+      "scope": "test sample for mechanical properties",
+      "instrument": "Asylum MFP-3D", "mode": "AM-FM viscoelastic mapping",
+      "probe": "RTESPA 300 Bruker", "scan_um": [1, 1],
+      "morphology": "drawn polymer, elongated bands along the draw direction",
+      "reference_values": {"bulk_young_modulus_GPa": 0.564},
+      "height_test": null
+    },
+    {
+      "id": "003", "name": "Mica", "scope": "low roughness / high resolution",
+      "instrument": "AR MFP-3D", "mode": "tapping", "probe": "RTESPA Bruker",
+      "scan_um": [0.5, 0.5], "also_scanned_um": [0.1, 0.1],
+      "morphology": "freshly cleaved, atomically flat",
+      "reference_values": {"rms_nm": 0.036},
+      "height_test": {
+        "quantity": "rms", "expected_nm": 0.036,
+        "why": "the flatness floor of the whole library. If the pipeline cannot return 36 pm here, its levelling is adding roughness rather than removing it."
+      }
+    },
+    {
+      "id": "004", "name": "ITO glass", "scope": "KPFM / C-AFM test sample",
+      "instrument": "Asylum MFP-3D", "mode": "KPFM", "probe": "SCM-PIT Bruker",
+      "scan_um": [9, 3],
+      "morphology": "fine dense grains",
+      "reference_values": {"sq_nm": 0.402, "work_function_eV": 4.52},
+      "height_test": {"quantity": "sq", "expected_nm": 0.402}
+    },
+    {
+      "id": "005", "name": "Anodic porous alumina", "abbrev": "APA",
+      "scope": "high resolution imaging / phase imaging",
+      "instrument": "Asylum MFP-3D", "mode": "tapping",
+      "probe": "RTESPA 300 Bruker", "scan_um": [2, 2],
+      "morphology": "dense array of pores",
+      "reference_values": {"pore_radius_nm": 35, "pitch_nm": 74},
+      "measured_how": "pore radius by masking + grain analysis in Gwyddion; pitch from the 2D FFT of the phase image",
+      "height_test": {
+        "quantity": "pore_radius_and_pitch",
+        "expected_radius_nm": 35, "expected_pitch_nm": 74,
+        "why": "the one sample that tests BOTH broken measurements at once: the object counter must find features that go DOWN, and the periodicity must return 74 nm rather than the two-pixel limit."
+      }
+    },
+    {
+      "id": "006", "name": "Gold electrodes", "scope": "conductive AFM test sample",
+      "instrument": "Asylum MFP-3D", "mode": "C-AFM with ORCA (contact)",
+      "probe": "SCM-PIT Bruker", "scan_um": [5, 4],
+      "morphology": "patterned electrode with straight edges, ~200 nm tall",
+      "reference_values": {
+        "step_height_nm": 201, "total_resistance_Mohm": 2.2,
+        "sample_bias_V": 2, "force_setpoint_nN": 100
+      },
+      "height_test": {
+        "quantity": "step_height", "expected_nm": 201,
+        "why": "a lithographic step with straight edges: the clean case for the ISO middle-third step measurement, and a stand-in for the film-thickness scratches."
+      }
+    },
+    {
+      "id": "007", "name": "PS-PMMA block co-polymer (cylinders)",
+      "scope": "high resolution mechanical properties",
+      "instrument": "Asylum MFP-3D", "mode": "AM-FM viscoelastic mapping",
+      "probe": "RTESPA 300 Bruker", "scan_um": [0.5, 0.5],
+      "morphology": "fingerprint pattern of cylindrical phases",
+      "reference_values": {"pitch_nm": 36},
+      "height_test": {
+        "quantity": "pitch", "expected_nm": 36,
+        "why": "periodic but NOT straight: the pattern meanders, so a direction-averaged method must still find the spacing."
+      }
+    },
+    {
+      "id": "008", "name": "PS-PMMA block co-polymer (lamellae)",
+      "scope": "high resolution mechanical properties",
+      "instrument": "Asylum MFP-3D", "mode": "AM-FM viscoelastic mapping",
+      "probe": "RTESPA 300 Bruker", "scan_um": [0.5, 0.5],
+      "morphology": "lamellar phases",
+      "reference_values": {"pitch_nm": 36},
+      "height_test": {"quantity": "pitch", "expected_nm": 36}
+    },
+    {
+      "id": "009", "name": "PMMA film", "scope": "mechanical properties",
+      "instrument": "Asylum MFP-3D", "mode": "AM-FM viscoelastic mapping",
+      "probe": "RTESPA 300 Bruker", "scan_um": [0.5, 0.5],
+      "morphology": "smooth spin-coated film",
+      "reference_values": {"young_modulus_GPa": 2.77,
+                           "bulk_range_MPa": [1800, 3100]},
+      "calibration": "tip calibrated on the Asylum PS/LDPE standard, PS reference 2 GPa",
+      "height_test": null
+    },
+    {
+      "id": "010", "name": "TiO2 nanorods in PMMA", "scope": "mechanical properties",
+      "instrument": "Asylum MFP-3D", "mode": "AM-FM viscoelastic mapping",
+      "probe": "RTESPA 300 Bruker", "scan_um": [9, 3],
+      "morphology": "nanorod aggregates embedded in a PMMA matrix",
+      "reference_values": {"nanorod_width_nm": [3, 4],
+                           "nanorod_length_nm": [25, 30]},
+      "height_test": {
+        "quantity": "object_size", "expected_width_nm": [3, 4],
+        "why": "3-4 nm wide against a ~25 nm tip radius: the apparent width will be many times the real one. The pipeline must NOT report the measured width as the object's."
+      }
+    },
+    {
+      "id": "011", "name": "Lambda DNA on mica", "scope": "high resolution imaging",
+      "instrument": "Asylum MFP-3D", "mode": "tapping",
+      "probe": "RTESPA 300 Bruker", "scan_um": null,
+      "morphology": "single filaments crossing a flat mica background",
+      "reference_values": {
+        "height_nm": 1.34, "apparent_width_nm": 40,
+        "tip_radius_nm": 10, "real_width_nm": 10
+      },
+      "measured_how": "tip deconvolution done by hand in the catalog: apparent width 2x = 4*sqrt(R_tip*R_feature), so R_feature = (2x)^2 / (16*R_tip)",
+      "height_test": {
+        "quantity": "tip_deconvolution",
+        "given_apparent_width_nm": 40, "given_tip_radius_nm": 10,
+        "expected_real_width_nm": 10,
+        "why": "the worked example of the tip correction, with the user's own numbers. A filament 1.34 nm tall reads 40 nm wide and is really about 10 nm."
+      }
+    },
+    {
+      "id": "012", "name": "DVD", "scope": "lab exercise test sample",
+      "instrument": "Park XE-100", "mode": "non-contact",
+      "probe": "OMCL-AC160TS", "scan_um": [0.5, 0.5],
+      "morphology": "spiral track with elongated pits along it",
+      "reference_values": {"track_pitch_nm": 740,
+                           "measured_pitch_nm": 733.5,
+                           "measured_how": "simple FFT"},
+      "height_test": {
+        "quantity": "pitch", "expected_nm": 740, "tolerance_nm": 15,
+        "why": "THE periodicity test. A certified pitch, already reproduced to within 0.9% by a plain FFT. The pool contains our own DVD scan, on which the current periodicity measurement returns a 22 nm period -- the two-pixel limit -- instead of the track spacing."
+      }
+    }
+  ]
+}
