@@ -76,6 +76,42 @@ scans are not flattened by deep ones:
 .venv\Scripts\python.exe -m afm_copilot batch-images "D:\scans" --out figures --dpi 300 --auto-group
 ```
 
+## Talking to it through Claude
+
+The same operations are exposed to Claude Desktop as an MCP server, so you can
+work by conversation instead of by flag. It runs on your existing Claude
+subscription — no API key, nothing billed per token — and because MCP carries
+images back, Claude *sees* the map it is reasoning about.
+
+Register it once:
+
+```bash
+.venv\Scripts\python.exe tools\register_mcp.py --apply
+```
+
+That merges into `claude_desktop_config.json`, keeping every other setting, and
+backs up the previous version first. Restart Claude Desktop afterwards — MCP
+servers are only read at launch. Run it without `--apply` to see the change
+before it happens.
+
+Then just ask: *"look at the scans in D:\today and tell me what they need"*,
+*"measure the film thickness"*, *"does Gwyddion have anything for removing
+scan-line stripes?"*
+
+Ten tools are available. The ones worth knowing:
+
+| Tool | What it gives Claude |
+|---|---|
+| `inspect_scan` | Measurements **and the rendered image**, so it can judge visually |
+| `list_recipes` / `explain_recipe` | The recipes with their reasoning, to quote back to you |
+| `process_scans` | Applies a recipe, reporting what each step changed |
+| `measure_thickness` | The step measurement, including the refusals |
+| `search_gwyddion` | Searches all 197 Gwyddion functions when the recipes don't cover it |
+
+The server's instructions tell Claude two things explicitly: that a large drop
+in RMS is not automatically good, and that it must never guess a sample's
+content or its recipe from the filename — that would defeat a blind test set.
+
 ## The API inventory
 
 Gwyddion's processing power is the point of this project, and the inventory is
