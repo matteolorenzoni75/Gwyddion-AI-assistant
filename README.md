@@ -4,8 +4,16 @@ An interactive application with an LLM at its core that reads an AFM height map,
 recognises what the artifacts are, and drives Gwyddion's own processing
 functions to correct them — with as little human effort as possible.
 
-**Status: research and groundwork complete. No application code yet.**
-The only working code here is the PyGwy inventory tooling in [`tools/`](tools/).
+Two ways in, over one library: a **desktop application** for the work that needs
+your eyes, and an **MCP server** so Claude Desktop can do the rest by
+conversation.
+
+| Working today | Planned |
+|---|---|
+| Batch export to comparable figures | Roughness and spatial length |
+| One-click recipes, each explaining itself | Automatic artifact detection |
+| Profiles: drag, measure, export | Learning from your decisions |
+| Film thickness, with honest refusals | |
 
 This project continues [`C:\AFM_Automation`](file:///C:/AFM_Automation), which is
 untouched. Nothing there has been modified or deleted.
@@ -34,7 +42,11 @@ untouched. Nothing there has been modified or deleted.
 
 ## Using it
 
-Set up once:
+Set up once, **from the project folder**:
+
+```bash
+cd C:\AFM_Copilot
+```
 
 ```bash
 C:\Users\MLorenzoni\AppData\Local\Programs\Python\Python313\python.exe -m venv .venv
@@ -44,20 +56,41 @@ C:\Users\MLorenzoni\AppData\Local\Programs\Python\Python313\python.exe -m venv .
 .venv\Scripts\python.exe -m pip install -e .
 ```
 
-Check that Gwyddion can be driven headlessly:
+That last step is what makes `afm_copilot` importable from any directory. Skip
+it and you get `No module named 'afm_copilot'` everywhere except the project
+folder.
+
+> **Never type a bare `python` on this machine.** It resolves to Gwyddion's
+> Python 2.7, which cannot run this. Always use `.venv\Scripts\python.exe`, or
+> the `afm-copilot` command that the install above puts on the path.
+
+### The desktop application
+
+Double-click **AFM Copilot.bat**, or the desktop shortcut. From a terminal:
 
 ```bash
-.venv\Scripts\python.exe -m afm_copilot selftest
+C:\AFM_Copilot\.venv\Scripts\python.exe -m afm_copilot.gui
+```
+
+The window has the scan list on the left, the image in the middle with a
+draggable histogram for the z range, the recipes on the right with their full
+explanation, and the profile underneath — drag the cyan line across the image
+and the section follows.
+
+### Checking the Gwyddion connection
+
+```bash
+afm-copilot selftest
 ```
 
 **See what the one-click recipes do, and why:**
 
 ```bash
-.venv\Scripts\python.exe -m afm_copilot recipes
+afm-copilot recipes
 ```
 
 ```bash
-.venv\Scripts\python.exe -m afm_copilot recipes clean-with-features
+afm-copilot recipes clean-with-features
 ```
 
 **Process a folder** — raw instrument files are converted automatically. Every
@@ -65,7 +98,7 @@ step reports what it changed, so the processing is auditable rather than a
 black box:
 
 ```bash
-.venv\Scripts\python.exe -m afm_copilot process "D:\scans" --recipe quick-clean --out results
+afm-copilot process "D:\scans" --recipe quick-clean --out results
 ```
 
 **Render a batch as comparable images** — one shared colour scale, scale bar,
@@ -73,7 +106,7 @@ fixed DPI. `--auto-group` splits a mixed folder into scale groups so shallow
 scans are not flattened by deep ones:
 
 ```bash
-.venv\Scripts\python.exe -m afm_copilot batch-images "D:\scans" --out figures --dpi 300 --auto-group
+afm-copilot batch-images "D:\scans" --out figures --dpi 300 --auto-group
 ```
 
 ## Talking to it through Claude
