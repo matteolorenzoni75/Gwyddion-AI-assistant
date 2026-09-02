@@ -464,6 +464,68 @@ def cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_plan(args: argparse.Namespace) -> int:
+    """Say what each scan needs, and why, without touching anything."""
+    from afm_copilot.decide import plan_for
+
+    gwy_files, raw_files = _collect_inputs(args.inputs)
+    if raw_files:
+        work = Path(args.out) if args.out else Path(".afm_plan")
+        try:
+            report = GwyBridge().convert_raw(raw_files, work / "_gwy")
+        except BridgeError as exc:
+            print(f"Could not read the raw files: {exc}", file=sys.stderr)
+            return 1
+        gwy_files.extend(Path(r["gwy"]) for r in report["results"] if r["ok"])
+
+    if not gwy_files:
+        print("Nothing to look at.", file=sys.stderr)
+        return 1
+
+    plans = []
+    for path in sorted(set(gwy_files)):
+        try:
+            channel = load_height(path)
+        except (ValueError, OSError) as exc:
+            print(f"  ! {path.name}: {exc}", file=sys.stderr)
+            continue
+        plans.append((path, plan_for(channel)))
+
+    if args.detail:
+        for path, plan in plans:
+            print(f"\n=== {path.name} ===")
+            print(plan.explain())
+        print()
+    else:
+        print(f"{'scan':<34} {'tilt':>5} {'objects':>8} {'order':>6}   recipe")
+        print("-" * 78)
+        for path, plan in plans:
+            print(f"{path.stem[:34]:<34} {plan.tilt * 100:>4.0f}% "
+                  f"{plan.object_fraction * 100:>7.0f}% "
+                  f"{plan.background_degree:>6}   {plan.recipe_key}")
+        print("\nRun again with --detail to see the reasoning for each.")
+
+    print("\nNothing was processed. These are recommendations, measured from "
+          "each scan.")
+    if args.out:
+        out_dir = Path(args.out)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        payload = [{
+            "scan": p.name,
+            "tilt": plan.tilt,
+            "object_fraction": plan.object_fraction,
+            "background_degree": plan.background_degree,
+            "already_levelled": plan.already_levelled,
+            "recipe": plan.recipe_key,
+            "explained_by_degree": plan.explained_by_degree,
+            "notes": plan.notes,
+        } for p, plan in plans]
+        path = out_dir / "plan.json"
+        path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        print(f"Details: {path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="afm-copilot",
@@ -610,6 +672,21 @@ def build_parser() -> argparse.ArgumentParser:
     p_cmp.add_argument("--title", default="Raw and processed",
                        help="title shown on the report")
     p_cmp.set_defaults(func=cmd_compare)
+
+    p_plan = sub.add_parser(
+        "plan",
+        help="say what each scan needs, and why, without processing anything",
+        description=(
+            "Measures each scan and recommends how to treat it — how much tilt "
+            "it has, whether anything stands above the surface, and what order "
+            "of background is genuinely there. Nothing is changed; this is the "
+            "reasoning, shown before any decision is acted on."))
+    p_plan.add_argument("inputs", nargs="+", help="files or folders")
+    p_plan.add_argument("--detail", action="store_true",
+                        help="show the full reasoning for each scan")
+    p_plan.add_argument("--out", default=None,
+                        help="also write the measurements to this directory")
+    p_plan.set_defaults(func=cmd_plan)
 
     return parser
 
