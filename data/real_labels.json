@@ -1,0 +1,45 @@
+{
+  "about": "Labels given by the user, one scan at a time, looking at the images. Ground truth for the 55-scan test pool. The filenames are deliberately uninformative or deliberately wrong: nothing here may be inferred from a name.",
+  "started": "2026-09-02",
+  "labels": [
+    {
+      "index": 1,
+      "scan": "231219007006",
+      "label": "calibration grating",
+      "note": "Certified pitch, so this scan is the reference against which the periodicity measurement itself is checked. Measured 1.7 um at 90 deg; grating model not yet confirmed by the user.",
+      "measured_period_nm": 1700,
+      "scan_size_um": 35.0
+    },
+    {
+      "index": 2,
+      "scan": "6PercYb-PbI3005",
+      "label": "scalpel scratch through a film, for film thickness",
+      "note": "User: 'misura molto frequente'. A scalpel cut down to the substrate; the film thickness is the step from the plateau to the trench floor. Bimodality 0.51, kurtosis -1.0: two height levels. Periodicity reports 28 at 101 deg, which is a FALSE POSITIVE -- one straight edge across the frame, not a repeat.",
+      "scan_size_um": 30.0,
+      "frequency": "common"
+    },
+    {
+      "index": 3,
+      "scan": "AS_SG_Mix_Br_I_10005",
+      "label": "halide perovskite crystal on a flat substrate",
+      "note": "One large faceted crystal about 5 x 15 um and 450 nm tall, plus lower ragged material and isolated debris. Periodicity reports 51 with a 102 nm period against a 48.9 nm pixel -- a FALSE POSITIVE at the two-pixel limit, i.e. line noise.",
+      "scan_size_um": 25.0,
+      "user_note": "The curved background here is the z feedback landing/flying over the tall crystal, not sample shape. This is the artifact we have to correct."
+    },
+    {
+      "index": 4,
+      "scan": "Camilla sample - deatil 01 5 um 002",
+      "label": "unnamed -- genuine sample morphology, pitted surface",
+      "note": "User confirmed the image is good and everything in it is morphology; did not name the material. Flat surface, RMS 23 nm, pitted with holes 100-400 nm across and up to 8 nm deep. Skewness -1.97 catches it; the object count reports 0 in 0 pieces because the detector only looks for features ABOVE the background. I wrongly called the edge streaks a tip artifact -- they are real.",
+      "scan_size_um": 5.0
+    },
+    {
+      "index": 5,
+      "scan": "Camilla sample - deatil 02 5 um 001",
+      "label": "same sample as index 4, different area",
+      "note": "User: 'si molto simile'. Same specimen, a few um away, but the descriptors land far apart: RMS 51 vs 23 nm, correlation length 566 vs 234 nm, skewness -0.37 vs -1.97. Pits still present; object count sees 2 pieces because it only looks upward. Elongated ridge-and-groove texture running up to the right.",
+      "scan_size_um": 5.0,
+      "same_sample_as": 4
+    }
+  ]
+}
