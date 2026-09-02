@@ -13,6 +13,9 @@ was processed the way it was.
 
 from afm_copilot.ops.catalog import OPERATIONS, Operation, get_operation
 from afm_copilot.ops.recipes import RECIPES, Recipe, get_recipe
+from afm_copilot.ops.recorded import (compare_logs, describe_source, parse_log,
+                                      read_log, recipe_from_log)
 
 __all__ = ["OPERATIONS", "Operation", "get_operation",
-           "RECIPES", "Recipe", "get_recipe"]
+           "RECIPES", "Recipe", "get_recipe",
+           "read_log", "parse_log", "recipe_from_log", "describe_source"]

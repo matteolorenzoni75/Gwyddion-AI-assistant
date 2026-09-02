@@ -18,7 +18,8 @@ from pathlib import Path
 from afm_copilot import __version__
 from afm_copilot.bridge import BridgeError, GwyBridge
 from afm_copilot.gwy_io import Channel, load_channels, load_height
-from afm_copilot.ops import RECIPES, get_recipe
+from afm_copilot.ops import (RECIPES, compare_logs, describe_source,
+                             get_recipe, read_log, recipe_from_log)
 from afm_copilot.report import build_thickness_report
 from afm_copilot.render import (RenderStyle, group_by_scale, group_label,
                                 render_batch)
@@ -335,6 +336,100 @@ def cmd_thickness(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_copy_processing(args: argparse.Namespace) -> int:
+    """Repeat one scan's processing on others."""
+    reference = Path(args.reference)
+    if not reference.is_file():
+        print(f"No such file: {reference}", file=sys.stderr)
+        return 1
+
+    entries = read_log(reference, channel=args.channel)
+    if not entries:
+        print(f"{reference.name} carries no processing history.\n"
+              f"Open it in Gwyddion, do the processing there, save it, and try "
+              f"again — Gwyddion records what you did inside the file.",
+              file=sys.stderr)
+        return 1
+
+    try:
+        recipe = recipe_from_log(entries, key="recorded",
+                                 title=f"Processing copied from {reference.stem}",
+                                 source_name=reference.name)
+    except ValueError as exc:
+        print(f"{exc}", file=sys.stderr)
+        return 1
+
+    importer = describe_source(entries)
+    print(f"Read {len(recipe.steps)} processing step(s) from {reference.name}"
+          + (f" (originally read by Gwyddion's '{importer}' importer)"
+             if importer else "") + ":\n")
+    print(recipe.explain())
+    print()
+
+    if args.show_only:
+        print("Nothing processed — this was a preview. Drop --show-only to "
+              "apply it.")
+        return 0
+
+    if not args.inputs:
+        print("Give one or more files or folders to apply this to, or use "
+              "--show-only.", file=sys.stderr)
+        return 1
+
+    gwy_files, raw_files = _collect_inputs(args.inputs)
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        bridge = GwyBridge()
+        if raw_files:
+            print(f"Converting {len(raw_files)} raw file(s)...")
+            report = bridge.convert_raw(raw_files, out_dir / "_gwy")
+            gwy_files.extend(Path(r["gwy"]) for r in report["results"] if r["ok"])
+        targets = [p for p in sorted(set(gwy_files)) if p != reference]
+        if not targets:
+            print("No scans to apply it to.", file=sys.stderr)
+            return 1
+        print(f"Applying to {len(targets)} scan(s)...\n")
+        result = bridge.run_recipe(recipe, targets, out_dir / "processed")
+    except BridgeError as exc:
+        print(f"Failed: {exc}", file=sys.stderr)
+        return 1
+
+    print(f"Done: {result['n_ok']}/{result['n_total']} scan(s).\n")
+    mismatches = 0
+    for rec in result["results"]:
+        if not rec["ok"]:
+            print(f"  {rec['stem']}: FAILED — {rec['error']}")
+            continue
+        print(f"  {rec['stem']}: RMS {rec['initial']['rms']:.4g} -> "
+              f"{rec['final']['rms']:.4g} m")
+        for step in rec["steps"]:
+            if step["note"]:
+                print(f"      {step['title']:<34} {step['note']}")
+
+        # Read back what Gwyddion recorded on the result and check it matches.
+        # A setting written to the wrong place fails silently, so comparing the
+        # two logs is the only way to know the copy was faithful.
+        problems = compare_logs(entries, read_log(rec["output"]))
+        for problem in problems:
+            print(f"      ! {problem}")
+        mismatches += len(problems)
+
+    if mismatches:
+        print(f"\n{mismatches} setting(s) did not carry over. Those steps ran "
+              f"with Gwyddion's own defaults\ninstead of the reference's "
+              f"values — check the result before relying on it.")
+    elif result["n_ok"]:
+        print("\nEvery recorded setting was reproduced exactly.")
+
+    json_path = out_dir / "copy_processing_summary.json"
+    json_path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+    print(f"\nProcessed files: {out_dir / 'processed'}")
+    print(f"Full record:     {json_path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="afm-copilot",
@@ -439,6 +534,28 @@ def build_parser() -> argparse.ArgumentParser:
                          help="skip levelling; use if the files are already "
                               "processed")
     p_thick.set_defaults(func=cmd_thickness)
+
+    p_copy = sub.add_parser(
+        "copy-processing",
+        help="repeat one scan's processing on others",
+        description=(
+            "Gwyddion records what it did inside every file it saves. Process "
+            "one scan the way you want — here or by hand in Gwyddion itself — "
+            "then use it as the reference and the same steps, with the same "
+            "settings, are applied to every scan you name."))
+    p_copy.add_argument("--from", dest="reference", required=True,
+                        metavar="SCAN.gwy",
+                        help="the scan whose processing should be copied")
+    p_copy.add_argument("inputs", nargs="*",
+                        help="files or folders to apply it to")
+    p_copy.add_argument("--out", default="copied",
+                        help="output directory (default: copied)")
+    p_copy.add_argument("--channel", type=int, default=0,
+                        help="which channel's history to read (default: 0)")
+    p_copy.add_argument("--show-only", action="store_true",
+                        help="print what was recorded without processing "
+                             "anything")
+    p_copy.set_defaults(func=cmd_copy_processing)
 
     return parser
 
