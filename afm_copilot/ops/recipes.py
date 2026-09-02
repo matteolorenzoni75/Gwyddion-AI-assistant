@@ -114,6 +114,30 @@ _ALL: list[Recipe] = [
         ),
     ),
     Recipe(
+        key="isolate-objects",
+        title="Correct the background around raised objects",
+        purpose="Mark whatever stands above the surface, correct the "
+                "background using only the surface around it, and leave the "
+                "objects themselves untouched by the fit.",
+        when_to_use="The common case: objects sitting on a substrate that is "
+                    "flat apart from instrument bow — a silicon wafer or mica. "
+                    "Particles, flakes, crystals, deposited islands.",
+        when_not_to_use="Surfaces with no distinct background, where features "
+                        "merge gradually into the substrate, or where the "
+                        "structure of interest is recessed rather than raised. "
+                        "Also check the mask if the objects cover much of the "
+                        "frame — there may not be enough background left to fit.",
+        steps=(
+            "plane_level",
+            "mark_raised_objects",
+            "drop_small_marks",
+            "background_around_objects",
+            "remove_mask",
+            "align_rows_median_diff",
+            "fix_zero",
+        ),
+    ),
+    Recipe(
         key="despike",
         title="Repair spikes and dropouts",
         purpose="Find single bad pixels and replace them with interpolated "

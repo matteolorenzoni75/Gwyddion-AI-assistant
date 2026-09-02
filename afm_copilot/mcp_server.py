@@ -73,7 +73,13 @@ server = MCPServer(
         "Never infer what a sample is, or which recipe it needs, from its "
         "filename. The user keeps their test set deliberately blind, and "
         "guessing from names defeats that. Judge from the image and the "
-        "measurements."
+        "measurements.\n\n"
+        "This project keeps notes on what it has established — call "
+        "`recall_knowledge` before answering how to process something or why a "
+        "correction behaved as it did. Those notes were measured on this "
+        "equipment and this data, and they include findings that contradict "
+        "the general advice. When something new is established, offer to "
+        "record it with `remember`."
     ),
 )
 
@@ -383,6 +389,54 @@ def search_gwyddion(query: str, limit: int = 20) -> str:
                  "what exists rather than implying it is already available "
                  "here.")
     return "\n".join(lines)
+
+
+@server.tool(
+    description="Consult what this project has established about these scans "
+                "and about Gwyddion. Use it BEFORE answering anything about "
+                "how to process a scan, why a correction behaved as it did, or "
+                "what a measurement means — the notes record what was actually "
+                "measured here, including things that turned out to be wrong. "
+                "Call it with no query to see everything known.")
+def recall_knowledge(query: str = "", limit: int = 4) -> str:
+    from afm_copilot.knowledge import index, recall
+
+    if not query.strip():
+        return index()
+
+    notes = recall(query, limit=limit)
+    if not notes:
+        return (f"Nothing recorded about '{query}'.\n\n" + index()
+                + "\n\nSay so rather than filling the gap with general "
+                  "knowledge about AFM — the point of these notes is that they "
+                  "were measured on this equipment and this data.")
+
+    parts = [f"{len(notes)} note(s) bearing on '{query}':\n"]
+    for n in notes:
+        parts.append(f"### {n.title}")
+        parts.append(f"_verified {n.verified}, {n.confidence}_\n")
+        parts.append(n.body)
+        parts.append("\n---\n")
+    return "\n".join(parts)
+
+
+@server.tool(
+    description="Record something new that has been established — a "
+                "measurement, a method that worked, or one that failed and "
+                "why. Only write what was actually observed, with the numbers; "
+                "do not record a guess as a finding. Ask the user before "
+                "recording anything they have not confirmed.")
+def remember(slug: str, title: str, body: str, tags: str = "",
+             confidence: str = "measured") -> str:
+    from afm_copilot.knowledge import add_note
+
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    try:
+        path = add_note(slug, title, body, tag_list, confidence)
+    except FileExistsError as exc:
+        return str(exc)
+    return (f"Recorded as {path.name}. It is a plain text file in the "
+            f"project's knowledge folder — the user can read and correct it.")
 
 
 @server.tool(

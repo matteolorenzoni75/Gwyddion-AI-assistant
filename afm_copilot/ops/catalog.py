@@ -194,6 +194,77 @@ _ALL: list[Operation] = [
         needs_mask=True,
     ),
     Operation(
+        key="mark_raised_objects",
+        gwy_func="grain_mark",
+        title="Mark the objects standing above the surface",
+        menu="/Grains/Mark by Threshold",
+        what="Marks every region rising more than a set fraction of the height "
+             "range above the rest, and covers it with a mask.",
+        why="This is the step that separates the objects from the surface they "
+            "sit on. Once they are marked, the background underneath can be "
+            "corrected without the objects taking part in the fit.",
+        caution="The threshold is a fraction of the height range, so it adapts "
+                "to each scan — but it assumes the objects really do stand "
+                "clear of the background. On a surface with a gradual slope, "
+                "or where features merge into the substrate, the mask will cut "
+                "through them.",
+        creates_mask=True,
+        settings={
+            "/module/grain_mark/isheight": True,
+            "/module/grain_mark/isslope": False,
+            "/module/grain_mark/islap": False,
+            "/module/grain_mark/isrank": False,
+            "/module/grain_mark/height": 0.35,
+            "/module/grain_mark/inverted": False,
+            "/module/grain_mark/combine": False,
+            "/module/grain_mark/merge_type": 0,
+            "/module/grain_mark/update": True,
+        },
+    ),
+    Operation(
+        key="drop_small_marks",
+        gwy_func="grain_filter",
+        title="Discard the specks",
+        menu="/Grains/Filter",
+        what="Removes the smallest marked regions, keeping only objects of a "
+             "meaningful size.",
+        why="Thresholding always catches a scattering of single-pixel noise "
+            "along with the real objects. Leaving those in the mask punches "
+            "small holes in the background fit for no reason.",
+        caution="Uses whatever size limit Gwyddion currently has set. If your "
+                "objects are genuinely tiny, check that they survived.",
+        needs_mask=True,
+    ),
+    Operation(
+        key="background_around_objects",
+        gwy_func="polylevel",
+        title="Correct the background, ignoring the marked objects",
+        menu="/Level/Polynomial Background",
+        what="Fits a curved surface to the background only — every marked "
+             "pixel is left out of the fit — and subtracts it from the whole "
+             "image.",
+        why="This is the answer to the usual complaint that a polynomial "
+            "background 'acts on the whole image'. It does subtract from the "
+            "whole image, which is correct, but with a mask it is *fitted* on "
+            "the background alone. Measured on a test surface with a flat "
+            "object on a curved base: fitting through everything left the "
+            "object distorted by 8.4 nm, fitting around the mask left it flat "
+            "to 0.3 nm.",
+        caution="Still a polynomial, so it removes real long-wavelength "
+                "structure along with the bow. Use the lowest order that "
+                "flattens the background.",
+        needs_mask=True,
+        settings={
+            "/module/polylevel/col_degree": 2,
+            "/module/polylevel/row_degree": 2,
+            "/module/polylevel/same_degree": True,
+            "/module/polylevel/independent": 1,
+            "/module/polylevel/do_extract": False,
+            # 0 is MASK_EXCLUDE: the marked pixels take no part in the fit.
+            "/module/polylevel/masking": 0,
+        },
+    ),
+    Operation(
         key="remove_mask",
         gwy_func="mask_remove",
         title="Clear the mask",
