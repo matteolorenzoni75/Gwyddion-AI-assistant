@@ -43,7 +43,8 @@ class PageData:
     result: StepResult
 
 
-def _draw_map(ax, channel: Channel, profile: Profile, cmap: str = DEFAULT_CMAP):
+def _draw_map(ax, channel: Channel, profile: Profile | None = None,
+              cmap: str = DEFAULT_CMAP):
     """The height map, with the profile line drawn where it was taken."""
     data = channel.data - np.nanmin(channel.data)
     factor, unit = pick_unit(float(np.nanmax(data)) or 1e-9)
@@ -55,9 +56,10 @@ def _draw_map(ax, channel: Channel, profile: Profile, cmap: str = DEFAULT_CMAP):
     ax.set_axis_off()
 
     # The line the profile was taken along, so the reader can see the geometry.
-    ax.plot([profile.start_px[0], profile.end_px[0]],
-            [profile.start_px[1], profile.end_px[1]],
-            color="#00e5ff", linewidth=1.4, alpha=0.95)
+    if profile is not None:
+        ax.plot([profile.start_px[0], profile.end_px[0]],
+                [profile.start_px[1], profile.end_px[1]],
+                color="#00e5ff", linewidth=1.4, alpha=0.95)
 
     npx = data.shape[1]
     bar_m, label, frac = nice_bar_length(channel.xreal, 0.25)

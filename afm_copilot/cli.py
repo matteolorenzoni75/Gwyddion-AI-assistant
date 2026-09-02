@@ -17,6 +17,7 @@ from pathlib import Path
 
 from afm_copilot import __version__
 from afm_copilot.bridge import BridgeError, GwyBridge
+from afm_copilot.compare import build_comparison_report
 from afm_copilot.gwy_io import Channel, load_channels, load_height
 from afm_copilot.ops import (RECIPES, compare_logs, describe_source,
                              get_recipe, read_log, recipe_from_log)
@@ -430,6 +431,39 @@ def cmd_copy_processing(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_compare(args: argparse.Namespace) -> int:
+    """Two columns: every scan as it arrived and as it came out."""
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    pdf = out_dir / args.name
+
+    try:
+        summary = build_comparison_report(
+            args.raw, args.processed, pdf, title=args.title,
+            png_dir=out_dir / "pages")
+    except ValueError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    print(f"{summary['n_scans']} scan(s), {summary['n_processed']} processed.\n")
+    print(f"  {'scan':<32} {'RMS raw':>10} {'RMS after':>10} "
+          f"{'tilt raw':>9} {'tilt after':>10}")
+    for s in summary["scans"]:
+        raw, out = s["raw"], s["processed"]
+        print(f"  {s['name'][:32]:<32} {raw['rms'] * 1e9:>9.2f}n "
+              f"{(out['rms'] * 1e9 if out else float('nan')):>9.2f}n "
+              f"{raw['tilt'] * 100:>8.0f}% "
+              f"{(out['tilt'] * 100 if out else float('nan')):>9.0f}%")
+
+    print(f"\nReport: {pdf}")
+    json_path = out_dir / "comparison.json"
+    json_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(f"Numbers: {json_path}")
+    print("\nA fall in RMS is not by itself an improvement — read the table "
+          "beside the\nimages, not instead of them.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="afm-copilot",
@@ -556,6 +590,26 @@ def build_parser() -> argparse.ArgumentParser:
                         help="print what was recorded without processing "
                              "anything")
     p_copy.set_defaults(func=cmd_copy_processing)
+
+    p_cmp = sub.add_parser(
+        "compare",
+        help="side-by-side report of every scan, raw and processed",
+        description=(
+            "One row per scan, two columns: as it arrived and as it came out, "
+            "with the numbers under each. Makes over-processing visible — a "
+            "correction that halved the roughness while flattening a real "
+            "feature looks obviously wrong side by side, and looks like "
+            "success in a table."))
+    p_cmp.add_argument("--raw", required=True,
+                       help="folder of the original .gwy scans")
+    p_cmp.add_argument("--processed", required=True,
+                       help="folder of the processed .gwy scans")
+    p_cmp.add_argument("--out", default="comparison", help="output directory")
+    p_cmp.add_argument("--name", default="raw_vs_processed.pdf",
+                       help="report filename")
+    p_cmp.add_argument("--title", default="Raw and processed",
+                       help="title shown on the report")
+    p_cmp.set_defaults(func=cmd_compare)
 
     return parser
 
