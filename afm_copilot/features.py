@@ -202,7 +202,27 @@ def object_statistics(mask: np.ndarray, pixel_size: float) -> dict:
 # periodic structure
 # --------------------------------------------------------------------------
 
-def periodicity(data: np.ndarray, pixel_size: float) -> dict:
+# Nothing shorter than this can be called a structure: at two pixels an image
+# is at its sampling limit and describes nothing at all. Four is the smallest
+# spacing whose shape survives.
+MIN_PERIOD_PIXELS = 4.0
+
+# A repeat has to happen more than once to be a repeat. Below three cycles
+# across the frame there is not enough evidence to tell a periodic surface from
+# one broad feature.
+MIN_PERIOD_REPEATS = 3.0
+
+# How strongly the profile must oscillate: the correlation one period later
+# minus the correlation half a period later. A clean grating reaches 2, a
+# smooth surface with no repeat sits near 0. See _repeats_in_the_image.
+MIN_PERIOD_AGREEMENT = 0.60
+
+# Distinct candidate waves examined before giving up.
+MAX_PERIOD_CANDIDATES = 24
+
+
+def periodicity(data: np.ndarray, pixel_size: float,
+                search_harder: bool = False) -> dict:
     """
     Repeating structure: how strong, which way, and at what spacing.
 
@@ -233,9 +253,20 @@ def periodicity(data: np.ndarray, pixel_size: float) -> dict:
     # Ignore the centre (that is the overall form, not a repeat) and the
     # highest frequencies (that is pixel noise).
     usable = (radius > 3) & (radius < min(h, w) / 2 - 2)
+
+    # And refuse periods shorter than a few pixels outright. A "period" of two
+    # pixels is the physical limit below which an image describes nothing, and
+    # it is where this measurement kept landing: on six scans of the test pool,
+    # including the optical disc -- the most plainly periodic image in it --
+    # the reported spacing was the sampling limit rather than the structure.
+    frequency = np.hypot((yy - cy) / float(h), (xx - cx) / float(w))
+    with np.errstate(divide="ignore"):
+        period_px = np.where(frequency > 0, 1.0 / frequency, np.inf)
+    usable &= period_px >= MIN_PERIOD_PIXELS
+
     if not usable.any():
         return {"periodicity": 0.0, "period_angle": float("nan"),
-                "period_length": float("nan")}
+                "period_length": float("nan"), "period_confirmed": 0.0}
 
     # Compare each point to the other directions at the SAME spatial
     # frequency, not to the spectrum as a whole. Any natural surface has far
@@ -250,26 +281,207 @@ def periodicity(data: np.ndarray, pixel_size: float) -> dict:
         if band.sum() >= 8:
             ring_median[band] = np.median(spectrum[band])
 
+    # Give the ring comparison a floor, taken from the outermost rings where
+    # there is nothing but noise. Without it the division is unfair by
+    # construction: a high-frequency ring holds almost no energy, so its median
+    # is near zero and any noise pixel divided by it scores in the millions,
+    # burying every real low-frequency peak in the ranking. With the floor a
+    # noise pixel scores about 1, which is what it deserves.
+    outer = usable & (radius > 0.6 * float(radius[usable].max()))
+    noise_floor = float(np.median(spectrum[outer])) if outer.any() else 0.0
+    if noise_floor > 0:
+        ring_median = np.maximum(ring_median, noise_floor)
+
     significant = usable & (ring_median > 0)
     if not significant.any():
         return {"periodicity": 0.0, "period_angle": float("nan"),
-                "period_length": float("nan")}
+                "period_length": float("nan"), "period_confirmed": 0.0}
 
     contrast = np.zeros_like(spectrum)
     contrast[significant] = spectrum[significant] / ring_median[significant]
 
-    strength = float(contrast.max())
-    py, px = np.unravel_index(int(np.argmax(contrast)), contrast.shape)
-    dy, dx = py - cy, px - cx
+    # The transform proposes; the image itself decides. Walk the candidate
+    # peaks from strongest down and keep the first that survives a check in
+    # real space -- see _repeats_in_the_image. Without this a single groove
+    # crossing the frame scores 28 against the 3-4 of a random surface, because
+    # one straight edge does resemble a stripe of very long wavelength.
+    order = np.argsort(contrast, axis=None)[::-1]
+    tested: list[tuple[int, int]] = []
+    for flat_index in order[:MAX_PERIOD_CANDIDATES * 8]:
+        py, px = np.unravel_index(int(flat_index), contrast.shape)
+        if not significant[py, px]:
+            continue
+        dy, dx = py - cy, px - cx
+        fy, fx = dy / float(h), dx / float(w)
 
-    # The stripes run perpendicular to the direction of the peak.
-    angle = math.degrees(math.atan2(dy, dx)) % 180.0
-    freq = math.hypot(dy / h, dx / w)
-    length = (pixel_size / freq) if freq > 0 else float("nan")
+        # One peak and its mirror describe the same wave; so do neighbouring
+        # pixels of one broad peak. Test each distinct wave once.
+        key = (int(round(fy * 40)), int(round(fx * 40)))
+        if key in tested or (-key[0], -key[1]) in tested:
+            continue
+        tested.append(key)
+        if len(tested) > MAX_PERIOD_CANDIDATES:
+            break
 
-    return {"periodicity": strength,
-            "period_angle": (angle + 90.0) % 180.0,
-            "period_length": length}
+        agreement = _repeats_in_the_image(field * window, fy, fx)
+        if agreement < MIN_PERIOD_AGREEMENT:
+            continue
+
+        # The stripes run perpendicular to the direction of the peak.
+        angle = math.degrees(math.atan2(dy, dx)) % 180.0
+        freq = math.hypot(fy, fx)
+        return {"periodicity": float(contrast[py, px]),
+                "period_angle": (angle + 90.0) % 180.0,
+                "period_length": (pixel_size / freq) if freq > 0 else float("nan"),
+                "period_confirmed": agreement}
+
+    # The transform found nothing it could stand behind. A direct sweep of real
+    # space would find repeats the transform misses -- faint ones, curved ones,
+    # ones that happen only three or four times across the frame. It is
+    # deliberately **off** by default, and the reason is measured rather than
+    # assumed: switched on, it costs more in false positives than it buys in
+    # recall. It called two-pixel noise a structure at 1.89 out of 2, and gave
+    # a 45 um frame a "period" of 17 um, which is 2.6 repeats.
+    #
+    # What it lacks is a way to tell a repeat from a disturbance, and that is
+    # arriving: with the scan speed from the file, mains interference at 50 Hz
+    # lands at a spacing we can compute exactly -- 3.744 um/s gives 74.9 nm,
+    # and its harmonics at 37.4 and 25.0 nm -- always along the fast axis.
+    # Every false candidate above sat in that family. Once the metadata
+    # survives conversion, this becomes usable and the default can change.
+    if not search_harder:
+        return {"periodicity": 0.0, "period_angle": float("nan"),
+                "period_length": float("nan"), "period_confirmed": 0.0}
+
+    agreement, wave = _sweep_for_repeat(field * window)
+    if agreement >= MIN_PERIOD_AGREEMENT and wave is not None:
+        fy, fx = wave
+        angle = math.degrees(math.atan2(fy * h, fx * w)) % 180.0
+        freq = math.hypot(fy, fx)
+        return {"periodicity": float(agreement),
+                "period_angle": (angle + 90.0) % 180.0,
+                "period_length": (pixel_size / freq) if freq > 0 else float("nan"),
+                "period_confirmed": agreement,
+                "period_found_by": "sweep"}
+
+    # Nothing repeated. Reporting zero is the honest answer, and a great deal
+    # better than the strongest noise peak dressed up as a structure.
+    return {"periodicity": 0.0, "period_angle": float("nan"),
+            "period_length": float("nan"), "period_confirmed": 0.0}
+
+
+def _sweep_for_repeat(field: np.ndarray) -> tuple[float, tuple[float, float] | None]:
+    """
+    Look for a repeat by trying directions and spacings directly.
+
+    Coarse first, then finer around whatever the coarse pass liked best, so the
+    cost stays near two hundred projections rather than thousands. Slower than
+    reading a peak off the transform and far more patient: it does not care
+    whether the repeat is sharp, only whether it is there.
+    """
+    h, w = field.shape
+    longest = min(h, w) / MIN_PERIOD_REPEATS
+    if longest <= MIN_PERIOD_PIXELS:
+        return 0.0, None
+
+    def best_over(angles: np.ndarray, periods: np.ndarray):
+        best, wave = 0.0, None
+        for a in angles:
+            sa, ca = math.sin(a), math.cos(a)
+            for p in periods:
+                candidate = (sa / p, ca / p)
+                agree = _repeats_in_the_image(field, candidate[0], candidate[1])
+                if agree > best:
+                    best, wave = agree, candidate
+        return best, wave
+
+    coarse_angles = np.linspace(0.0, math.pi, 24, endpoint=False)
+    coarse_periods = np.geomspace(MIN_PERIOD_PIXELS, longest, 18)
+    best, wave = best_over(coarse_angles, coarse_periods)
+    if wave is None:
+        return 0.0, None
+
+    # Refine: the coarse grid gives the neighbourhood, not the value.
+    angle = math.atan2(wave[0], wave[1])
+    period = 1.0 / math.hypot(*wave)
+    fine_angles = np.linspace(angle - 0.13, angle + 0.13, 7)
+    fine_periods = np.linspace(period * 0.8, period * 1.25, 11)
+    # Clip at BOTH ends. Only clipping the short end let the refinement stretch
+    # a period past the longest the frame can evidence, and a 45 um scan came
+    # back with a 17 um "repeat" -- 2.6 of them across the whole image.
+    fine_periods = fine_periods[(fine_periods >= MIN_PERIOD_PIXELS)
+                                & (fine_periods <= longest)]
+    if fine_periods.size:
+        better, finer = best_over(fine_angles, fine_periods)
+        if better > best:
+            best, wave = better, finer
+    return best, wave
+
+
+def _repeats_in_the_image(field: np.ndarray, fy: float, fx: float,
+                          bins_per_cycle: int = 8) -> float:
+    """
+    Does the candidate wave actually repeat in the surface, or only in the
+    transform?
+
+    Project every pixel onto the direction the wave travels and average the
+    heights at each position along it. Then ask two questions of that profile,
+    not one: does it resemble itself a **whole** period later, and does it
+    resemble the *opposite* of itself **half** a period later.
+
+    Both are needed, and the second is the one that does the work. Asking only
+    the first rewards any smooth surface -- a gentle slope also looks like
+    itself four pixels on, which is how an earlier version of this check passed
+    a single step with 0.90 and read a 74-pixel grating as a 4-pixel one. What
+    separates a genuine repeat is that it comes back *inverted* at half a
+    period: a grating scores about +1 and -1, giving 2, while a smooth profile
+    scores about +1 and +1, giving 0.
+
+    Returns that difference, from 0 (no repeat) to 2 (a clean oscillation).
+    """
+    h, w = field.shape
+    yy, xx = np.mgrid[0:h, 0:w]
+    phase = xx * fx + yy * fy                       # position, in cycles
+    span = float(phase.max() - phase.min())
+    if span < MIN_PERIOD_REPEATS:
+        return 0.0
+
+    index = ((phase - phase.min()) * bins_per_cycle).astype(int)
+    nbins = int(index.max()) + 1
+    finite = np.isfinite(field)
+    counts = np.bincount(index[finite].ravel(), minlength=nbins).astype(float)
+    totals = np.bincount(index[finite].ravel(),
+                         weights=field[finite].ravel(), minlength=nbins)
+
+    filled = counts > 0
+    if filled.sum() < 3 * bins_per_cycle:
+        return 0.0
+    profile = np.zeros(nbins, dtype=float)
+    profile[filled] = totals[filled] / counts[filled]
+    profile[~filled] = profile[filled].mean()
+    profile -= profile.mean()
+
+    # A correlation does not care how small the numbers are, so a profile that
+    # is pure averaged noise can still correlate strongly by chance -- which is
+    # what happened when a candidate wave ran across the stripes instead of
+    # along them and the projection came out flat. Require the profile to be
+    # modulated by more than averaging noise would leave behind.
+    per_bin = float(counts[filled].mean())
+    surface_noise = float(np.nanstd(field[finite]))
+    if per_bin > 0 and surface_noise > 0:
+        if profile.std() < 3.0 * surface_noise / math.sqrt(per_bin):
+            return 0.0
+
+    def correlation_at(lag: int) -> float:
+        if lag < 1 or lag >= profile.size:
+            return 0.0
+        a, b = profile[:-lag], profile[lag:]
+        denominator = math.sqrt(float(np.dot(a, a)) * float(np.dot(b, b)))
+        return float(np.dot(a, b) / denominator) if denominator > 0 else 0.0
+
+    whole = correlation_at(bins_per_cycle)
+    half = correlation_at(bins_per_cycle // 2)
+    return whole - half
 
 
 # --------------------------------------------------------------------------
