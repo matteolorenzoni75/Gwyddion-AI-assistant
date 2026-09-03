@@ -1,4 +1,4 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
@@ -13,6 +13,7 @@ authors = [{ name = "Matteo Lorenzoni" }]
 keywords = ["AFM", "SPM", "Gwyddion", "microscopy", "image-processing"]
 
 dependencies = [
+    "igor2",
     "numpy>=1.24",
     "matplotlib>=3.7",
     "gwyfile>=0.3",
@@ -32,3 +33,4 @@ packages = ["afm_copilot"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+

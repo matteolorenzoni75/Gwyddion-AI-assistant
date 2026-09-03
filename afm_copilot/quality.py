@@ -225,12 +225,16 @@ def _check_feedback(flat: np.ndarray) -> Check:
     return Check("feedback", excess, "ok", "the feedback kept up")
 
 
-def assess(channel: Channel) -> Quality:
+def assess(channel: Channel, acquisition=None) -> Quality:
     """
     Look at one scan and say whether to keep it, fix it, or drop it.
 
     The background comes out first: almost every check is about the surface,
     and a tilt would otherwise dominate all of them.
+
+    `acquisition` is the instrument's own note, when the original file is at
+    hand. It is optional and nothing depends on it -- it only adds what cannot
+    be seen in the pixels.
     """
     from afm_copilot.decide import choose_background_degree
     from afm_copilot.features import subtract_background
@@ -262,6 +266,23 @@ def assess(channel: Channel) -> Quality:
     checks.append(_check_banding(flat))
     checks.append(_check_glitches(flat))
     checks.append(_check_feedback(flat))
+
+    # The one thing the pixels cannot tell us: that somebody changed the
+    # settings part-way down the frame. The instrument writes it into the note
+    # -- "0.40064@Line: 229" -- and it explains images whose character changes
+    # half way through, which otherwise look like a puzzling sample.
+    line = getattr(acquisition, "changed_at_line", None)
+    if line:
+        total = channel.yres or 1
+        where = line / total
+        # Only when it happened in the body of the frame. Several real scans
+        # record a change at line 509 of 512 -- the operator adjusting
+        # something as the scan ended -- and that leaves nothing behind.
+        if 0.05 < where < 0.95:
+            checks.append(Check(
+                "settings changed", where, "fixable",
+                f"the scan settings were changed at line {line} of {total} -- "
+                "the two parts were not taken under the same conditions"))
 
     # Discarding is the expensive mistake, so it takes more than one opinion.
     #

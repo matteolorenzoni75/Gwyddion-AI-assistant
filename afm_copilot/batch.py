@@ -21,7 +21,7 @@ from pathlib import Path
 
 import numpy as np
 
-from afm_copilot import frame, quality
+from afm_copilot import frame, instrument, quality
 from afm_copilot.decide import plan_for
 from afm_copilot.features import measure
 from afm_copilot.gwy_io import Channel, load_height
@@ -43,6 +43,11 @@ class ScanResult:
     size_um: float = 0.0
     pixel_nm: float = 0.0
     recipe: str = ""
+    # From the instrument's own note, when the original file is still around.
+    # Session dates scans taken together, which is what lets one calibration
+    # sample speak for the rest of them.
+    session: str = ""
+    scan_mode: str = ""
     measurements: dict = field(default_factory=dict)
 
 
@@ -137,6 +142,10 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         gwy.extend(convert(raw, out / "_gwy"))
     gwy = sorted(set(gwy))
 
+    # Where to look for the instrument's original file, which still holds the
+    # scan note after conversion has dropped it.
+    originals = [p if p.is_dir() else p.parent for p in inputs]
+
     results: list[ScanResult] = []
     seen: list[tuple[str, np.ndarray]] = []
 
@@ -149,7 +158,9 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
                                       verdict="unreadable", why=[str(exc)[:120]]))
             continue
 
-        verdict = quality.assess(channel)
+        original = instrument.find_original(name, originals)
+        acquisition = instrument.read(original) if original else None
+        verdict = quality.assess(channel, acquisition)
         entry = ScanResult(
             name=name, source=str(path),
             kept=verdict.verdict != "discard",
@@ -157,6 +168,8 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
             why=[c.says for c in verdict.problems],
             size_um=round(channel.xreal * 1e6, 3),
             pixel_nm=round(channel.pixel_size * 1e9, 2),
+            session=acquisition.session if acquisition else "",
+            scan_mode=acquisition.scan_mode if acquisition else "",
         )
 
         if verdict.verdict == "discard":
