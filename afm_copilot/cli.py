@@ -526,6 +526,44 @@ def cmd_plan(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_batch(args: argparse.Namespace) -> int:
+    """Everything, on a folder: the normal level of operation."""
+    from afm_copilot import batch
+
+    out = Path(args.out)
+    summary = batch.run([Path(p) for p in args.inputs], out,
+                        deduplicate=not args.keep_duplicates)
+
+    if not summary["scans_read"]:
+        print("Nothing to read.", file=sys.stderr)
+        return 1
+
+    print(f"Read {summary['scans_read']} scan(s).\n")
+    print(f"  kept          {summary['kept']:>4}"
+          f"   ({summary['good']} as they were, "
+          f"{summary['needed_work']} needing correction)")
+    print(f"  cropped       {summary['cropped']:>4}   stopped early, trimmed "
+          "to the part that has data")
+    print(f"  repeats       {summary['duplicates']:>4}   the same area scanned "
+          "again")
+    print(f"  set aside     {summary['discarded']:>4}   not worth using")
+    if summary["unreadable"]:
+        print(f"  unreadable    {summary['unreadable']:>4}")
+
+    aside = [r for r in summary["results"] if r["verdict"] == "discard"]
+    if aside:
+        print("\nSet aside, and why:\n")
+        for r in aside:
+            print(f"  {r['name']}")
+            for why in r["why"]:
+                print(f"     {why}")
+
+    print(f"\nEverything, scan by scan: {out / 'batch.json'}")
+    print("Nothing was deleted. A scan set aside is recorded with its reason, "
+          "so\nyou can look at it and disagree.")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="afm-copilot",
@@ -687,6 +725,21 @@ def build_parser() -> argparse.ArgumentParser:
     p_plan.add_argument("--out", default=None,
                         help="also write the measurements to this directory")
     p_plan.set_defaults(func=cmd_plan)
+
+    p_batch = sub.add_parser(
+        "batch",
+        help="the whole path on a folder: check, crop, measure, report",
+        description=(
+            "The normal way to use this. Point it at a day's or a month's "
+            "measurements and it reads them, judges whether each is worth "
+            "using, crops the ones that stopped early, sets aside the "
+            "duplicates, and measures the rest — with a reason recorded "
+            "against every scan it leaves out. Nothing is deleted."))
+    p_batch.add_argument("inputs", nargs="+", help="files or folders")
+    p_batch.add_argument("--out", required=True, help="where to write results")
+    p_batch.add_argument("--keep-duplicates", action="store_true",
+                         help="measure repeated scans of the same area too")
+    p_batch.set_defaults(func=cmd_batch)
 
     return parser
 
