@@ -532,7 +532,8 @@ def cmd_batch(args: argparse.Namespace) -> int:
 
     out = Path(args.out)
     summary = batch.run([Path(p) for p in args.inputs], out,
-                        deduplicate=not args.keep_duplicates)
+                        deduplicate=not args.keep_duplicates,
+                        do_clean=not args.no_clean)
 
     if not summary["scans_read"]:
         print("Nothing to read.", file=sys.stderr)
@@ -548,7 +549,33 @@ def cmd_batch(args: argparse.Namespace) -> int:
           "again")
     print(f"  set aside     {summary['discarded']:>4}   not worth using")
     if summary["unreadable"]:
-        print(f"  unreadable    {summary['unreadable']:>4}")
+        print(f"  could not read{summary['unreadable']:>4}   listed below, "
+              "not skipped")
+
+    if summary.get("cleaned"):
+        print(f"\nCleaned {summary['cleaned']}, by what each one needed:\n")
+        for key, count in summary.get("recipes_used", {}).items():
+            print(f"  {key:<22} {count:>4}")
+    lost = [r for r in summary["results"] if r.get("over_flattened")]
+    if lost:
+        print(f"\nLook at these {len(lost)}: the cleaning took more roughness "
+              "than the background\ncan account for, so some of what it removed "
+              "was surface, not artifact.\n")
+        for r in lost:
+            kept_pct = 100.0 * r["rms_after_nm"] / r["rms_before_nm"]
+            print(f"  {r['name'][:38]:<38} {kept_pct:5.1f}% of the roughness "
+                  f"left   ({r['recipe']})")
+        print("\n  Nothing was chosen differently on their account -- which "
+              "recipe is right\n  depends on what the sample is, and that is "
+              "your call, not a rule of thumb.")
+
+    unread = [r for r in summary["results"] if r["verdict"] == "unreadable"]
+    if unread:
+        print(f"\nCould not be read at all ({len(unread)}):\n")
+        for r in unread[:12]:
+            print(f"  {r['name'][:40]:<40} {r['why'][0][:60]}")
+        if len(unread) > 12:
+            print(f"  ... and {len(unread) - 12} more, all in batch.json")
 
     aside = [r for r in summary["results"] if r["verdict"] == "discard"]
     if aside:
@@ -739,6 +766,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_batch.add_argument("--out", required=True, help="where to write results")
     p_batch.add_argument("--keep-duplicates", action="store_true",
                          help="measure repeated scans of the same area too")
+    p_batch.add_argument("--no-clean", action="store_true",
+                         help="judge and measure only, leave the scans alone")
     p_batch.set_defaults(func=cmd_batch)
 
     return parser

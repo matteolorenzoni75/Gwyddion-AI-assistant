@@ -141,6 +141,32 @@ def load_channels(path: str | Path) -> list[Channel]:
     return channels
 
 
+def save_height(channel: Channel, path: str | Path) -> Path:
+    """
+    Write one channel back out as a .gwy Gwyddion can open.
+
+    Needed because the two runtimes divide the work: cropping an interrupted
+    scan happens here in Python 3, while the cleaning recipes run inside
+    Gwyddion. Without a way to hand the cropped surface back, the recipes
+    would go on levelling and filtering with the empty band still in the
+    frame -- fitting a background to the part of the image where the tip was
+    not measuring anything.
+    """
+    from gwyfile.objects import GwyContainer, GwyDataField
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    field = GwyDataField(
+        np.ascontiguousarray(channel.data, dtype=float),
+        xreal=float(channel.xreal), yreal=float(channel.yreal),
+        si_unit_xy=channel.xy_unit, si_unit_z=channel.z_unit,
+    )
+    container = GwyContainer({"/0/data": field,
+                              "/0/data/title": channel.name or "Height"})
+    container.tofile(str(path))
+    return path
+
+
 def load_height(path: str | Path) -> Channel:
     """
     Read the one channel most likely to be surface topography.

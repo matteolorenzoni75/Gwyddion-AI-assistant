@@ -1,4 +1,4 @@
-﻿[build-system]
+[build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
@@ -13,11 +13,13 @@ authors = [{ name = "Matteo Lorenzoni" }]
 keywords = ["AFM", "SPM", "Gwyddion", "microscopy", "image-processing"]
 
 dependencies = [
-    "igor2",
     "numpy>=1.24",
     "matplotlib>=3.7",
     "gwyfile>=0.3",
     "pillow>=10",
+    # Reads the Asylum scan note in Python 3, straight from the original file,
+    # so the Python 2.7 bridge never has to carry metadata across.
+    "igor2>=0.5",
 ]
 
 [project.optional-dependencies]
@@ -33,4 +35,3 @@ packages = ["afm_copilot"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

@@ -16,6 +16,7 @@ decides but that a person can see what it decided and why.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
@@ -24,7 +25,7 @@ import numpy as np
 from afm_copilot import frame, instrument, quality
 from afm_copilot.decide import plan_for
 from afm_copilot.features import measure
-from afm_copilot.gwy_io import Channel, load_height
+from afm_copilot.gwy_io import Channel, load_height, save_height
 
 RAW_SUFFIXES = {".ibw", ".tiff", ".tif", ".spm", ".nid", ".mi", ".sxm", ".jpk"}
 
@@ -48,11 +49,23 @@ class ScanResult:
     # sample speak for the rest of them.
     session: str = ""
     scan_mode: str = ""
+    cleaned: bool = False
+    rms_before_nm: float | None = None
+    rms_after_nm: float | None = None
+    over_flattened: bool = False
+    steps: list[str] = field(default_factory=list)
     measurements: dict = field(default_factory=dict)
 
 
 def _is_raw(path: Path) -> bool:
     return path.suffix.lower() in RAW_SUFFIXES
+
+
+def _tally(values) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        counts[value] = counts.get(value, 0) + 1
+    return dict(sorted(counts.items(), key=lambda kv: -kv[1]))
 
 
 def collect(inputs: list[Path]) -> tuple[list[Path], list[Path]]:
@@ -70,32 +83,89 @@ def collect(inputs: list[Path]) -> tuple[list[Path], list[Path]]:
     return gwy, raw
 
 
-def convert(raw: list[Path], into: Path, chunk: int = 40) -> list[Path]:
+def convert(raw: list[Path], into: Path,
+            chunk: int = 40) -> tuple[list[Path], list[tuple[Path, str]]]:
     """
     Raw instrument files through Gwyddion, in chunks.
 
     In chunks because a single failure in one file should not cost the whole
     batch, and because a list of a thousand paths is not something to hand a
     subprocess in one go.
+
+    Returns what converted **and what did not, with the reason**. An earlier
+    version returned only the successes, and on a folder that had quietly grown
+    to 191 files it read 166 of them without anybody noticing the other 25 had
+    gone missing. A batch that promises to be vouched for cannot lose files in
+    silence: a file that failed to convert has to be as visible as one that was
+    judged and set aside.
     """
     from afm_copilot.bridge import BridgeError, GwyBridge
 
     into.mkdir(parents=True, exist_ok=True)
     done: list[Path] = []
+    failed: list[tuple[Path, str]] = []
+
     todo = [p for p in raw if not (into / (p.stem + ".gwy")).exists()]
     done.extend(into / (p.stem + ".gwy")
                 for p in raw if (into / (p.stem + ".gwy")).exists())
 
     if todo:
-        bridge = GwyBridge()
+        try:
+            bridge = GwyBridge()
+        except BridgeError as exc:
+            return sorted(set(done)), [(p, f"Gwyddion unreachable: {exc}")
+                                       for p in todo]
+
         for start in range(0, len(todo), chunk):
-            batch = todo[start:start + chunk]
-            try:
-                report = bridge.convert_raw(batch, into)
-            except BridgeError:
-                continue
-            done.extend(Path(r["gwy"]) for r in report["results"] if r["ok"])
-    return sorted(set(done))
+            _convert_group(bridge, todo[start:start + chunk], into,
+                           done, failed)
+    return sorted(set(done)), failed
+
+
+def _convert_group(bridge, group: list[Path], into: Path,
+                   done: list[Path], failed: list[tuple[Path, str]]) -> None:
+    """
+    Convert a group, splitting it in half if the subprocess dies.
+
+    Some files crash Gwyddion outright rather than returning an error -- an
+    access violation inside a format reader -- and that kills the subprocess
+    with every file it was given. A batch of forty then loses forty, including
+    files that had converted perfectly well the day before.
+
+    So a crash is not a verdict on the group. Halve it and try again: the bad
+    file is isolated in a handful of passes, and everything around it survives.
+    """
+    from afm_copilot.bridge import BridgeError
+
+    if not group:
+        return
+    try:
+        report = bridge.convert_raw(group, into)
+    except BridgeError as exc:
+        if len(group) == 1:
+            failed.append((group[0], f"conversion failed: {exc}"[:140]))
+            return
+        middle = len(group) // 2
+        _convert_group(bridge, group[:middle], into, done, failed)
+        _convert_group(bridge, group[middle:], into, done, failed)
+        return
+
+    # The converter identifies each file by "source" and "stem"; there is no
+    # "input" key. Reading the wrong one silently produced two entries for the
+    # same failed file.
+    accounted = set()
+    for record in report.get("results", []):
+        stem = record.get("stem") or Path(record.get("source", "")).stem
+        accounted.add(stem)
+        if record.get("ok"):
+            done.append(Path(record["gwy"]))
+        else:
+            failed.append((Path(record.get("source", stem)),
+                           str(record.get("error") or "unknown")[:140]))
+    # Anything the report never mentioned is missing too.
+    for path in group:
+        if path.stem not in accounted:
+            failed.append((path, "Gwyddion returned no result for it"))
 
 
 def _fingerprint(data: np.ndarray) -> np.ndarray:
@@ -126,8 +196,85 @@ def _looks_the_same(a: np.ndarray, b: np.ndarray, threshold: float = 0.97) -> bo
     return bool(np.corrcoef(a[both].ravel(), b[both].ravel())[0, 1] > threshold)
 
 
+def clean(work: list[tuple[ScanResult, Path]], out: Path) -> None:
+    """
+    Run each scan's chosen recipe, and record what it changed.
+
+    Grouped by recipe rather than looped per file: one Gwyddion subprocess for
+    every recipe in use, not one for every scan. On a batch of a hundred that
+    is the difference between seconds and minutes.
+
+    The recipe is never chosen by eye. It comes from `plan_for`, which measures
+    -- a recipe picked by looking at a picture once cost 35% of a scan's
+    roughness and made a flat object concave, and the number agreed with the
+    mistake all the way.
+    """
+    from afm_copilot.bridge import BridgeError, GwyBridge
+    from afm_copilot.ops.recipes import get_recipe
+
+    by_recipe: dict[str, list[tuple[ScanResult, Path]]] = {}
+    for entry, path in work:
+        by_recipe.setdefault(entry.recipe or "level-only", []).append((entry, path))
+
+    bridge = GwyBridge()
+    for key, group in by_recipe.items():
+        try:
+            recipe = get_recipe(key)
+        except KeyError:
+            continue
+        try:
+            report = bridge.run_recipe(recipe, [p for _, p in group],
+                                       out / "clean")
+        except BridgeError:
+            continue
+
+        outcome = {r["stem"]: r for r in report.get("results", [])}
+        for entry, path in group:
+            record = outcome.get(path.stem)
+            if not record or not record.get("ok"):
+                continue
+            entry.cleaned = True
+            entry.rms_before_nm = round(record["initial"]["rms"] * 1e9, 3)
+            entry.rms_after_nm = round(record["final"]["rms"] * 1e9, 3)
+            entry.steps = [
+                s["title"] for s in record.get("steps", []) if s.get("applied")
+            ]
+            entry.over_flattened = lost_too_much(entry)
+
+
+def lost_too_much(entry: ScanResult) -> bool:
+    """
+    Did the cleaning take more roughness than the background can account for?
+
+    Removing a background legitimately costs roughness, and the amount is
+    predictable: if a fitted background explains a fraction f of the height
+    variance, what should survive is sqrt(1 - f) of the RMS. A scan that ends
+    up far below that has lost surface, not artifact.
+
+    Two ways it happens, both seen on the real batch. Row alignment on a nearly
+    flat surface covered in small features subtracts the features along with
+    the line offsets -- the median of a row's differences cannot tell them
+    apart. And masking "objects" on a lithographic pattern masks the pattern,
+    so levelling flattens the thing being measured.
+
+    Flagged, not corrected. Which recipe is right is a judgement about what the
+    sample is, and choosing one by rule of thumb is how a scan was ruined
+    before, with the numbers agreeing all the way.
+    """
+    if not entry.rms_before_nm or not entry.rms_after_nm:
+        return False
+    explained = (entry.measurements or {}).get("explained_by_degree") or {}
+    order = (entry.measurements or {}).get("background_order", 1)
+    fraction = explained.get(order, explained.get(str(order), 0.0)) or 0.0
+    expected = math.sqrt(max(0.0, 1.0 - min(float(fraction), 0.999999)))
+    kept = entry.rms_after_nm / entry.rms_before_nm
+    # Generous: the recipes also despike and align rows, which cost something
+    # on any real surface. Only a scan far below the prediction is flagged.
+    return kept < 0.4 * expected and (1.0 - kept) > 0.5
+
+
 def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
-        keep_discarded: bool = True) -> dict:
+        do_clean: bool = True) -> dict:
     """
     Take a batch through every stage and report what happened.
 
@@ -138,24 +285,38 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
     """
     out.mkdir(parents=True, exist_ok=True)
     gwy, raw = collect(inputs)
+    unconverted: list[tuple[Path, str]] = []
     if raw:
-        gwy.extend(convert(raw, out / "_gwy"))
+        converted, unconverted = convert(raw, out / "_gwy")
+        gwy.extend(converted)
     gwy = sorted(set(gwy))
 
     # Where to look for the instrument's original file, which still holds the
     # scan note after conversion has dropped it.
     originals = [p if p.is_dir() else p.parent for p in inputs]
 
-    results: list[ScanResult] = []
+    results: list[ScanResult] = [
+        ScanResult(name=path.stem, source=str(path), kept=False,
+                   verdict="unreadable", why=[reason])
+        for path, reason in unconverted
+    ]
     seen: list[tuple[str, np.ndarray]] = []
+    # What to hand Gwyddion for cleaning: the cropped copy where the frame had
+    # to be trimmed, the original file otherwise.
+    to_clean: list[tuple[ScanResult, Path]] = []
 
     for path in gwy:
         name = path.stem
         try:
             channel = load_height(path)
-        except (ValueError, OSError) as exc:
-            results.append(ScanResult(name=name, source=str(path), kept=False,
-                                      verdict="unreadable", why=[str(exc)[:120]]))
+        except Exception as exc:                               # noqa: BLE001
+            # Deliberately everything. A damaged file can fail in whatever way
+            # its parser happens to fail -- a truncated .gwy raises an
+            # AssertionError from deep inside the reader -- and one bad file in
+            # a folder of a thousand must cost that file, not the batch.
+            results.append(ScanResult(
+                name=name, source=str(path), kept=False, verdict="unreadable",
+                why=[f"{type(exc).__name__}: {exc}"[:140] or "unreadable"]))
             continue
 
         original = instrument.find_original(name, originals)
@@ -177,9 +338,14 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
             continue
 
         cropped, report = frame.crop_to_data(channel)
+        source_for_cleaning = path
         if report["interrupted"]:
             entry.cropped_from = report["rows_total"]
             entry.size_um = round(cropped.xreal * 1e6, 3)
+            # Written back out so the recipes work on the trimmed frame. A
+            # background fitted through the empty band is fitted to nothing.
+            source_for_cleaning = save_height(
+                cropped, out / "prepared" / (name + ".gwy"))
 
         if deduplicate:
             mark = _fingerprint(cropped.data)
@@ -195,6 +361,15 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         entry.recipe = plan.recipe_key
         entry.measurements = measure(cropped).as_dict()
         results.append(entry)
+        to_clean.append((entry, source_for_cleaning))
+
+    if do_clean and to_clean:
+        try:
+            clean(to_clean, out)
+        except Exception:                                      # noqa: BLE001
+            # Cleaning needs Gwyddion; measuring and judging do not. Losing the
+            # cleaning step should not cost the rest of the report.
+            pass
 
     kept = [r for r in results if r.kept]
     summary = {
@@ -206,6 +381,9 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         "good": sum(1 for r in kept if r.verdict == "good"),
         "needed_work": sum(1 for r in kept if r.verdict == "fixable"),
         "cropped": sum(1 for r in kept if r.cropped_from),
+        "cleaned": sum(1 for r in kept if r.cleaned),
+        "over_flattened": sum(1 for r in kept if r.over_flattened),
+        "recipes_used": _tally(r.recipe for r in kept if r.cleaned),
         "results": [asdict(r) for r in results],
     }
     (out / "batch.json").write_text(json.dumps(summary, indent=1, default=float),
