@@ -571,6 +571,11 @@ class Features:
     periodicity: float = 0.0
     period_angle: float = float("nan")
     period_length: float = float("nan")
+    # How convincingly the repeat showed up in the image itself, 0 to 2. It is
+    # kept because it separates an artificial pattern from a natural one: the
+    # calibration grating scores 1.9, while the natural surfaces in the pool
+    # that repeat at all sit between 0.5 and 0.65.
+    period_confirmed: float = 0.0
 
     # texture
     rms: float = 0.0
@@ -620,6 +625,7 @@ def measure(channel: Channel) -> Features:
         periodicity=period["periodicity"],
         period_angle=period["period_angle"],
         period_length=period["period_length"],
+        period_confirmed=period.get("period_confirmed", 0.0),
         rms=float(np.nanstd(flat)),
         correlation_length=correlation_length(flat, pixel),
         scan_size=channel.xreal,
