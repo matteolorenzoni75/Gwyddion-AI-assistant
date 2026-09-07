@@ -49,6 +49,23 @@ MEANINGFUL_BACKGROUND = 0.10
 # was the surface itself.
 SETTLED = 0.05
 
+# The same idea, measured against what is still unexplained rather than against
+# the whole. The next order has to account for less than this share of the
+# remainder for the background to count as settled. Judged absolutely, the test
+# went blind on every scan whose background was already nearly perfect.
+SETTLED_RELATIVE = 0.15
+
+# An order of 2 or more has to account for at least this much before it is
+# accepted in the loop. Tilt has a physical cause; curvature is as often the
+# sample's own shape, and a second-order fit that explains 41% of a frame with
+# three large domes in it would be carving the domes.
+CURVATURE_MUST_EXPLAIN = 0.60
+
+# When nothing settles, an order that accounts for this much of the height
+# variation is a background anyway. Below it, the polynomial is tracking the
+# surface rather than anything the instrument added.
+BACKGROUND_DOMINATES = 0.80
+
 # Below this fraction of the frame, what was marked is specks rather than
 # objects, and masking them only punches holes in the background fit.
 MIN_OBJECT_FRACTION = 0.03
@@ -334,22 +351,50 @@ def choose_background_degree(
     fraction. Otherwise the fit is spending real roughness to chase noise --
     which is how a second-order background came to be fitted to a surface that
     was already flat.
+
+    "Appreciable" means appreciable **against what is left**, not against the
+    whole. Measured absolutely, the rule was blind wherever a background was
+    nearly perfect already: on a polished substrate an order-1 fit explained
+    99.59% and order 2 explained 99.95%, so the extra 0.36% looked negligible
+    and order 1 was chosen -- leaving an 18 nm bow on a surface whose noise is
+    0.7 nm. That 0.36% was 88% of everything still unexplained.
     """
     explained = {d: background_explains(data, d, mask)
                  for d in range(max_degree + 1)}
 
-    # A real background settles: the next order finds nothing more of that
-    # shape. Take the lowest order that both explains something and settles.
+    # A real background settles: the next order finds almost nothing more of
+    # that shape, relative to what remains. Take the lowest order that does.
     for degree in range(1, max_degree):
         if explained[degree] < MEANINGFUL_BACKGROUND:
             continue
-        if explained[degree + 1] - explained[degree] < SETTLED:
+        # Curvature has to earn more than tilt does. A tilted sample has a
+        # physical cause -- how it sits on the stage -- while curvature is as
+        # likely to be the shape of the sample itself, and removing it would be
+        # carving into what we are trying to measure.
+        if degree >= 2 and explained[degree] < CURVATURE_MUST_EXPLAIN:
+            continue
+        remaining = 1.0 - explained[degree]
+        gain = explained[degree + 1] - explained[degree]
+        if remaining <= 0 or gain / remaining < SETTLED_RELATIVE:
             return degree, explained
 
     # Nothing settled: every order kept finding more, which means it is finding
-    # the surface rather than a background. A plane is still defensible because
-    # tilt is a real acquisition artifact with a physical cause; higher orders
-    # here would be carving into the sample.
+    # the surface rather than a background.
+    #
+    # One exception, and it is what separates the two cases that look alike
+    # here. When a low order already accounts for the great majority of the
+    # height variation, it *is* the background whether or not the next order
+    # keeps improving on it -- flakes on mica, where order 2 explained 88%
+    # against order 1's 34%. When no order reaches that, the polynomial is
+    # tracking the surface: a scan the instrument had already levelled climbed
+    # 0%, 46%, 65% order after order, and every one of those orders was the
+    # sample.
+    for degree in range(1, max_degree + 1):
+        if explained[degree] >= BACKGROUND_DOMINATES:
+            return degree, explained
+
+    # Otherwise a plane is still defensible, because tilt is a real acquisition
+    # artifact; higher orders here would be carving into the sample.
     if explained[1] >= MEANINGFUL_BACKGROUND:
         return 1, explained
     return 0, explained

@@ -33,6 +33,73 @@ def flat(noise: float = 1e-9) -> np.ndarray:
     return RNG.normal(0.0, noise, (N, N))
 
 
+def textured(roughness: float = 1e-9) -> np.ndarray:
+    """A surface with structure of its own, not white noise."""
+    data = RNG.normal(0.0, roughness, (N, N))
+    for _ in range(8):
+        data = (data + np.roll(data, 1, 0) + np.roll(data, 1, 1)) / 3.0
+    return data * (roughness / max(data.std(), 1e-18))
+
+
+def test_a_nearly_perfect_background_is_still_finished_properly():
+    """
+    The failure the relative test exists for.
+
+    On a polished substrate order 1 explained 99.59% and order 2 explained
+    99.95%, so measured against the whole the extra 0.36% looked negligible and
+    order 1 was chosen -- leaving an 18 nm bow on a surface whose noise is
+    0.7 nm. Against what remained, that 0.36% was 88% of it.
+    """
+    # The proportions matter, and are taken from the real scan: a large tilt
+    # with a small bow riding on it, so that the plane alone already accounts
+    # for almost everything and the leftover curvature looks negligible next
+    # to the whole while being nearly all of what is left.
+    x, y = coords()
+    data = textured(0.2e-9) + 900e-9 * x + 60e-9 * (x ** 2 + y ** 2)
+    degree, explained = choose_background_degree(data)
+    assert explained[1] > 0.98, "the plane alone should already explain most"
+    assert explained[2] - explained[1] < 0.02, "and the bow is a sliver of it"
+    assert degree == 2
+
+
+def test_a_surface_of_its_own_shape_is_left_alone():
+    """
+    The case the old rule protected, and which must keep working.
+
+    A scan the instrument had already levelled climbed 0%, 46%, 65% order after
+    order. Every one of those orders was finding the sample.
+    """
+    assert choose_background_degree(textured())[0] == 0
+
+
+def test_curvature_has_to_earn_more_than_tilt_does():
+    """
+    Three large domes: a second-order fit explains a fair share of the frame
+    and would be carving the domes out of it.
+    """
+    x, y = coords()
+    domes = textured(2e-9)
+    for cx, cy in ((-0.25, -0.2), (0.2, 0.15), (0.3, -0.3)):
+        r2 = (x - cx) ** 2 + (y - cy) ** 2
+        domes += 300e-9 * np.exp(-r2 / 0.02)
+    degree, explained = choose_background_degree(domes)
+    assert explained[2] < 0.60, "the fixture must not be background-dominated"
+    assert degree < 2
+
+
+def test_a_background_that_dominates_is_taken_even_if_it_never_settles():
+    """
+    Flakes on mica: order 1 explained 34%, order 2 explained 88%, and nothing
+    settled by order 3 -- so the old rule fell back to the lowest order and
+    left the bow in.
+    """
+    x, y = coords()
+    data = textured(3e-9) + 600e-9 * (x ** 2 + y ** 2) + 200e-9 * x
+    degree, explained = choose_background_degree(data)
+    assert explained[2] >= 0.80
+    assert degree == 2
+
+
 def tilted(slope: float = 100e-9) -> np.ndarray:
     x, _ = coords()
     return slope * x + flat(1e-9)

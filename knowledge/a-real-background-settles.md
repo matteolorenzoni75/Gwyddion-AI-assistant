@@ -35,11 +35,47 @@ The last row is the case that matters. Its plane accounts for nothing, and
 every higher order keeps climbing — the mark of a fit finding structure rather
 than form.
 
-The rule: take the lowest order that accounts for at least 10% and whose
-successor adds less than 5 percentage points. If nothing settles, a plane is
-still defensible — tilt is a real acquisition artifact with a physical cause —
-but only if it accounts for something; higher orders in that case would be
-cutting into the sample.
+## Settling has to be measured against what is left
+
+The first version of the rule asked whether the next order added at least five
+percentage points *of the whole*, and that went blind wherever the background
+was already nearly perfect. On a polished substrate order 1 accounted for
+99.59% and order 2 for 99.95%: the extra 0.36% looked negligible, order 1 was
+chosen, and an 18 nm bow stayed in the image — on a surface whose noise is
+0.7 nm. That 0.36% was **88% of everything still unexplained**.
+
+So the test is relative: the next order must account for less than 15% of what
+remains. Which then needs two guards, because two situations look alike once
+you allow the fit to keep climbing.
+
+**Curvature must earn more than tilt does.** A tilted sample has a physical
+cause — how it sits on the stage. Curvature is as often the shape of the sample
+itself. So an order of 2 or more is only accepted when it accounts for at least
+60%: on a frame holding three large domes, order 2 accounts for 41%, and taking
+it would carve the domes out of the image.
+
+**And when nothing settles at all, ask whether a low order still dominates.**
+This is what separates the two hard cases:
+
+- *Flakes on mica*: order 1 accounts for 34%, order 2 for 88%, and nothing
+  settles by order 3. Order 2 **is** the background whether or not higher
+  orders keep improving on it. The old rule fell back to the lowest order and
+  left the bow in.
+- *Already levelled by the instrument*: 0%, 46%, 65% — no order reaches a
+  majority, because the polynomial is tracking the sample. Correctly left
+  alone.
+
+The threshold between them is 80% of the height variation. Above it, a
+background; below it, the surface.
+
+**The rule, in full:** take the lowest order that accounts for at least 10% —
+and, from order 2 upward, at least 60% — whose successor adds less than 15% of
+what is still unexplained. If nothing settles, take the lowest order that
+accounts for 80% or more. Failing that a plane is still defensible if it
+accounts for something, and otherwise leave the scan alone.
+
+Checked against every case with a known answer: four built surfaces (plane,
+bowl, saddle, already-levelled) and eight real scans. All twelve correct.
 
 ## Two traps found while building this
 
