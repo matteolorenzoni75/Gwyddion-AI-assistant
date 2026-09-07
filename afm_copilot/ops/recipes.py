@@ -131,14 +131,45 @@ _ALL: list[Recipe] = [
             "plane_level",
             "mark_raised_objects",
             "drop_small_marks",
+            "grow_mask",
             "background_around_objects",
+            # Rows aligned with the mask still up, then cleared -- see
+            # 'align_rows_around_objects' for why the order matters.
+            "align_rows_around_objects",
             "remove_mask",
-            "align_rows_median_diff",
             # Scars are never the sample: a stroke dragged along the fast axis
             # is the tip losing and regaining the surface. This step was
             # missing here, so 60 scans of a 197-scan batch went through with
             # their strokes intact while the 107 on 'quick clean' had them
             # repaired.
+            "remove_scars",
+            "fix_zero",
+        ),
+    ),
+    Recipe(
+        key="isolate-objects-flat",
+        title="Level the background around objects, without adding curvature",
+        purpose="Mark whatever stands above the surface and fit a plane to the "
+                "background alone, leaving the objects out of the fit.",
+        when_to_use="Objects on a background that measures flat. The masking "
+                    "is what matters here: a tall object left in the fit tilts "
+                    "the plane towards itself and the base comes out sloped.",
+        when_not_to_use="Backgrounds with real curvature — use 'isolate "
+                        "objects', which fits a curved surface around the same "
+                        "mask.",
+        steps=(
+            "plane_level",
+            "mark_raised_objects",
+            "drop_small_marks",
+            "grow_mask",
+            "plane_around_objects",
+            # The rows are aligned while the mask is still up, and only then
+            # is it cleared. Clearing first let the object back into the
+            # row-by-row fit, and on a block covering a fifth of the frame the
+            # median difference of every row crossing it is the object's own
+            # slope -- which the correction then writes into the background.
+            "align_rows_around_objects",
+            "remove_mask",
             "remove_scars",
             "fix_zero",
         ),

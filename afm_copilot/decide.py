@@ -669,12 +669,30 @@ def _recipe_for_plan(plan: Plan) -> str:
         # correction biases roughness, and the same property protects a
         # pattern that varies along the slow axis.
         return "roughness-ready"
-    if plan.has_objects and plan.background_degree > 0:
-        return "isolate-objects"
     if plan.has_objects:
-        # Objects present but a flat background: nothing to fit around them,
-        # so the routine tidy-up is enough and safer.
-        return "quick-clean"
+        # Whenever something stands clear of the surface the background is
+        # fitted *around* it -- but at the order the background actually has.
+        #
+        # Two real failures sit either side of this. Requiring an order above
+        # zero sent flat-background scans to the routine tidy-up, which levels
+        # with the object still in the fit, so a tall block tilted the plane
+        # towards itself and left the base sloped -- the commonest and hardest
+        # fault by the user's account. Sending everything to the curved fit
+        # instead invents curvature at the corners of a background that has
+        # none. So: masked either way, curved only when there is curvature.
+        #
+        # Held at the curved variant for now, and the flat one is not yet
+        # routed to, because measuring it settled nothing in its favour: on the
+        # scan this was built for, the background around the object came out
+        # *worse* levelled than not masked at all -- 121 nm of spread against
+        # 104. The cause is upstream of the recipe. Gwyddion's own threshold
+        # marks a different region from the detector in `decide`: on that scan
+        # 79% of the frame against our 19.5%, and correcting the threshold to
+        # match did not close the gap. The fix is to hand Gwyddion the mask we
+        # already computed instead of having it find one again, which is a
+        # piece of work in itself and the next thing to do here.
+        return ("isolate-objects" if plan.background_degree > 0
+                else "quick-clean")
     if plan.already_levelled and plan.background_degree == 0:
         # Unless the lines are damaged. 'Level only' says so in its own words
         # -- do not use it when the image has obvious banding or scars, it will

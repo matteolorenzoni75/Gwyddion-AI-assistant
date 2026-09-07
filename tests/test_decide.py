@@ -256,16 +256,26 @@ def test_a_bowed_scan_with_objects_gets_the_masked_recipe():
 
 def test_objects_on_a_flat_background_do_not_get_a_polynomial():
     """
-    The real scan that failed.
+    Two real failures, one on each side of this.
 
-    Its background measured 0% tilt, and a second-order fit invented curvature
-    at the corners. With objects present but a flat background, the answer is
-    the plain tidy-up, not the masked polynomial.
+    A second-order fit on a background measuring 0% tilt invents curvature at
+    the corners. But levelling with the object still in the fit tilts the plane
+    towards it and leaves the base sloped, which the user reports as the
+    commonest and hardest fault of all -- so the fit is masked either way, and
+    only the order follows the background.
     """
     plan = plan_for(surface(with_object(flat())))
     assert plan.has_objects
     assert plan.background_degree == 0
     assert plan.recipe_key != "isolate-objects"
+
+
+def test_objects_on_a_curved_background_do_get_the_polynomial():
+    x, y = coords()
+    curved = textured(2e-9) + 300e-9 * (x ** 2 + y ** 2)
+    plan = plan_for(surface(with_object(curved)))
+    assert plan.has_objects
+    assert plan.recipe_key == "isolate-objects"
 
 
 def test_objects_are_measured_against_the_majority_surface():

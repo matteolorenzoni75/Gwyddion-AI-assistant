@@ -26,6 +26,10 @@ from afm_copilot.gwy_io import Channel
 # nothing next to a live row.
 DEAD_ROW_FRACTION = 0.02
 
+# And never above this much of the image's own noise: a row quieter than the
+# noise is not measuring anything, and a row noisier than it is.
+DEAD_ROW_NOISE = 0.5
+
 # Below this much of the frame surviving, what is left is not worth measuring.
 # Calibrated against the user's own calls on the six interrupted scans in the
 # pool: they kept one with 32% of the frame surviving -- because what remained
@@ -61,7 +65,19 @@ def live_rows(data: np.ndarray) -> tuple[int, int]:
     if typical <= 0:
         return 0, n - 1
 
-    live = spread > DEAD_ROW_FRACTION * typical
+    # A dead row is *constant*; a flat row still has noise. Judging deadness as
+    # a fraction of the busiest rows made the threshold depend on whatever else
+    # is in the frame: on a scan with one tall object it came to 3.5 nm while
+    # the image's own noise was 1.1, so ordinary substrate rows were called
+    # dead and 8% of the frame was thrown away. One scan lost 28% that way.
+    from afm_copilot.quality import noise_level
+
+    floor = DEAD_ROW_FRACTION * typical
+    noise = noise_level(values)
+    if noise > 0:
+        floor = min(floor, DEAD_ROW_NOISE * noise)
+
+    live = spread > floor
     if not live.any():
         return 0, n - 1
 

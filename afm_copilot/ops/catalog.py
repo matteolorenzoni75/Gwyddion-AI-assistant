@@ -134,6 +134,56 @@ _ALL: list[Operation] = [
         },
     ),
     Operation(
+        key="grow_mask",
+        gwy_func="mask_morph",
+        title="Grow the mask over the object's flanks",
+        menu="/Mask/Morphological Operation",
+        what="Widens the existing mask by a few pixels in every direction.",
+        why="A threshold marks the top of an object and stops at its shoulder, "
+            "leaving the flanks in the background. Those flanks are largely "
+            "the tip's own shape smeared around the object -- roughly a tip "
+            "radius wide -- so they are neither background nor reliable "
+            "sample, and letting them into the fit is what the user sees as "
+            "edges that are still not right.",
+        caution="Grows every mark, so on a crowded surface it can merge "
+                "neighbouring objects and leave too little background to fit "
+                "on. Keep the radius near the tip radius in pixels.",
+        needs_mask=True,
+        settings={
+            # Only the radius is set. The module's default operation was
+            # verified to dilate -- a mask of 206187 pixels came back at
+            # 209013 -- so the mode is left as Gwyddion has it rather than
+            # guessing at an enum value that means something else.
+            "/module/mask_morph/radius": 3,
+        },
+    ),
+    Operation(
+        key="align_rows_around_objects",
+        gwy_func="align_rows",
+        title="Align rows, ignoring the marked objects",
+        menu="/Correct Data/Align Rows",
+        what="The same row correction, with every marked pixel left out of it: "
+             "each row's offset is judged from its background alone.",
+        why="A large object breaks the ordinary version. Median-of-differences "
+            "survives a *narrow* feature crossing a row, but when the object "
+            "covers much of the line the median difference is the object's "
+            "own slope, and the correction writes that slope into the "
+            "background. The user reached a good result on exactly this scan "
+            "by masking the block by hand and only then aligning rows -- so "
+            "the mask has to still be there when this runs, which means "
+            "clearing it comes afterwards, not before.",
+        caution="Needs a mask that actually covers the object; with none it "
+                "behaves like the plain version.",
+        needs_mask=True,
+        settings={
+            "/module/linematch/method": LINEMATCH_MEDIAN_OF_DIFF,
+            "/module/linematch/do_extract": False,
+            "/module/linematch/do_plot": False,
+            # 0 is MASK_EXCLUDE: marked pixels take no part in the fit.
+            "/module/linematch/masking": 0,
+        },
+    ),
+    Operation(
         key="align_rows_median",
         gwy_func="align_rows",
         title="Align rows (median)",
@@ -207,14 +257,23 @@ _ALL: list[Operation] = [
                 "to each scan — but it assumes the objects really do stand "
                 "clear of the background. On a surface with a gradual slope, "
                 "or where features merge into the substrate, the mask will cut "
-                "through them.",
+                "through them.\n\n"
+                "The setting runs the opposite way to what the name suggests, "
+                "which was measured rather than assumed: on one scan 0.20 "
+                "marked 86% of the frame, 0.35 marked 79%, 0.65 marked 28% "
+                "and 0.80 marked 6%. At the old 0.35 the background fit had "
+                "only a fifth of the image left to sit on, and levelling "
+                "around the object came out worse than not masking at all.",
         creates_mask=True,
         settings={
             "/module/grain_mark/isheight": True,
             "/module/grain_mark/isslope": False,
             "/module/grain_mark/islap": False,
             "/module/grain_mark/isrank": False,
-            "/module/grain_mark/height": 0.35,
+            # Chosen so the marked area lands near what this project's own
+            # object detector finds -- about a fifth of the frame on the scan
+            # this was calibrated against, rather than four fifths.
+            "/module/grain_mark/height": 0.70,
             "/module/grain_mark/inverted": False,
             "/module/grain_mark/combine": False,
             "/module/grain_mark/merge_type": 0,
@@ -257,6 +316,33 @@ _ALL: list[Operation] = [
         settings={
             "/module/polylevel/col_degree": 2,
             "/module/polylevel/row_degree": 2,
+            "/module/polylevel/same_degree": True,
+            "/module/polylevel/independent": 1,
+            "/module/polylevel/do_extract": False,
+            # 0 is MASK_EXCLUDE: the marked pixels take no part in the fit.
+            "/module/polylevel/masking": 0,
+        },
+    ),
+    Operation(
+        key="plane_around_objects",
+        gwy_func="polylevel",
+        title="Level the background, ignoring the marked objects",
+        menu="/Level/Polynomial Background",
+        what="Fits a plane to the background only — every marked pixel is left "
+             "out — and subtracts it from the whole image.",
+        why="The same idea as the curved version, at the order a flat "
+            "background actually needs. Both failures it sits between are "
+            "real: level a scan with a tall object still in the fit and the "
+            "object tilts the plane towards itself, leaving the base sloped, "
+            "which the user reports as the commonest and hardest fault; fit a "
+            "second-order surface to a background that has no curvature and it "
+            "invents some at the corners.",
+        caution="If the background genuinely bows, this leaves the bow. The "
+                "order comes from what was measured, not from the recipe.",
+        needs_mask=True,
+        settings={
+            "/module/polylevel/col_degree": 1,
+            "/module/polylevel/row_degree": 1,
             "/module/polylevel/same_degree": True,
             "/module/polylevel/independent": 1,
             "/module/polylevel/do_extract": False,
