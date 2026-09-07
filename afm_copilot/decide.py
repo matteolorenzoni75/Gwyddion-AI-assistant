@@ -70,6 +70,12 @@ BACKGROUND_DOMINATES = 0.80
 # objects, and masking them only punches holes in the background fit.
 MIN_OBJECT_FRACTION = 0.03
 
+# Rows out of line, or offset from each other, past which a scan needs its
+# lines straightened whatever else is done to it. Below these the most
+# conservative recipe is still defensible.
+ROWS_NEED_ALIGNING = 0.01
+BANDING_NEEDS_ALIGNING = 0.08
+
 # Objects are taken as the pixels this far above the background, as a fraction
 # of the height range. Deliberately generous: a mask that is slightly too big
 # costs a little background to fit on, one that is too small lets the object
@@ -96,11 +102,24 @@ class Plan:
     object_fraction: float
     raised_fraction: float = 0.0
     sunken_fraction: float = 0.0
+    spike_fraction: float = 0.0
+    needs_despike: bool = False
+    stepped_rows: float = 0.0
+    banding: float = 0.0
     tilt: float = 0.0
+
+    @property
+    def line_defects(self) -> bool:
+        """Rows that need straightening before anything else is believed."""
+        return (self.stepped_rows >= ROWS_NEED_ALIGNING
+                or self.banding >= BANDING_NEEDS_ALIGNING)
     explained_by_degree: dict[int, float] = field(default_factory=dict)
     already_levelled: bool = False
     notes: list[str] = field(default_factory=list)
     recipe_key: str = "level-only"
+    # The surface this plan was decided on, so the stages after it can use the
+    # same one rather than each fitting its own background.
+    levelling: "Levelling | None" = None
 
     def explain(self) -> str:
         lines = [f"Recommended: {self.recipe_key}", ""]
@@ -339,6 +358,33 @@ def _find_features(data: np.ndarray,
     return above, below
 
 
+@dataclass
+class Levelling:
+    """
+    One scan's background, chosen once and shared.
+
+    Every stage needs the surface with its background removed -- deciding what
+    to do, measuring, judging quality, bounding the tip -- and each was working
+    it out for itself. On a 512-square scan that meant the background chosen
+    five times and fitted twenty, about two thirds of the batch's whole running
+    time, and four subtly different levelled surfaces describing one image.
+
+    The cost was the obvious half. The other half is that the numbers reported
+    for a scan should describe the same surface as the picture drawn of it.
+    """
+
+    degree: int
+    explained: dict[int, float]
+    flat: np.ndarray
+
+
+def level(data: np.ndarray, mask: np.ndarray | None = None) -> Levelling:
+    """Choose the background order once, and keep the surface it leaves."""
+    degree, explained = choose_background_degree(data, mask)
+    return Levelling(degree=degree, explained=explained,
+                     flat=_subtract_background(data, max(1, degree), mask))
+
+
 def choose_background_degree(
     data: np.ndarray,
     mask: np.ndarray | None = None,
@@ -401,7 +447,12 @@ def choose_background_degree(
 
 
 def plan_for(channel: Channel) -> Plan:
-    """Measure a scan and say what it needs, with the numbers."""
+    """
+    Measure a scan and say what it needs, with the numbers.
+
+    The levelling it settles on is carried on the returned Plan, so the stages
+    that follow describe the same surface instead of each working out its own.
+    """
     from afm_copilot.analysis import plane_fraction
 
     data = np.asarray(channel.data, dtype=float)
@@ -421,14 +472,25 @@ def plan_for(channel: Channel) -> Plan:
     has_objects = MIN_OBJECT_FRACTION < fraction < 0.60
 
     mask = objects if has_objects else None
-    degree, explained = choose_background_degree(data, mask)
+    settled = level(data, mask)
+    degree, explained = settled.degree, settled.explained
+
+    from afm_copilot.features import row_banding, row_step_fraction
+    from afm_copilot.quality import SPIKES_WORTH_REPAIRING, spike_fraction
+
+    spikes = spike_fraction(data)
+    levelled = settled.flat
 
     plan = Plan(
+        stepped_rows=row_step_fraction(levelled),
+        banding=row_banding(levelled),
         background_degree=degree,
         has_objects=has_objects,
         object_fraction=fraction,
         raised_fraction=raised,
         sunken_fraction=sunken,
+        spike_fraction=spikes,
+        needs_despike=spikes >= SPIKES_WORTH_REPAIRING,
         tilt=tilt,
         explained_by_degree=explained,
         already_levelled=tilt < FLAT_ENOUGH,
@@ -472,6 +534,22 @@ def plan_for(channel: Channel) -> Plan:
             "Nothing stands clear of the surface, in either direction — no "
             "separate features to protect from the fit.")
 
+    if plan.line_defects:
+        plan.notes.append(
+            f"{plan.stepped_rows:.0%} of the rows step away from their "
+            f"neighbours (offset {plan.banding:.2f} of the surface's own "
+            f"variation), so the lines are straightened and the strokes "
+            f"repaired — a scar dragged along the fast axis is the tip losing "
+            f"and regaining the surface, never the sample.")
+
+    if spikes > 0.005:
+        plan.notes.append(
+            f"{spikes:.1%} of the frame departs sharply from its neighbours. "
+            f"That can be dropouts, dust or glitches — or small tall features "
+            f"that are entirely real, and nothing measurable here tells the "
+            f"two apart. Nothing is repaired on this number alone; use "
+            f"`--despike` if you know the sample has no such features.")
+
     if degree == 0:
         plan.notes.append(
             "The background needs no curvature removed: a higher order does "
@@ -484,6 +562,7 @@ def plan_for(channel: Channel) -> Plan:
             f"higher order finds no more of that shape — so it is a real "
             f"background rather than the surface itself.")
 
+    plan.levelling = settled
     plan.recipe_key = _recipe_for_plan(plan)
     return plan
 
@@ -497,5 +576,12 @@ def _recipe_for_plan(plan: Plan) -> str:
         # so the routine tidy-up is enough and safer.
         return "quick-clean"
     if plan.already_levelled and plan.background_degree == 0:
+        # Unless the lines are damaged. 'Level only' says so in its own words
+        # -- do not use it when the image has obvious banding or scars, it will
+        # not touch them -- and nothing was checking: 23 of the 30 scans routed
+        # here in one batch had rows out of line, the worst of them 45%, and
+        # every one came out with the damage untouched.
+        if plan.line_defects:
+            return "quick-clean"
         return "level-only"
     return "quick-clean"

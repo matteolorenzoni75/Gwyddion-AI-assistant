@@ -134,6 +134,12 @@ _ALL: list[Recipe] = [
             "background_around_objects",
             "remove_mask",
             "align_rows_median_diff",
+            # Scars are never the sample: a stroke dragged along the fast axis
+            # is the tip losing and regaining the surface. This step was
+            # missing here, so 60 scans of a 197-scan batch went through with
+            # their strokes intact while the 107 on 'quick clean' had them
+            # repaired.
+            "remove_scars",
             "fix_zero",
         ),
     ),

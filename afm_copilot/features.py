@@ -585,7 +585,7 @@ class Features:
         return asdict(self)
 
 
-def measure(channel: Channel) -> Features:
+def measure(channel: Channel, levelling=None) -> Features:
     """
     Measure everything, on the surface with its background removed.
 
@@ -600,8 +600,16 @@ def measure(channel: Channel) -> Features:
     pixel = channel.pixel_size
 
     tilt = background_explains(data, 1)
-    degree, explained = choose_background_degree(data)
-    flat = subtract_background(data, max(1, degree))
+    # Reuse the levelling the plan already settled on when there is one. Left
+    # to itself every stage fits the background again, and they do not
+    # necessarily agree -- the roughness reported for a scan would then
+    # describe a slightly different surface from the one in its picture.
+    if levelling is not None:
+        degree, explained, flat = (levelling.degree, levelling.explained,
+                                   levelling.flat)
+    else:
+        degree, explained = choose_background_degree(data)
+        flat = subtract_background(data, max(1, degree))
 
     above, below = detect_features(flat)
     raised, sunken = float(above.mean()), float(below.mean())

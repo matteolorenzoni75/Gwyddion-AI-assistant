@@ -87,6 +87,28 @@ def test_curvature_has_to_earn_more_than_tilt_does():
     assert degree < 2
 
 
+def test_a_flat_scan_with_damaged_lines_is_not_left_alone():
+    """
+    'Level only' says so itself: do not use it when the image has banding or
+    scars, it will not touch them. Nothing was checking, and 23 of the 30 scans
+    routed there in one batch had rows out of line -- the worst at 45% -- every
+    one of them left as it was.
+    """
+    data = textured()
+    offsets = RNG.normal(0.0, 3e-9, (N, 1))
+    plan = plan_for(surface(data + offsets))
+    assert plan.already_levelled or plan.background_degree == 0
+    assert plan.line_defects
+    assert plan.recipe_key != "level-only"
+
+
+def test_a_clean_flat_scan_is_still_left_alone():
+    """And the conservative choice must survive where it is right."""
+    plan = plan_for(surface(textured()))
+    assert not plan.line_defects
+    assert plan.recipe_key == "level-only"
+
+
 def test_a_background_that_dominates_is_taken_even_if_it_never_settles():
     """
     Flakes on mica: order 1 explained 34%, order 2 explained 88%, and nothing

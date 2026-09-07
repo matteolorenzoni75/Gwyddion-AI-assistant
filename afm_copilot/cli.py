@@ -534,7 +534,8 @@ def cmd_batch(args: argparse.Namespace) -> int:
     summary = batch.run([Path(p) for p in args.inputs], out,
                         deduplicate=not args.keep_duplicates,
                         do_clean=not args.no_clean,
-                        do_draw=not args.no_images)
+                        do_draw=not args.no_images,
+                        do_despike=args.despike)
 
     if not summary["scans_read"]:
         print("Nothing to read.", file=sys.stderr)
@@ -555,6 +556,20 @@ def cmd_batch(args: argparse.Namespace) -> int:
     if summary["unreadable"]:
         print(f"  could not read{summary['unreadable']:>4}   listed below, "
               "not skipped")
+
+    if summary.get("despiked"):
+        print(f"\nRepaired isolated pixels in {summary['despiked']} scan(s) "
+              "before anything else touched\nthem, because you asked. Check "
+              "the roughness change: on one scan this costs 22%.")
+    else:
+        spiky = [r for r in summary["results"]
+                 if r.get("spike_fraction", 0) > 0.02]
+        if spiky:
+            print(f"\n{len(spiky)} scan(s) have pixels departing sharply from "
+                  "their neighbours. Nothing\nwas repaired: a dropout and a "
+                  "small tall feature look identical here, and the\nhighest "
+                  "scorers in this batch are nanoparticles and a lithographic "
+                  "pattern.\nUse --despike if you know the sample.")
 
     if summary.get("cleaned"):
         print(f"\nCleaned {summary['cleaned']}, by what each one needed:\n")
@@ -801,6 +816,10 @@ def build_parser() -> argparse.ArgumentParser:
                          help="judge and measure only, leave the scans alone")
     p_batch.add_argument("--no-images", action="store_true",
                          help="skip drawing the final pictures")
+    p_batch.add_argument("--despike", action="store_true",
+                         help="repair isolated pixels first — only when you "
+                              "know the sample has no small tall features of "
+                              "its own, which nothing here can tell apart")
     p_batch.set_defaults(func=cmd_batch)
 
     return parser

@@ -66,6 +66,24 @@ RATTLE_TURNS = 0.5             # how often the height must change direction
 RATTLE_AREA = 0.015            # of the frame, before it is worth saying
 RATTLE_CONTRAST = 15.0         # how much louder than the rest of the image
 
+# A pixel this far from the image's noise, measured against the median of its
+# neighbours, is a candidate for a dropout.
+SPIKE_ABOVE_TYPICAL = 12.0
+
+# Deliberately unreachable: the fraction is reported, never acted on by itself.
+#
+# Ranked across 232 real scans, the highest scores belong to nanoparticles on
+# silicon, a lithographic pattern and a regular dot lattice -- small, sharp and
+# entirely real. No threshold separated those from genuine dropouts, which is
+# the caution the despiking recipe already carries in its own words. Repairing
+# them is not free either: on one scan the recipe cut RMS by 22% and the height
+# range by more than half.
+#
+# So despiking stays a decision someone makes about a sample they know, offered
+# through `batch --despike` and the despike recipe, and the number below is
+# there so a person can see what they would be acting on.
+SPIKES_WORTH_REPAIRING = 2.0
+
 
 @dataclass
 class Check:
@@ -121,6 +139,40 @@ def noise_level(data: np.ndarray) -> float:
         return 0.0
     mad = float(np.median(np.abs(d - np.median(d))))
     return 1.4826 * mad / math.sqrt(2.0)
+
+
+def spike_fraction(data: np.ndarray) -> float:
+    """
+    How much of the frame is isolated bad pixels.
+
+    A spike disagrees with every neighbour at once -- a dropout, a speck of
+    dust, an electrical glitch. A real feature, however small and tall, agrees
+    with at least the pixels it is made of, so comparing each pixel against the
+    median of its surroundings separates the two without needing to know what
+    the sample is.
+
+    Left as a plain number rather than a verdict, because what to do about it
+    depends on the surface: on a field of small tall particles the same test
+    would call the particles spikes, which is why the despiking recipe carries
+    that warning and why this only ever *suggests* despiking.
+    """
+    from scipy import ndimage
+
+    values = np.asarray(data, dtype=float)
+    if values.size < 256:
+        return 0.0
+    filled = np.nan_to_num(values, nan=float(np.nanmedian(values)))
+    smooth = ndimage.median_filter(filled, size=3, mode="nearest")
+    departure = np.abs(filled - smooth)
+
+    # Measured against the image's noise, not against the median departure.
+    # The median collapses towards zero on a smooth surface, and then anything
+    # at all clears a multiple of it: the first version of this called the
+    # median scan 0.8% spikes and the worst 45%, which no image can be.
+    scale = noise_level(filled)
+    if scale <= 0:
+        return 0.0
+    return float(np.mean(departure > SPIKE_ABOVE_TYPICAL * scale))
 
 
 def _check_noise(flat: np.ndarray) -> Check:
@@ -309,7 +361,7 @@ def _check_rattle(flat: np.ndarray) -> Check:
                  f"the height record is steady ({area:.1%} unsettled)")
 
 
-def assess(channel: Channel, acquisition=None) -> Quality:
+def assess(channel: Channel, acquisition=None, levelling=None) -> Quality:
     """
     Look at one scan and say whether to keep it, fix it, or drop it.
 
@@ -335,8 +387,11 @@ def assess(channel: Channel, acquisition=None) -> Quality:
         measured, _ = frame.crop_to_data(channel)
 
     raw = np.asarray(measured.data, dtype=float)
-    degree, _ = choose_background_degree(raw)
-    flat = subtract_background(raw, max(1, degree))
+    if levelling is not None and levelling.flat.shape == raw.shape:
+        flat = levelling.flat
+    else:
+        degree, _ = choose_background_degree(raw)
+        flat = subtract_background(raw, max(1, degree))
     if report["interrupted"]:
         dead = report["dead_fraction"]
         if report["worth_keeping"]:

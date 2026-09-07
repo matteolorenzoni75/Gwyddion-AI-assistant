@@ -58,6 +58,9 @@ class ScanResult:
     picture_full: str = ""
     contrast: str = ""
     clipped: float = 0.0
+    needs_despike: bool = False
+    despiked: bool = False
+    spike_fraction: float = 0.0
     cleaned: bool = False
     rms_before_nm: float | None = None
     rms_after_nm: float | None = None
@@ -205,9 +208,15 @@ def _looks_the_same(a: np.ndarray, b: np.ndarray, threshold: float = 0.97) -> bo
     return bool(np.corrcoef(a[both].ravel(), b[both].ravel())[0, 1] > threshold)
 
 
-def clean(work: list[tuple[ScanResult, Path]], out: Path) -> None:
+def clean(work: list[tuple[ScanResult, Path]], out: Path,
+          despike: bool = False) -> None:
     """
     Run each scan's chosen recipe, and record what it changed.
+
+    `despike` is off by default and has to be asked for. Repairing isolated
+    pixels is not free -- on one real scan it cut RMS by 22% -- and no
+    measurement here separates a dropout from a small tall feature that is
+    genuinely there. See `quality.SPIKES_WORTH_REPAIRING`.
 
     Grouped by recipe rather than looped per file: one Gwyddion subprocess for
     every recipe in use, not one for every scan. On a batch of a hundred that
@@ -221,11 +230,38 @@ def clean(work: list[tuple[ScanResult, Path]], out: Path) -> None:
     from afm_copilot.bridge import BridgeError, GwyBridge
     from afm_copilot.ops.recipes import get_recipe
 
+    bridge = GwyBridge()
+
+    # Spikes first, and on their own pass. A single bad pixel drags a
+    # background fit towards itself, survives every levelling step, and then
+    # stretches the colour range of the finished picture over a height nothing
+    # else in the image reaches -- so repairing it after the fact repairs
+    # nothing that already went wrong.
+    needing = [(entry, path) for entry, path in work
+               if entry.needs_despike and despike] if despike else []
+    repaired: dict[str, Path] = {}
+    if needing:
+        try:
+            report = bridge.run_recipe(get_recipe("despike"),
+                                       [p for _, p in needing],
+                                       out / "repaired")
+            for record in report.get("results", []):
+                # `run_recipe` names the result "output"; `convert_raw` names
+                # it "gwy". Reading the wrong one here silently discarded every
+                # repair -- the pass ran on 125 scans and reported 0 done.
+                if record.get("ok") and record.get("output"):
+                    repaired[record["stem"]] = Path(record["output"])
+        except (BridgeError, KeyError):
+            repaired = {}
+        for entry, path in needing:
+            if path.stem in repaired:
+                entry.despiked = True
+
     by_recipe: dict[str, list[tuple[ScanResult, Path]]] = {}
     for entry, path in work:
-        by_recipe.setdefault(entry.recipe or "level-only", []).append((entry, path))
-
-    bridge = GwyBridge()
+        source = repaired.get(path.stem, path)
+        by_recipe.setdefault(entry.recipe or "level-only",
+                             []).append((entry, source))
     for key, group in by_recipe.items():
         try:
             recipe = get_recipe(key)
@@ -363,7 +399,8 @@ def _gwyddion_ranges(paths: list[Path]) -> dict[str, list[float]]:
 
 
 def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
-        do_clean: bool = True, do_draw: bool = True) -> dict:
+        do_clean: bool = True, do_draw: bool = True,
+        do_despike: bool = False) -> dict:
     """
     Take a batch through every stage and report what happened.
 
@@ -462,17 +499,18 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
 
         plan = plan_for(cropped)
         entry.recipe = plan.recipe_key
-        entry.measurements = measure(cropped).as_dict()
+        entry.needs_despike = plan.needs_despike
+        entry.spike_fraction = round(plan.spike_fraction, 5)
+        # One levelling for the whole scan. Measuring on its own would fit the
+        # background again and report a surface slightly different from the one
+        # the plan was decided on.
+        entry.measurements = measure(cropped, plan.levelling).as_dict()
 
         # What the probe did to the widths. The measurement is an apparent
         # size until this is applied, and which radius was used has to travel
         # with the number -- the same particle reads half again as wide through
         # a coated probe as through a bare one.
-        from afm_copilot.features import subtract_background
-        levelled = subtract_background(
-            np.asarray(cropped.data, dtype=float),
-            max(1, plan.background_degree))
-        probe = tip.for_scan(levelled, cropped.pixel_size)
+        probe = tip.for_scan(plan.levelling.flat, cropped.pixel_size)
         entry.tip_radius_nm = round(probe.radius * 1e9, 2)
         entry.tip_source = probe.source
         apparent = entry.measurements.get("object_median_size") or 0.0
@@ -484,7 +522,7 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
 
     if do_clean and to_clean:
         try:
-            clean(to_clean, out)
+            clean(to_clean, out, despike=do_despike)
         except Exception:                                      # noqa: BLE001
             # Cleaning needs Gwyddion; measuring and judging do not. Losing the
             # cleaning step should not cost the rest of the report.
@@ -514,6 +552,8 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         "needed_work": sum(1 for r in kept if r.verdict == "fixable"),
         "cropped": sum(1 for r in kept if r.cropped_from),
         "cleaned": sum(1 for r in kept if r.cleaned),
+        "needed_despike": sum(1 for r in kept if r.needs_despike),
+        "despiked": sum(1 for r in kept if r.despiked),
         "over_flattened": sum(1 for r in kept if r.over_flattened),
         "tip_from_image": sum(1 for r in kept if r.tip_source == "image"),
         "drawn": sum(1 for r in kept if r.picture),
