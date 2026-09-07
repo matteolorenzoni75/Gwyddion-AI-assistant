@@ -152,6 +152,143 @@ def _otsu_split(values: np.ndarray, bins: int = 256) -> tuple[float, float]:
     return float(centres[best]), max(0.0, min(1.0, eta))
 
 
+# --------------------------------------------------------------------------
+# which measurement a scan is actually for
+# --------------------------------------------------------------------------
+
+# Two clearly separated height levels: the mark of a step, a scratch or a
+# terrace, and the condition for a thickness to mean anything.
+TWO_LEVELS = 0.50
+
+# Below this much of the frame departing from the surface, and with no step,
+# a single roughness describes the scan.
+UNIFORM_ENOUGH = 0.03
+
+# Enough separate objects that their sizes say something.
+ENOUGH_PARTICLES = 5
+
+
+@dataclass
+class Reading:
+    """One measurement, with the reason it was the right one to take."""
+
+    kind: str                        # thickness | roughness | particles
+    headline: str
+    detail: str = ""
+    caveat: str = ""
+
+
+def readings_for(channel: Channel, measurements: dict,
+                 tip_radius: float | None = None) -> list[Reading]:
+    """
+    Decide what a scan is *for*, then take that measurement.
+
+    A batch is not a uniform thing to be measured uniformly. One scan carries a
+    step and its answer is a thickness; the next is a flat film and its answer
+    is a roughness; a third is covered in particles and its answer is how many
+    and how big. Measuring all three the same way yields three numbers, two of
+    which describe nothing.
+
+    Where none of the three applies, the honest output is none of them.
+    """
+    from afm_copilot.tip import feature_radius
+
+    out: list[Reading] = []
+    bimodality = float(measurements.get("bimodality", 0.0) or 0.0)
+    objects = float(measurements.get("object_fraction", 0.0) or 0.0)
+    count = int(measurements.get("object_count", 0) or 0)
+    polarity = int(measurements.get("object_polarity", 0) or 0)
+    rms = float(measurements.get("rms", 0.0) or 0.0)
+    correlation = measurements.get("correlation_length")
+
+    if bimodality >= TWO_LEVELS:
+        try:
+            step = measure_film_thickness(channel)
+        except Exception as exc:                               # noqa: BLE001
+            step = None
+            refusal = str(exc)[:150]
+        else:
+            refusal = "; ".join(step.warnings or []) if not step.ok else ""
+
+        # A measurement that refuses has to be reported as a refusal. This
+        # module is built so that it *can* refuse -- returning a plausible
+        # number where there is no step is the failure it exists to avoid --
+        # and reading past `ok` printed "step nan nm" on three scans, which is
+        # worse than either the number or the refusal alone.
+        if step is not None and step.ok:
+            out.append(Reading(
+                "thickness", f"step {step.value * 1e9:.1f} nm",
+                f"+/- {step.uncertainty * 1e9:.1f} nm, from the two levels the "
+                f"heights fall into (separability {bimodality:.2f})",
+                "A height is the one thing neither the tip nor the scanner "
+                "distorts, so this is the most trustworthy number here."))
+        else:
+            out.append(Reading(
+                "thickness", "no step here, though the heights look split",
+                refusal or "the two levels are not separated enough to measure",
+                "Reported rather than a number: a plausible thickness where "
+                "there is no step is the one output worth nothing at all."))
+
+    confirmed = float(measurements.get("period_confirmed", 0.0) or 0.0)
+    spacing = measurements.get("period_length")
+    if confirmed > 0 and spacing and np.isfinite(spacing):
+        angle = measurements.get("period_angle")
+        # How convincingly it repeats, out of a possible 2, separates a
+        # manufactured pattern from a surface that merely has a preferred
+        # spacing: a calibration grating scores about 1.9, a grain structure
+        # between 0.5 and 0.7.
+        made = ("regular enough to be manufactured" if confirmed > 1.4
+                else "a preferred spacing rather than a made pattern")
+        out.append(Reading(
+            "pattern", f"pitch {spacing * 1e9:.0f} nm",
+            (f"repeating at {angle:.0f}°" if angle is not None
+             and np.isfinite(angle) else "repeating")
+            + f", {made} (agreement {confirmed:.2f} of 2)",
+            "The spacing is a lateral distance, so it carries the scanner's "
+            "calibration with it -- two scans of one DVD in this set disagree "
+            "by 12 to 16%."))
+
+    if objects < UNIFORM_ENOUGH and bimodality < TWO_LEVELS:
+        detail = "over the whole frame"
+        if correlation and np.isfinite(correlation):
+            detail += (f"; the surface stops resembling itself after "
+                       f"{correlation * 1e9:.0f} nm, which is the length a "
+                       "cut-off should respect")
+        out.append(Reading(
+            "roughness", f"Sq {rms * 1e9:.2f} nm", detail,
+            "Levelling always takes some real roughness with the artifact, so "
+            "this is a lower bound -- row-by-row correction costs far more "
+            "than whole-image levelling."))
+
+    if count >= ENOUGH_PARTICLES and polarity != 0:
+        median = float(measurements.get("object_median_size", 0.0) or 0.0)
+        spread = float(measurements.get("object_size_spread", 0.0) or 0.0)
+        elongation = float(measurements.get("object_elongation", 0.0) or 0.0)
+        what = "pits" if polarity < 0 else "particles"
+
+        detail_parts = [f"{count} of them"]
+        if spread:
+            detail_parts.append(
+                ("all much the same size" if spread < 0.35
+                 else "a wide range of sizes") + f" (spread {spread:.0%})")
+        if elongation >= 1.6:
+            detail_parts.append(f"elongated, about {elongation:.1f} to 1")
+
+        headline = f"{what}, {median * 1e9:.0f} nm across"
+        caveat = ""
+        if tip_radius and median > 0:
+            true_across = 2.0 * feature_radius(median, tip_radius)
+            headline = (f"{what}, {true_across * 1e9:.0f} nm across "
+                        f"({median * 1e9:.0f} nm as measured)")
+            caveat = (f"The measured width includes the tip; corrected for a "
+                      f"{tip_radius * 1e9:.0f} nm probe. A blunter probe would "
+                      "mean smaller objects still.")
+        out.append(Reading("particles", headline, ", ".join(detail_parts),
+                           caveat))
+
+    return out
+
+
 def plane_fraction(data: np.ndarray) -> float:
     """
     Fraction of the height variance a best-fit plane accounts for.

@@ -133,12 +133,24 @@ def noise_level(data: np.ndarray) -> float:
     rather than a standard deviation so that genuine steps -- a few large
     differences -- do not count as noise.
     """
-    d = np.diff(np.asarray(data, dtype=float), axis=1)
-    d = d[np.isfinite(d)]
-    if d.size == 0:
-        return 0.0
-    mad = float(np.median(np.abs(d - np.median(d))))
-    return 1.4826 * mad / math.sqrt(2.0)
+    values = np.asarray(data, dtype=float)
+
+    def along(axis: int) -> float:
+        d = np.diff(values, axis=axis)
+        d = d[np.isfinite(d)]
+        if d.size == 0:
+            return float("inf")
+        mad = float(np.median(np.abs(d - np.median(d))))
+        return 1.4826 * mad / math.sqrt(2.0)
+
+    # Both directions, and the quieter one wins. Noise is isotropic; structure
+    # is not. A fine grating changes height at every pixel across the stripes
+    # and almost none along them, so measuring in one direction only called a
+    # real calibration grating 69% noise and threw it away -- the worst thing
+    # this software can do.
+    across, along_rows = along(1), along(0)
+    quieter = min(across, along_rows)
+    return 0.0 if not math.isfinite(quieter) else quieter
 
 
 def spike_fraction(data: np.ndarray) -> float:
@@ -444,8 +456,12 @@ def assess(channel: Channel, acquisition=None, levelling=None) -> Quality:
     # Independent checks agreeing is far stronger evidence than any one of them
     # shouting, and a human operator discards a few scans in a batch, not a
     # fifth of it.
-    fatal = [c for c in checks
-             if c.is_bad and c.name in ("interrupted", "noise")]
+    # Only an empty frame is fatal on its own now. Noise used to be, and a
+    # scan of HOPG whose terraces were perfectly good was thrown away for it --
+    # the user's verdict was that it is noisy and entirely recoverable, the
+    # noise being the only thing wrong with it. Something that can be filtered
+    # is not a reason to discard; it is a reason to filter.
+    fatal = [c for c in checks if c.is_bad and c.name == "interrupted"]
     bad = [c for c in checks if c.is_bad]
 
     if fatal or len(bad) >= 2:

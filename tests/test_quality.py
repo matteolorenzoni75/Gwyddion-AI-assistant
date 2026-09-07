@@ -46,9 +46,25 @@ def test_a_tilted_scan_is_still_clean():
     assert assess(channel(tilted)).verdict == "good"
 
 
-def test_mostly_noise_is_discarded():
-    """Nothing to measure under it -- one of the two fatal cases."""
+def test_mostly_noise_is_kept_and_flagged():
+    """
+    Noise used to be fatal on its own, and that was wrong.
+
+    A scan of HOPG was thrown away for it whose terraces were perfectly good --
+    the user's verdict was that it is noisy and entirely recoverable, the noise
+    being the only thing wrong with it. Something that can be filtered is not a
+    reason to discard; it is a reason to filter.
+    """
     data = np.random.default_rng(3).normal(0, 5e-9, (SIZE, SIZE))
+    verdict = assess(channel(data))
+    assert verdict.verdict == "fixable"
+    assert any(c.name == "noise" and c.is_bad for c in verdict.checks)
+
+
+def test_an_empty_frame_is_still_fatal_on_its_own():
+    """The one case where there is genuinely nothing to work with."""
+    data = surface()
+    data[30:, :] = data[29, 0]
     assert assess(channel(data)).verdict == "discard"
 
 

@@ -29,13 +29,16 @@ def coords():
     return x, y
 
 
-def flat(noise: float = 1e-9) -> np.ndarray:
-    return RNG.normal(0.0, noise, (N, N))
+def flat(noise: float = 1e-9, seed: int = 101) -> np.ndarray:
+    # Its own generator, not the shared one. Sharing made every fixture depend
+    # on which tests had run before it, so adding a test three files away
+    # changed this one's data and its verdict with it.
+    return np.random.default_rng(seed).normal(0.0, noise, (N, N))
 
 
-def textured(roughness: float = 1e-9) -> np.ndarray:
+def textured(roughness: float = 1e-9, seed: int = 202) -> np.ndarray:
     """A surface with structure of its own, not white noise."""
-    data = RNG.normal(0.0, roughness, (N, N))
+    data = np.random.default_rng(seed).normal(0.0, roughness, (N, N))
     for _ in range(8):
         data = (data + np.roll(data, 1, 0) + np.roll(data, 1, 1)) / 3.0
     return data * (roughness / max(data.std(), 1e-18))
@@ -85,6 +88,40 @@ def test_curvature_has_to_earn_more_than_tilt_does():
     degree, explained = choose_background_degree(domes)
     assert explained[2] < 0.60, "the fixture must not be background-dominated"
     assert degree < 2
+
+
+def test_a_pattern_along_the_slow_axis_is_not_row_aligned():
+    """
+    Row alignment removes whatever each row's median says, so it is safe only
+    when those medians carry nothing. A honeycomb lost a quarter of its
+    periodicity to it and came back wavy.
+    """
+    _, y = coords()
+    striped = textured(1e-9) + 40e-9 * np.sin(2 * np.pi * y * 9)
+    plan = plan_for(surface(striped))
+    assert plan.rows_are_structure
+    assert not plan.line_defects
+    assert plan.recipe_key == "roughness-ready"
+
+
+def test_stripes_along_the_fast_axis_are_left_alone_by_this():
+    """
+    Vertical stripes give identical row medians, so alignment cannot hurt them
+    -- and a calibration grating measured before and after is unchanged.
+    """
+    x, _ = coords()
+    striped = textured(1e-9) + 40e-9 * np.sin(2 * np.pi * x * 9)
+    assert not plan_for(surface(striped)).rows_are_structure
+
+
+def test_wandering_row_offsets_are_still_a_defect():
+    """
+    The guard must not excuse real banding: a drifting offset wanders and
+    never comes back, which is what separates it from a pattern.
+    """
+    data = textured() + RNG.normal(0.0, 3e-9, (N, 1)).cumsum(axis=0) * 0.05
+    plan = plan_for(surface(data))
+    assert not plan.rows_are_structure
 
 
 def test_a_flat_scan_with_damaged_lines_is_not_left_alone():

@@ -19,6 +19,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import math
+
 import numpy as np
 
 from afm_copilot.gwy_io import Channel
@@ -76,6 +78,11 @@ MIN_OBJECT_FRACTION = 0.03
 ROWS_NEED_ALIGNING = 0.01
 BANDING_NEEDS_ALIGNING = 0.08
 
+# The sequence of row medians has to let go of itself before it can be said to
+# come back: it must fall below the first figure, then rise above the second.
+ROWS_MUST_FALL_TO = 0.10
+ROWS_REPEAT = 0.45
+
 # Objects are taken as the pixels this far above the background, as a fraction
 # of the height range. Deliberately generous: a mask that is slightly too big
 # costs a little background to fit on, one that is too small lets the object
@@ -108,11 +115,40 @@ class Plan:
     banding: float = 0.0
     tilt: float = 0.0
 
+    rows_are_structure: bool = False
+    columns: int = 0
+
+    @property
+    def banding_floor(self) -> float:
+        """
+        How much row-to-row scatter noise alone produces.
+
+        A row's median of `n` independent values wanders by about 1.25/sqrt(n)
+        of the surface's own spread, so a fixed threshold is a threshold on the
+        image width. At 256 columns that floor is 0.078 -- which is where the
+        fixed 0.08 sat, so pure noise was being sent off to have its rows
+        straightened.
+        """
+        if self.columns <= 1:
+            return BANDING_NEEDS_ALIGNING
+        return max(BANDING_NEEDS_ALIGNING,
+                   2.5 * 1.25 / math.sqrt(self.columns))
+
     @property
     def line_defects(self) -> bool:
-        """Rows that need straightening before anything else is believed."""
+        """
+        Rows that need straightening before anything else is believed.
+
+        Not when the row-to-row variation is the sample. Aligning rows works on
+        the slow axis, so a pattern that varies along it lives in exactly the
+        row medians the correction removes: a honeycomb lost a quarter of its
+        periodicity that way and came back wavy, while a grating of vertical
+        stripes -- whose row medians are all alike -- passed through untouched.
+        """
+        if self.rows_are_structure:
+            return False
         return (self.stepped_rows >= ROWS_NEED_ALIGNING
-                or self.banding >= BANDING_NEEDS_ALIGNING)
+                or self.banding >= self.banding_floor)
     explained_by_degree: dict[int, float] = field(default_factory=dict)
     already_levelled: bool = False
     notes: list[str] = field(default_factory=list)
@@ -484,6 +520,8 @@ def plan_for(channel: Channel) -> Plan:
     plan = Plan(
         stepped_rows=row_step_fraction(levelled),
         banding=row_banding(levelled),
+        rows_are_structure=rows_carry_structure(levelled),
+        columns=int(data.shape[1]),
         background_degree=degree,
         has_objects=has_objects,
         object_fraction=fraction,
@@ -534,7 +572,13 @@ def plan_for(channel: Channel) -> Plan:
             "Nothing stands clear of the surface, in either direction — no "
             "separate features to protect from the fit.")
 
-    if plan.line_defects:
+    if plan.rows_are_structure:
+        plan.notes.append(
+            "The row-to-row variation repeats, so it is the sample and not an "
+            "offset — this surface has structure running along the slow scan "
+            "axis. Nothing that aligns rows will touch it: doing so erases the "
+            "pattern and leaves waviness where it was.")
+    elif plan.line_defects:
         plan.notes.append(
             f"{plan.stepped_rows:.0%} of the rows step away from their "
             f"neighbours (offset {plan.banding:.2f} of the surface's own "
@@ -567,8 +611,64 @@ def plan_for(channel: Channel) -> Plan:
     return plan
 
 
+def rows_carry_structure(flat: np.ndarray,
+                         min_repeats: float = 3.0) -> bool:
+    """
+    Are the row-to-row differences the sample, or the instrument?
+
+    Row alignment removes whatever the median of each row says, so it is safe
+    exactly when those medians carry no information -- offsets from a drifting
+    feedback, which wander at random. When the sample itself varies along the
+    slow axis the medians follow it, and straightening them erases the pattern
+    and leaves waviness where it was.
+
+    The test is whether the sequence of row medians *repeats*. A random walk
+    does not; a surface with horizontal or diagonal structure does. Vertical
+    stripes give identical medians and so never trip this, which is why a
+    calibration grating survives row alignment untouched while a honeycomb
+    does not.
+    """
+    rows = np.nanmedian(np.asarray(flat, dtype=float), axis=1)
+    rows = rows[np.isfinite(rows)]
+    if rows.size < 32:
+        return False
+    rows = rows - rows.mean()
+    spread = float(np.std(rows))
+    if spread <= 0:
+        return False
+
+    # Autocorrelation of the row-median sequence -- and what matters is not how
+    # high it stays but whether it *comes back*. Any smooth surface has row
+    # medians that resemble themselves a few rows later, so a plain threshold
+    # fired on 94% of the batch. A repeat is a sequence that falls away and
+    # then rises again; a wandering offset falls and stays down.
+    correlation = np.correlate(rows, rows, mode="full")[rows.size - 1:]
+    correlation = correlation / correlation[0]
+    longest = int(rows.size / min_repeats)
+    if longest <= 6:
+        return False
+
+    dip = None
+    for lag in range(2, longest):
+        if correlation[lag] < ROWS_MUST_FALL_TO:
+            dip = lag
+            break
+    if dip is None:
+        return False                     # never let go: smooth, not periodic
+
+    rebound = correlation[dip:longest]
+    return bool(rebound.size and rebound.max() >= ROWS_REPEAT)
+
+
 def _recipe_for_plan(plan: Plan) -> str:
     """Which of the written recipes matches what was measured."""
+    if plan.rows_are_structure:
+        # Nothing that aligns rows may touch this scan: the row medians are
+        # the sample. 'Roughness ready' is the recipe that levels and repairs
+        # scars without going near them -- it exists because row-wise
+        # correction biases roughness, and the same property protects a
+        # pattern that varies along the slow axis.
+        return "roughness-ready"
     if plan.has_objects and plan.background_degree > 0:
         return "isolate-objects"
     if plan.has_objects:
