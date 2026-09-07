@@ -51,6 +51,11 @@ SATURATION_SEVERE = 0.05
 FEEDBACK_LAG_NOTABLE = 0.8
 FEEDBACK_LAG_SEVERE = 3.0
 
+# Not here: a check for a worn or truncated tip. Four attempts, none of which
+# worked, and the reasons are written down in
+# knowledge/the-tip-shows-itself-to-the-eye.md rather than left as code that
+# fires on the wrong scans.
+
 
 @dataclass
 class Check:
@@ -223,6 +228,7 @@ def _check_feedback(flat: np.ndarray) -> Check:
                      "signs of the feedback lagging along the scan direction; "
                      "shapes will be smeared in that direction")
     return Check("feedback", excess, "ok", "the feedback kept up")
+
 
 
 def assess(channel: Channel, acquisition=None) -> Quality:
