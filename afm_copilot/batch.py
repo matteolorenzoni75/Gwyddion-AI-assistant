@@ -54,6 +54,10 @@ class ScanResult:
     tip_radius_nm: float | None = None
     tip_source: str = ""
     object_true_radius_nm: float | None = None
+    picture: str = ""
+    picture_full: str = ""
+    contrast: str = ""
+    clipped: float = 0.0
     cleaned: bool = False
     rms_before_nm: float | None = None
     rms_after_nm: float | None = None
@@ -278,8 +282,88 @@ def lost_too_much(entry: ScanResult) -> bool:
     return kept < 0.4 * expected and (1.0 - kept) > 0.5
 
 
+def draw(work: list[tuple[ScanResult, Path]], out: Path) -> None:
+    """
+    Write the picture of each scan, with the contrast put where the subject is.
+
+    This is the thing that leaves the lab. It is drawn per scan rather than on
+    one shared scale, because the job here is that each image be legible; a set
+    meant to be *compared* needs one range across all of it, which is what
+    `afm-copilot batch-images --auto-group` is for. Which of the two you want
+    depends on the question, so the report says which was done.
+    """
+    from afm_copilot.render import (ColorScale, RenderStyle,
+                                    guided_color_scale, pick_unit,
+                                    render_channel)
+
+    style = RenderStyle()
+    gwyddion_ranges = _gwyddion_ranges([p for _, p in work])
+
+    for entry, path in work:
+        try:
+            channel = load_height(path)
+        except Exception:                                      # noqa: BLE001
+            continue
+
+        try:
+            scale, note = guided_color_scale(channel)
+            render_channel(channel, out / "images" / f"{entry.name}.png",
+                           scale, style=style, title=entry.name)
+            entry.picture = f"images/{entry.name}.png"
+            entry.contrast = note.get("reason", "")
+            entry.clipped = round(float(note.get("clipped", 0.0)), 4)
+        except Exception:                                      # noqa: BLE001
+            pass
+
+        # And the same scan as Gwyddion would show it, so there is always the
+        # familiar picture to compare against. Not a fallback: the two answer
+        # different questions, and seeing them side by side is what makes the
+        # narrowing on the guided one legible as a choice rather than a quirk.
+        band = gwyddion_ranges.get(path.stem)
+        if band is None:
+            continue
+        try:
+            data = np.asarray(channel.data, dtype=float)
+            finite = data[np.isfinite(data)]
+            base = float(finite.min()) if finite.size else 0.0
+            vmin, vmax = band[0] - base, band[1] - base
+            if vmax <= vmin:
+                continue
+            factor, unit = pick_unit(vmax - vmin)
+            render_channel(
+                channel, out / "images" / "full" / f"{entry.name}.png",
+                ColorScale(vmin=vmin, vmax=vmax, unit_factor=factor,
+                           unit_name=unit),
+                style=style, title=entry.name)
+            entry.picture_full = f"images/full/{entry.name}.png"
+        except Exception:                                      # noqa: BLE001
+            continue
+
+
+def _gwyddion_ranges(paths: list[Path]) -> dict[str, list[float]]:
+    """
+    Gwyddion's own automatic colour range for each file, in one call.
+
+    Asked for rather than imitated: the method is documented as unspecified, so
+    an approximation would look almost right and be quietly different from what
+    the user sees when they open the same file themselves.
+
+    An empty result is not a failure worth stopping for -- it costs the second
+    picture, nothing else.
+    """
+    if not paths:
+        return {}
+    try:
+        from afm_copilot.bridge import GwyBridge
+        report = GwyBridge().run_script(
+            "autorange.py", [str(p) for p in paths], timeout=900.0)
+    except Exception:                                          # noqa: BLE001
+        return {}
+    return report.get("ranges", {}) or {}
+
+
 def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
-        do_clean: bool = True) -> dict:
+        do_clean: bool = True, do_draw: bool = True) -> dict:
     """
     Take a batch through every stage and report what happened.
 
@@ -406,6 +490,17 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
             # cleaning step should not cost the rest of the report.
             pass
 
+    if do_draw and to_clean:
+        # Draw the cleaned scan where cleaning worked, the prepared one where
+        # it did not: the picture should show what the numbers describe.
+        drawable = [
+            (entry, out / "clean" / (source.stem + ".gwy")
+             if entry.cleaned and (out / "clean" / (source.stem + ".gwy")).exists()
+             else source)
+            for entry, source in to_clean
+        ]
+        draw(drawable, out)
+
     kept = [r for r in results if r.kept]
     summary = {
         "scans_read": len(results),
@@ -421,6 +516,10 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         "cleaned": sum(1 for r in kept if r.cleaned),
         "over_flattened": sum(1 for r in kept if r.over_flattened),
         "tip_from_image": sum(1 for r in kept if r.tip_source == "image"),
+        "drawn": sum(1 for r in kept if r.picture),
+        "drawn_full": sum(1 for r in kept if r.picture_full),
+        "contrast_guided": sum(1 for r in kept
+                               if r.picture and "tower over" in r.contrast),
         "recipes_used": _tally(r.recipe for r in kept if r.cleaned),
         "results": [asdict(r) for r in results],
     }

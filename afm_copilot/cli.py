@@ -533,7 +533,8 @@ def cmd_batch(args: argparse.Namespace) -> int:
     out = Path(args.out)
     summary = batch.run([Path(p) for p in args.inputs], out,
                         deduplicate=not args.keep_duplicates,
-                        do_clean=not args.no_clean)
+                        do_clean=not args.no_clean,
+                        do_draw=not args.no_images)
 
     if not summary["scans_read"]:
         print("Nothing to read.", file=sys.stderr)
@@ -559,6 +560,26 @@ def cmd_batch(args: argparse.Namespace) -> int:
         print(f"\nCleaned {summary['cleaned']}, by what each one needed:\n")
         for key, count in summary.get("recipes_used", {}).items():
             print(f"  {key:<22} {count:>4}")
+    if summary.get("drawn"):
+        guided = summary.get("contrast_guided", 0)
+        print(f"\nDrew {summary['drawn']} picture(s) to {out / 'images'}. "
+              f"{guided} of them put the\ncontrast on what stands out from the "
+              "surface rather than spreading it over\nthe whole frame. Each "
+              "image is scaled to be legible on its own, so they are\nNOT "
+              "comparable with each other -- use batch-images --auto-group "
+              "for that.")
+        if summary.get("drawn_full"):
+            print(f"\n  images/full/ holds the same {summary['drawn_full']} "
+                  "scans as Gwyddion would show\n  them, on its own automatic "
+                  "range with the tails cut. Where the two differ,\n  the "
+                  "difference is the choice being made.")
+        heavy = [r for r in summary["results"] if r.get("clipped", 0) > 0.05]
+        if heavy:
+            print(f"\n  {len(heavy)} saturate more than 5% of the frame, so "
+                  "something in them runs\n  well past the rest:")
+            for r in sorted(heavy, key=lambda r: -r["clipped"])[:5]:
+                print(f"     {r['name'][:40]:<40} {r['clipped']:.0%} saturated")
+
     sized = [r for r in summary["results"] if r.get("object_true_radius_nm")]
     if sized:
         from_image = summary.get("tip_from_image", 0)
@@ -778,6 +799,8 @@ def build_parser() -> argparse.ArgumentParser:
                          help="measure repeated scans of the same area too")
     p_batch.add_argument("--no-clean", action="store_true",
                          help="judge and measure only, leave the scans alone")
+    p_batch.add_argument("--no-images", action="store_true",
+                         help="skip drawing the final pictures")
     p_batch.set_defaults(func=cmd_batch)
 
     return parser

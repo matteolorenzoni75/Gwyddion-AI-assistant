@@ -87,6 +87,21 @@ class RenderStyle:
     textcolor: str = "black"
 
 
+# Past this much of the frame, what was found is not "features on a
+# background": there is no background left to protect, and the whole image is
+# the subject.
+FEATURES_FILL_THE_FRAME = 0.60
+
+# Features have to tower this far over the surface's own roughness before it is
+# worth giving them up to saturation. Below it the ordinary range shows both,
+# and narrowing would throw away real information for nothing.
+TALL_FEATURES = 3.0
+
+# And the range still reaches this far into them, as a multiple of the
+# surface's spread, so they are not a flat silhouette.
+INTO_THE_FEATURES = 1.5
+
+
 @dataclass
 class ColorScale:
     """The z range shared by a batch, in metres."""
@@ -133,6 +148,112 @@ def common_color_scale(
         vmax = vmin + 1e-12
     factor, unit = pick_unit(vmax - vmin)
     return ColorScale(vmin=vmin, vmax=vmax, unit_factor=factor, unit_name=unit)
+
+
+def guided_color_scale(channel: Channel,
+                       percentile: tuple[float, float] = (0.5, 99.5),
+                       ) -> tuple[ColorScale, dict]:
+    """
+    A colour range chosen from where the interesting part of the image is.
+
+    Percentiles over the whole frame answer the wrong question. They ask what
+    range holds most of the *pixels*, and most of the pixels are background --
+    so a scan with one tall crystal spends its entire colour scale on the
+    crystal and renders the substrate as a single flat tone, while a scan of a
+    nearly flat film spends it on noise.
+
+    What a person does instead is decide what the picture is *of*, and give
+    that the contrast. Here the features found by `decide.detect_features`
+    stand in for that judgement: the background sets one end of the range and
+    the features set the other, so both keep some of the scale. Where the
+    features run far past that -- a spike, a piece of dirt -- they are allowed
+    to clip, and how much clipped is reported rather than hidden.
+
+    Returns the scale and a note saying what was decided and what it cost.
+    """
+    from afm_copilot.decide import (_subtract_background,
+                                    choose_background_degree, detect_features)
+
+    data = np.asarray(channel.data, dtype=float)
+    finite = data[np.isfinite(data)]
+    if finite.size == 0:
+        raise ValueError("no finite data in this channel")
+    base = finite - finite.min()
+
+    degree, _ = choose_background_degree(data)
+    above, below = detect_features(_subtract_background(data, max(1, degree)))
+
+    def plain(reason: str) -> tuple[ColorScale, dict]:
+        lo, hi = np.percentile(base, percentile)
+        if hi <= lo:
+            hi = lo + 1e-12
+        factor, unit = pick_unit(hi - lo)
+        return (ColorScale(vmin=float(lo), vmax=float(hi),
+                           unit_factor=factor, unit_name=unit),
+                {"guided": False, "reason": reason, "clipped": 0.0})
+
+    features = above | below
+    fraction = float(features.mean())
+    if fraction <= 0.001 or fraction >= FEATURES_FILL_THE_FRAME:
+        return plain(
+            "nothing stands out to give the contrast to, so the range covers "
+            "the whole frame" if fraction <= 0.001 else
+            "features cover most of the frame, so there is no background to "
+            "protect and the range covers everything")
+
+    shifted = base.reshape(data.shape)
+    background = shifted[~features & np.isfinite(data)]
+    feature_values = shifted[features & np.isfinite(data)]
+    if background.size < 64 or feature_values.size < 16:
+        return plain("too little of either to tell apart")
+
+    # How far the features run past the surface they sit on, in units of the
+    # surface's own roughness. This is the number that decides whether there is
+    # anything to gain: features a little taller than the texture cost nothing,
+    # and the ordinary percentile range shows everything perfectly well.
+    lo, hi = np.percentile(background, (1.0, 99.0))
+    surface_spread = float(hi - lo)
+    if surface_spread <= 0:
+        return plain("the surface has no spread to protect")
+
+    sunken = below.mean() > above.mean()
+    reach = (float(np.median(background) - np.median(feature_values)) if sunken
+             else float(np.median(feature_values) - np.median(background)))
+    if reach < TALL_FEATURES * surface_spread:
+        return plain(
+            "the features stand only a little clear of the surface, so the "
+            "ordinary range already shows both")
+
+    # They tower. Give the range to the surface and let them saturate: the
+    # objects are recognisable by shape once they are bright, while the texture
+    # they sit on is lost entirely if the scale is stretched to contain them.
+    # Widening it to fit them is the mistake -- tried first here, and it made
+    # every picture darker and flatter than the plain percentiles did.
+    if sunken:
+        vmax = float(hi)
+        vmin = float(lo - INTO_THE_FEATURES * surface_spread)
+        what = "pits"
+    else:
+        vmin = float(lo)
+        vmax = float(hi + INTO_THE_FEATURES * surface_spread)
+        what = "raised features"
+
+    if vmax <= vmin:
+        return plain("the features do not separate from the background in "
+                     "height")
+
+    clipped = float(np.mean((base < vmin) | (base > vmax)))
+    factor, unit = pick_unit(vmax - vmin)
+    note = {
+        "guided": True,
+        "reason": (f"the {what} tower over the surface ({fraction:.1%} of the "
+                   f"frame, {reach / surface_spread:.0f}x its roughness), so "
+                   "the range is given to the surface and they are allowed to "
+                   f"saturate — {clipped:.1%} of the image does"),
+        "clipped": clipped,
+    }
+    return (ColorScale(vmin=vmin, vmax=vmax, unit_factor=factor,
+                       unit_name=unit), note)
 
 
 def scale_spread(channels: list[Channel]) -> float:
