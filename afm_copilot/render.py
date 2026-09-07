@@ -101,6 +101,10 @@ TALL_FEATURES = 3.0
 # surface's spread, so they are not a flat silhouette.
 INTO_THE_FEATURES = 1.5
 
+# Narrowing has to buy something. A range this close to the ordinary one is not
+# worth explaining, so the ordinary one is used and says nothing.
+NARROWING_WORTH_IT = 0.7
+
 
 @dataclass
 class ColorScale:
@@ -241,6 +245,20 @@ def guided_color_scale(channel: Channel,
     if vmax <= vmin:
         return plain("the features do not separate from the background in "
                      "height")
+
+    # Never wider than the ordinary range. The margin above the background is
+    # meant to reach a little way into the features, but on a rough surface it
+    # can overshoot the plain percentile and end up *widening* the range --
+    # which is the very mistake this function exists to avoid. It did, on four
+    # of the first six scans it fired on: darker pictures with less detail than
+    # the percentiles gave. Guided may only ever narrow.
+    ordinary_lo, ordinary_hi = np.percentile(base, percentile)
+    vmin, vmax = max(vmin, float(ordinary_lo)), min(vmax, float(ordinary_hi))
+    if vmax <= vmin:
+        return plain("narrowing would leave no range at all")
+    if (vmax - vmin) > NARROWING_WORTH_IT * float(ordinary_hi - ordinary_lo):
+        return plain("narrowing would barely change the picture, so the "
+                     "ordinary range stands")
 
     clipped = float(np.mean((base < vmin) | (base > vmax)))
     factor, unit = pick_unit(vmax - vmin)

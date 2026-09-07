@@ -89,6 +89,25 @@ def test_pits_narrow_the_other_way():
     assert note["guided"] and "pits" in note["reason"]
 
 
+@pytest.mark.parametrize("roughness", [1e-9, 8e-9, 40e-9])
+def test_guided_never_widens_the_range(roughness):
+    """
+    The invariant, and it had to be learned the hard way.
+
+    Reaching a margin above the background to keep the features from becoming
+    a flat silhouette can overshoot the ordinary percentile on a rough surface,
+    and then the "guided" range is *wider* than the plain one -- darker
+    pictures with less detail, which is exactly the failure this function
+    exists to prevent. It fired that way on four of the first six real scans
+    it touched.
+    """
+    ch = channel(with_towers(height=200e-9) + textured(roughness, seed=9))
+    plain = common_color_scale([ch])
+    guided, _ = guided_color_scale(ch)
+    assert guided.vmin >= plain.vmin - 1e-15
+    assert guided.vmax <= plain.vmax + 1e-15
+
+
 def test_the_decision_always_explains_itself():
     """Every range carries the sentence that justifies it."""
     for data in (textured(), with_towers(), -with_towers()):
