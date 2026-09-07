@@ -22,7 +22,7 @@ from pathlib import Path
 
 import numpy as np
 
-from afm_copilot import frame, instrument, quality
+from afm_copilot import frame, instrument, quality, tip
 from afm_copilot.decide import plan_for
 from afm_copilot.features import measure
 from afm_copilot.gwy_io import Channel, load_height, save_height
@@ -49,6 +49,11 @@ class ScanResult:
     # sample speak for the rest of them.
     session: str = ""
     scan_mode: str = ""
+    # The probe, and whether the image had anything to say about it. Every
+    # lateral size in `measurements` is an apparent one until this is applied.
+    tip_radius_nm: float | None = None
+    tip_source: str = ""
+    object_true_radius_nm: float | None = None
     cleaned: bool = False
     rms_before_nm: float | None = None
     rms_after_nm: float | None = None
@@ -314,9 +319,23 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
             # its parser happens to fail -- a truncated .gwy raises an
             # AssertionError from deep inside the reader -- and one bad file in
             # a folder of a thousand must cost that file, not the batch.
-            results.append(ScanResult(
-                name=name, source=str(path), kept=False, verdict="unreadable",
-                why=[f"{type(exc).__name__}: {exc}"[:140] or "unreadable"]))
+            #
+            # But a file with no height channel is not damaged. Eight phase
+            # maps in one batch were filed under "could not read", which reads
+            # as an accusation against perfectly good files: they are simply
+            # not topography, and this is a height-only pipeline for now.
+            message = str(exc)
+            if "no height-like channel" in message:
+                results.append(ScanResult(
+                    name=name, source=str(path), kept=False,
+                    verdict="not topography",
+                    why=["no height channel in it — " +
+                         message.split("Found: ")[-1][:90]]))
+            else:
+                results.append(ScanResult(
+                    name=name, source=str(path), kept=False,
+                    verdict="unreadable",
+                    why=[f"{type(exc).__name__}: {exc}"[:140] or "unreadable"]))
             continue
 
         original = instrument.find_original(name, originals)
@@ -360,6 +379,22 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         plan = plan_for(cropped)
         entry.recipe = plan.recipe_key
         entry.measurements = measure(cropped).as_dict()
+
+        # What the probe did to the widths. The measurement is an apparent
+        # size until this is applied, and which radius was used has to travel
+        # with the number -- the same particle reads half again as wide through
+        # a coated probe as through a bare one.
+        from afm_copilot.features import subtract_background
+        levelled = subtract_background(
+            np.asarray(cropped.data, dtype=float),
+            max(1, plan.background_degree))
+        probe = tip.for_scan(levelled, cropped.pixel_size)
+        entry.tip_radius_nm = round(probe.radius * 1e9, 2)
+        entry.tip_source = probe.source
+        apparent = entry.measurements.get("object_median_size") or 0.0
+        if apparent > 0:
+            entry.object_true_radius_nm = round(
+                tip.feature_radius(apparent, probe.radius) * 1e9, 2)
         results.append(entry)
         to_clean.append((entry, source_for_cleaning))
 
@@ -378,11 +413,14 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         "discarded": sum(1 for r in results if r.verdict == "discard"),
         "duplicates": sum(1 for r in results if r.duplicate_of),
         "unreadable": sum(1 for r in results if r.verdict == "unreadable"),
+        "not_topography": sum(1 for r in results
+                              if r.verdict == "not topography"),
         "good": sum(1 for r in kept if r.verdict == "good"),
         "needed_work": sum(1 for r in kept if r.verdict == "fixable"),
         "cropped": sum(1 for r in kept if r.cropped_from),
         "cleaned": sum(1 for r in kept if r.cleaned),
         "over_flattened": sum(1 for r in kept if r.over_flattened),
+        "tip_from_image": sum(1 for r in kept if r.tip_source == "image"),
         "recipes_used": _tally(r.recipe for r in kept if r.cleaned),
         "results": [asdict(r) for r in results],
     }

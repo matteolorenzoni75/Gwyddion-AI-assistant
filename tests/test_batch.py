@@ -200,6 +200,34 @@ def test_one_crashing_file_does_not_take_its_whole_group(tmp_path):
     assert [p for p, _ in failed] == [poison]
 
 
+def test_a_phase_map_is_not_called_unreadable(tmp_path):
+    """
+    A file with no height channel is not damaged.
+
+    Eight phase maps in one batch were filed under "could not read", which
+    reads as an accusation against perfectly good files. They are simply not
+    topography, and this is a height-only pipeline for now.
+    """
+    from gwyfile.objects import GwyContainer, GwyDataField
+
+    source = tmp_path / "in"
+    source.mkdir(parents=True, exist_ok=True)
+    write(source, "height", surface())
+
+    field = GwyDataField(np.asarray(surface(), dtype=float),
+                         xreal=1e-5, yreal=1e-5,
+                         si_unit_xy="m", si_unit_z="deg")
+    GwyContainer({"/0/data": field,
+                  "/0/data/title": "Phase"}).tofile(str(source / "phase.gwy"))
+
+    summary = batch.run([source], tmp_path / "out", do_clean=False)
+    assert summary["unreadable"] == 0
+    assert summary["not_topography"] == 1
+    aside = [r for r in summary["results"]
+             if r["verdict"] == "not topography"][0]
+    assert "no height channel" in aside["why"][0]
+
+
 def test_over_flattening_needs_both_numbers():
     from afm_copilot.batch import ScanResult, lost_too_much
 

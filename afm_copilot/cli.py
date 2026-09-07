@@ -548,6 +548,9 @@ def cmd_batch(args: argparse.Namespace) -> int:
     print(f"  repeats       {summary['duplicates']:>4}   the same area scanned "
           "again")
     print(f"  set aside     {summary['discarded']:>4}   not worth using")
+    if summary.get("not_topography"):
+        print(f"  not height    {summary['not_topography']:>4}   other "
+              "channels, kept for when we read them")
     if summary["unreadable"]:
         print(f"  could not read{summary['unreadable']:>4}   listed below, "
               "not skipped")
@@ -556,6 +559,13 @@ def cmd_batch(args: argparse.Namespace) -> int:
         print(f"\nCleaned {summary['cleaned']}, by what each one needed:\n")
         for key, count in summary.get("recipes_used", {}).items():
             print(f"  {key:<22} {count:>4}")
+    sized = [r for r in summary["results"] if r.get("object_true_radius_nm")]
+    if sized:
+        from_image = summary.get("tip_from_image", 0)
+        print(f"\nObject sizes are corrected for the probe. {from_image} scan(s)"
+              " could bound the tip\nfrom their own features; the rest assume "
+              "the nominal 10 nm of an AC160.")
+
     lost = [r for r in summary["results"] if r.get("over_flattened")]
     if lost:
         print(f"\nLook at these {len(lost)}: the cleaning took more roughness "
