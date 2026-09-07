@@ -133,22 +133,10 @@ def row_step_fraction(data: np.ndarray, sigma: float = 3.0) -> float:
 # objects
 # --------------------------------------------------------------------------
 
-def detect_objects(data: np.ndarray, threshold: float = 0.30) -> np.ndarray:
-    """
-    Pixels standing clear of the background.
-
-    Measured against the median, so a large object does not drag the reference
-    up and hide itself. Known limit: once objects cover more than about half
-    the frame the median sits inside them, and the minority is what stands out.
-    """
-    finite = data[np.isfinite(data)]
-    if finite.size == 0:
-        return np.zeros(data.shape, dtype=bool)
-    base = float(np.median(finite))
-    span = float(finite.max() - finite.min())
-    if span <= 0:
-        return np.zeros(data.shape, dtype=bool)
-    return np.nan_to_num(data, nan=base) > base + threshold * span
+# Finding what departs from the surface lives in `decide`, and used to live
+# here as well -- two copies of the same idea, drifting apart. Re-exported so
+# the callers and tests that reach for it here keep working.
+from afm_copilot.decide import detect_features, detect_objects  # noqa: E402
 
 
 def object_statistics(mask: np.ndarray, pixel_size: float) -> dict:
@@ -560,8 +548,13 @@ class Features:
     row_banding: float = 0.0
     row_step_fraction: float = 0.0
 
-    # objects -- what sits on the surface
+    # objects -- what departs from the surface, and which way
     object_fraction: float = 0.0
+    raised_fraction: float = 0.0
+    sunken_fraction: float = 0.0
+    # +1 raised, -1 sunken, 0 neither or both. The single number that separates
+    # grains on a substrate from pores in a film, which the count alone cannot.
+    object_polarity: int = 0
     object_count: int = 0
     object_median_size: float = 0.0
     object_size_spread: float = 0.0
@@ -610,8 +603,23 @@ def measure(channel: Channel) -> Features:
     degree, explained = choose_background_degree(data)
     flat = subtract_background(data, max(1, degree))
 
-    objects = detect_objects(flat)
-    stats = object_statistics(objects, pixel)
+    above, below = detect_features(flat)
+    raised, sunken = float(above.mean()), float(below.mean())
+    # Count and size the side that actually carries the features. Measuring
+    # both together would average a grain's diameter with a pore's, and the
+    # answer would describe neither.
+    # Which side dominates, and only when it clearly does. A close-packed layer
+    # of spheres has no background to stand clear of, so what little it reports
+    # is the gaps between them -- and calling that "pitted" would describe the
+    # sample backwards.
+    if sunken > 2 * raised:
+        polarity, of_interest = -1, below
+    elif raised > 2 * sunken:
+        polarity, of_interest = +1, above
+    else:
+        polarity, of_interest = 0, above | below
+
+    stats = object_statistics(of_interest, pixel)
     period = periodicity(flat, pixel)
     shape = height_shape(flat)
 
@@ -621,7 +629,10 @@ def measure(channel: Channel) -> Features:
         explained_by_degree=explained,
         row_banding=row_banding(flat),
         row_step_fraction=row_step_fraction(flat),
-        object_fraction=float(objects.mean()),
+        object_fraction=float((above | below).mean()),
+        raised_fraction=raised,
+        sunken_fraction=sunken,
+        object_polarity=polarity,
         periodicity=period["periodicity"],
         period_angle=period["period_angle"],
         period_length=period["period_length"],

@@ -59,6 +59,16 @@ MIN_OBJECT_FRACTION = 0.03
 # into the fit, which is the failure that matters.
 OBJECT_THRESHOLD = 0.30
 
+# And however small that fraction turns out to be, a feature has to clear the
+# noise by this much to count. A polished substrate has no features and a tiny
+# height range, so a purely proportional threshold lands inside its noise and
+# reports a fifth of the frame as objects.
+MIN_SIGNAL_TO_NOISE = 4.0
+
+# One connected piece larger than this much of the frame is not an object; it
+# is background the fit did not remove. See _compact_only.
+MAX_FEATURE_FRACTION = 0.20
+
 
 @dataclass
 class Plan:
@@ -67,7 +77,9 @@ class Plan:
     background_degree: int
     has_objects: bool
     object_fraction: float
-    tilt: float
+    raised_fraction: float = 0.0
+    sunken_fraction: float = 0.0
+    tilt: float = 0.0
     explained_by_degree: dict[int, float] = field(default_factory=dict)
     already_levelled: bool = False
     notes: list[str] = field(default_factory=list)
@@ -160,29 +172,109 @@ def residual_after_background(data: np.ndarray, degree: int,
     return float(np.std(residual))
 
 
-def detect_objects(data: np.ndarray,
-                   threshold: float = OBJECT_THRESHOLD) -> np.ndarray:
+def detect_features(data: np.ndarray,
+                    threshold: float = OBJECT_THRESHOLD,
+                    ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Pixels standing clear of the background.
+    What stands clear of the background -- upwards and downwards.
 
-    Measured against the median rather than the mean, so a large object does
-    not drag the reference up and hide itself.
+    Both directions, because a surface can be interesting for what is missing
+    from it as much as for what sits on it. Looking only upwards made a porous
+    surface and a perfectly smooth one identical: on three pitted scans of the
+    test pool the count reported zero objects against dozens of obvious holes,
+    while the height asymmetry separated them without effort (-1.97, -1.51,
+    -1.89 against +1.43 for grains sitting on top).
 
-    Known limit: once objects cover more than about half the frame the median
-    sits inside them, and nothing is reported as standing clear. That is the
-    honest answer -- with no majority background there is nothing to fit a
-    background on -- but it means "no objects found" can mean either "a bare
-    surface" or "almost entirely object".
+    Measured against the median rather than the mean, so a large feature does
+    not drag the reference towards itself and hide.
+
+    A feature must also stand clear of the *noise*, not merely of a fraction of
+    the height range. Without that, a polished substrate whose whole variation
+    is a few nanometres has 18% of its frame declared "objects" -- the
+    threshold working inside the noise floor and finding nothing but itself.
+
+    Three limits, all measured, none of them hidden:
+
+    * Once features cover more than about half the frame the median sits inside
+      them and little is reported. With no majority background there is nothing
+      to stand clear of. A close-packed layer of spheres therefore comes back
+      reporting the *gaps between* them, which describes the sample backwards
+      -- so `object_polarity` is the number to distrust there, not the count.
+    * A background the fit did not fully remove can still be found. On a
+      polished substrate an order-1 fit leaves an 18 nm bow on a surface whose
+      noise is 0.7 nm, and the top of that bow is reported as raised features
+      covering a fifth of the frame. The cure is a better background, not a
+      stricter threshold.
+    * Row banding swamps everything on a very flat surface: 0.9 nm of mica
+      under 0.9 of banding reports nothing at all until the rows are aligned.
     """
+    from afm_copilot.quality import noise_level
+
     data = np.asarray(data, dtype=float)
+    empty = np.zeros(data.shape, dtype=bool)
     finite = data[np.isfinite(data)]
     if finite.size == 0:
-        return np.zeros(data.shape, dtype=bool)
+        return empty, empty.copy()
+
     base = float(np.median(finite))
     span = float(finite.max() - finite.min())
     if span <= 0:
-        return np.zeros(data.shape, dtype=bool)
-    return np.nan_to_num(data, nan=base) > base + threshold * span
+        return empty, empty.copy()
+
+    clearance = max(threshold * span, MIN_SIGNAL_TO_NOISE * noise_level(data))
+    filled = np.nan_to_num(data, nan=base)
+    return (_compact_only(filled > base + clearance),
+            _compact_only(filled < base - clearance))
+
+# Comparing each pixel to a local baseline instead of the global median was
+# tried here and reverted. It did reduce the polished-substrate false positive
+# from 19.7% to 1.9%, and in exchange it lost the close-packed spheres
+# entirely, halved the pits found on the porous scans, and broke the masked
+# background fit on a bowed surface. One case better, three worse: not a
+# trade worth taking. The two limitations below are documented instead.
+
+
+def _compact_only(mask: np.ndarray) -> np.ndarray:
+    """
+    Drop anything too large to be an object.
+
+    A feature is compact; a background is not. When a fitted background leaves
+    a gentle ramp behind, the high end of that ramp clears any threshold and
+    arrives as one enormous blob -- which is how two polished substrates came
+    to have a fifth of their frame reported as objects, on surfaces with
+    nothing on them at all.
+
+    Size is the honest discriminator here rather than height: the leftover
+    ramp is as tall as a real object would be, and only its extent gives it
+    away. Anything covering more than a fifth of the frame in one connected
+    piece is background that was not fully removed, and masking it would
+    starve the next background fit of the very area it needs.
+    """
+    if not mask.any():
+        return mask
+    from scipy import ndimage
+
+    labels, count = ndimage.label(mask)
+    if count == 0:
+        return mask
+    areas = np.bincount(labels.ravel())
+    too_big = np.flatnonzero(areas > MAX_FEATURE_FRACTION * mask.size)
+    if too_big.size == 0 or (too_big.size == 1 and too_big[0] == 0):
+        return mask
+    return mask & ~np.isin(labels, too_big[too_big > 0])
+
+
+def detect_objects(data: np.ndarray,
+                   threshold: float = OBJECT_THRESHOLD) -> np.ndarray:
+    """
+    Everything that is not background, whichever way it departs from it.
+
+    This is the mask a background fit needs: a pit distorts a fitted surface
+    exactly as a bump does, and leaving one in while excluding the other is
+    half a correction.
+    """
+    above, below = detect_features(data, threshold)
+    return above | below
 
 
 def _subtract_background(data: np.ndarray, degree: int,
@@ -202,26 +294,32 @@ def _subtract_background(data: np.ndarray, degree: int,
     return data - (design @ coef).reshape(data.shape)
 
 
-def _find_objects_above_background(data: np.ndarray,
-                                   passes: int = 2) -> np.ndarray:
+def _find_features(data: np.ndarray,
+                   passes: int = 2) -> tuple[np.ndarray, np.ndarray]:
     """
-    Objects, found in the surface once its background is out of the way.
+    What departs from the surface, once its background is out of the way.
+
+    Returns the raised and the sunken parts separately, because which of the
+    two a surface has is most of what distinguishes one kind of sample from
+    another -- grains sitting on a substrate against pores eaten into a film.
 
     Iterated, because the two depend on each other: a good background fit needs
-    the objects excluded, and finding the objects needs the background gone.
-    Two passes settle it -- the first removes enough tilt and bow for the
-    objects to stand out, the second refits the background without them.
+    the features excluded, and finding the features needs the background gone.
+    Two passes settle it -- the first removes enough tilt and bow for them to
+    stand out, the second refits the background without them.
 
     Without this, a bowed surface has its raised rim marked as objects, and the
     background is then fitted around the very shape it was meant to remove.
     """
     mask = np.zeros(data.shape, dtype=bool)
+    above = below = mask
     for _ in range(max(1, passes)):
         degree, _ = choose_background_degree(data, mask if mask.any() else None)
         residual = _subtract_background(data, degree,
                                         mask if mask.any() else None)
-        mask = detect_objects(residual)
-    return mask
+        above, below = detect_features(residual)
+        mask = above | below
+    return above, below
 
 
 def choose_background_degree(
@@ -269,8 +367,10 @@ def plan_for(channel: Channel) -> Plan:
     # the rim of a bowl, neither of which is an object. So: rough background
     # out, find the objects in what is left, then choose the real background
     # with those excluded, and look once more.
-    objects = _find_objects_above_background(data)
+    above, below = _find_features(data)
+    objects = above | below
     fraction = float(objects.mean())
+    raised, sunken = float(above.mean()), float(below.mean())
     # Below the lower bound there is nothing worth protecting; above the upper
     # one there is too little background left to fit anything on.
     has_objects = MIN_OBJECT_FRACTION < fraction < 0.60
@@ -282,6 +382,8 @@ def plan_for(channel: Channel) -> Plan:
         background_degree=degree,
         has_objects=has_objects,
         object_fraction=fraction,
+        raised_fraction=raised,
+        sunken_fraction=sunken,
         tilt=tilt,
         explained_by_degree=explained,
         already_levelled=tilt < FLAT_ENOUGH,
@@ -298,10 +400,23 @@ def plan_for(channel: Channel) -> Plan:
             f"so there is real tilt to remove.")
 
     if has_objects:
+        # Which way they depart matters more than how many there are: the same
+        # count means grains on a substrate or pores in a film, and those are
+        # not the same sample.
+        if sunken > 2 * raised:
+            what = (f"{sunken * 100:.0f}% of the frame lies *below* the "
+                    f"surface — holes or pores rather than objects sitting on "
+                    f"it")
+        elif raised > 2 * sunken:
+            what = (f"{raised * 100:.0f}% of the frame stands *above* the "
+                    f"surface — objects sitting on it")
+        else:
+            what = (f"{fraction * 100:.0f}% of the frame departs from the "
+                    f"surface, about equally up and down — a texture rather "
+                    f"than objects on a background")
         plan.notes.append(
-            f"{fraction * 100:.0f}% of the frame stands clear of the "
-            f"background — objects on a surface. The background can be "
-            f"corrected around them, leaving them untouched by the fit.")
+            what + ". The background can be corrected around it, leaving it "
+            "untouched by the fit.")
     elif fraction >= 0.60:
         plan.notes.append(
             f"{fraction * 100:.0f}% of the frame sits above the median, so "
@@ -309,8 +424,8 @@ def plan_for(channel: Channel) -> Plan:
             f"objects-on-a-surface would be wrong.")
     else:
         plan.notes.append(
-            "Nothing stands clear of the surface — no separate objects to "
-            "protect from the fit.")
+            "Nothing stands clear of the surface, in either direction — no "
+            "separate features to protect from the fit.")
 
     if degree == 0:
         plan.notes.append(
