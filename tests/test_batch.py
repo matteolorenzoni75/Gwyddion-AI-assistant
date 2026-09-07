@@ -228,6 +228,34 @@ def test_a_phase_map_is_not_called_unreadable(tmp_path):
     assert "no height channel" in aside["why"][0]
 
 
+def test_straightening_badly_offset_rows_is_not_over_flattening():
+    """
+    On a scan whose lines are badly offset the banding *is* most of the
+    roughness, so repairing it removes most of it. Comparing only against what
+    the background explains called that damage: two scans were flagged that
+    way, one with a banding of 0.83 -- a successful repair read as a destroyed
+    surface.
+    """
+    from afm_copilot.batch import ScanResult, lost_too_much
+
+    banded = ScanResult(
+        name="banded", source="", kept=True, verdict="fixable",
+        rms_before_nm=100.0, rms_after_nm=39.0,
+        measurements={"background_order": 1,
+                      "explained_by_degree": {1: 0.05},
+                      "row_banding": 0.83})
+    assert not lost_too_much(banded)
+
+    # The same loss with clean lines is still a loss.
+    clean_lines = ScanResult(
+        name="clean", source="", kept=True, verdict="fixable",
+        rms_before_nm=100.0, rms_after_nm=10.0,
+        measurements={"background_order": 1,
+                      "explained_by_degree": {1: 0.05},
+                      "row_banding": 0.02})
+    assert lost_too_much(clean_lines)
+
+
 def test_over_flattening_needs_both_numbers():
     from afm_copilot.batch import ScanResult, lost_too_much
 

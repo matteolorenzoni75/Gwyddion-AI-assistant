@@ -308,10 +308,20 @@ def lost_too_much(entry: ScanResult) -> bool:
     """
     if not entry.rms_before_nm or not entry.rms_after_nm:
         return False
-    explained = (entry.measurements or {}).get("explained_by_degree") or {}
-    order = (entry.measurements or {}).get("background_order", 1)
+    measurements = entry.measurements or {}
+    explained = measurements.get("explained_by_degree") or {}
+    order = measurements.get("background_order", 1)
     fraction = explained.get(order, explained.get(str(order), 0.0)) or 0.0
     expected = math.sqrt(max(0.0, 1.0 - min(float(fraction), 0.999999)))
+
+    # Row offsets have to be allowed for too. On a scan whose lines are badly
+    # offset the banding *is* most of the roughness, so straightening them
+    # removes most of it -- and comparing only against the background called
+    # that damage. Two scans were flagged that way, one with a banding of 0.83:
+    # a successful repair read as a destroyed surface.
+    banding = float(measurements.get("row_banding", 0.0) or 0.0)
+    expected *= math.sqrt(max(0.0, 1.0 - min(banding, 0.999) ** 2))
+
     kept = entry.rms_after_nm / entry.rms_before_nm
     # Generous: the recipes also despike and align rows, which cost something
     # on any real surface. Only a scan far below the prediction is flagged.

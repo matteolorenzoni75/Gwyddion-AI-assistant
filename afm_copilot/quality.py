@@ -349,7 +349,10 @@ def _check_rattle(flat: np.ndarray) -> Check:
     if not rattling.any():
         return Check("rattle", 0.0, "ok", "the height record is steady")
 
-    loudness = float(np.median(jitter[rattling])) / typical
+    # Cap it. On a scan that is 89% dead constant the typical jitter is
+    # essentially zero, and the ratio came out as 4.4e14 -- a number that says
+    # nothing except that its denominator had collapsed.
+    loudness = min(float(np.median(jitter[rattling])) / typical, 999.0)
     if area >= RATTLE_AREA and loudness >= RATTLE_CONTRAST:
         return Check(
             "rattle", area, "fixable",
