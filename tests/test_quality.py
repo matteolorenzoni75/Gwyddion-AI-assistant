@@ -122,6 +122,52 @@ def test_every_complaint_says_something_a_person_can_read():
         assert check.verdict in {"ok", "fixable", "bad"}
 
 
+def test_height_that_rattles_on_the_features_is_reported():
+    """
+    Noise that lives on part of the frame while the rest stays quiet.
+
+    A global measure cannot see it: on the scan this came from, the drop
+    rattles by 9 nm and the rest of the frame by 0.4, and averaged together
+    they are unremarkable.
+    """
+    data = surface(roughness=2e-9)
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    blob = (yy - 90) ** 2 + (xx - 90) ** 2 < 45 ** 2
+    data[blob] += 30e-9
+    # The tip flipping regime: alternate pixels pushed apart, on the blob only.
+    data[blob & (xx % 2 == 0)] += 4e-9
+    data[blob & (xx % 2 == 1)] -= 4e-9
+
+    verdict = assess(channel(data))
+    rattle = next(c for c in verdict.checks if c.name == "rattle")
+    assert rattle.verdict == "fixable"
+    assert "alternates" in rattle.says
+
+
+def test_a_steady_surface_with_objects_does_not_rattle():
+    """A particle's edge departs from a straight line too, but only once."""
+    data = surface(roughness=2e-9)
+    yy, xx = np.mgrid[0:SIZE, 0:SIZE]
+    data[(yy - 90) ** 2 + (xx - 90) ** 2 < 45 ** 2] += 30e-9
+    rattle = next(c for c in assess(channel(data)).checks if c.name == "rattle")
+    assert rattle.verdict == "ok"
+
+
+def test_the_dead_band_is_not_judged():
+    """
+    Checks run on the part that has data.
+
+    A dead band's edge reads as a step, its interior as saturation, and its
+    border with the live data rattles -- five scans in a real batch were
+    flagged for nothing but where they stopped.
+    """
+    data = surface()
+    data[200:, :] = data[199, 0]
+    verdict = assess(channel(data))
+    assert verdict.verdict == "fixable"
+    assert not any(c.is_bad for c in verdict.checks)
+
+
 def test_noise_level_ignores_real_steps():
     """A few large differences are a step, not noise."""
     data = surface(roughness=1e-9)

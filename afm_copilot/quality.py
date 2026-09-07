@@ -56,6 +56,16 @@ FEEDBACK_LAG_SEVERE = 3.0
 # knowledge/the-tip-shows-itself-to-the-eye.md rather than left as code that
 # fires on the wrong scans.
 
+# Height rattling from pixel to pixel over part of the frame while the rest
+# stays quiet. In non-contact the tip can sit near the boundary between the
+# attractive and the repulsive regime and flip between them, and it does so
+# only where the interaction crosses that boundary -- so the rattle lands on
+# the features and leaves the background clean.
+RATTLE_ABOVE_TYPICAL = 6.0     # how far above the usual jitter to look
+RATTLE_TURNS = 0.5             # how often the height must change direction
+RATTLE_AREA = 0.015            # of the frame, before it is worth saying
+RATTLE_CONTRAST = 15.0         # how much louder than the rest of the image
+
 
 @dataclass
 class Check:
@@ -231,6 +241,74 @@ def _check_feedback(flat: np.ndarray) -> Check:
 
 
 
+def _check_rattle(flat: np.ndarray) -> Check:
+    """
+    Does the height rattle over part of the frame while the rest stays quiet?
+
+    A tip working in non-contact can end up near the boundary between the
+    attractive and the repulsive regime and flip between the two. The height
+    record then oscillates from pixel to pixel -- but only where the
+    interaction crosses that boundary, which is on the raised features, while
+    the flat background records nothing wrong at all.
+
+    That unevenness is the whole signature, and it is why a global noise
+    measure misses it: on the scan this was built from, the drop rattles by
+    9 nm while the rest of the frame sits at 0.4, and averaged over the image
+    the two cancel into an unremarkable number.
+
+    Two things have to be true together, because each alone is ordinary:
+
+    * the height departs from a straight line far more than it usually does --
+      but so does the edge of any particle;
+    * and it *alternates*, turning up and down again within a few pixels --
+      an edge is one event, a rattle is many.
+
+    **What this does and does not manage**, against six scans the user
+    identified and one they ruled out. It flags 14 of 161, and among them four
+    of the six -- both `noisy drops` and both `NPs coated SiO2 50 nm`. It
+    misses `fibers 2`, whose whole frame jitters by 16 nm so nothing stands out
+    against it, and it flags `CdSe np DB`, where the plateaux really are that
+    rough. So the wording says what was measured and offers both readings: a
+    surface can be like that, and the reader is the one who knows which.
+
+    The two it catches and the one it gets wrong differ by nothing this
+    measurement can see -- 18x contrast on the false one against 7x on a true
+    one -- so no threshold separates them. Telling them apart needs the eye,
+    or the sample. See knowledge/the-tip-shows-itself-to-the-eye.md for the
+    same conclusion reached about tip wear.
+    """
+    second = np.abs(flat[:, :-2] - 2.0 * flat[:, 1:-1] + flat[:, 2:])
+    if second.size < 1000:
+        return Check("rattle", 0.0, "ok", "too small to judge")
+    jitter = np.pad(second, ((0, 0), (1, 1)), mode="edge")
+    usable = np.isfinite(jitter)
+    typical = float(np.median(jitter[usable])) if usable.any() else 0.0
+    if typical <= 0:
+        return Check("rattle", 0.0, "ok", "nothing to compare against")
+
+    turns = np.abs(np.diff(np.sign(np.diff(flat, axis=1)), axis=1)) / 2.0
+    turns = np.pad(turns, ((0, 0), (1, 1)), mode="edge")
+    window = np.ones(8) / 8.0
+    density = np.apply_along_axis(
+        lambda row: np.convolve(row, window, mode="same"), 1, turns)
+
+    rattling = (jitter > RATTLE_ABOVE_TYPICAL * typical) & (density > RATTLE_TURNS)
+    area = float(rattling.mean())
+    if not rattling.any():
+        return Check("rattle", 0.0, "ok", "the height record is steady")
+
+    loudness = float(np.median(jitter[rattling])) / typical
+    if area >= RATTLE_AREA and loudness >= RATTLE_CONTRAST:
+        return Check(
+            "rattle", area, "fixable",
+            f"over {area:.0%} of the frame the height alternates from pixel to "
+            f"pixel, {loudness:.0f} times harder than across the rest of the "
+            "image, while the rest stays quiet -- either the surface is really "
+            "like that there, or the feedback was slipping between regimes")
+    return Check("rattle", area, "ok",
+                 f"the height record is steady ({area:.1%} unsettled)")
+
+
 def assess(channel: Channel, acquisition=None) -> Quality:
     """
     Look at one scan and say whether to keep it, fix it, or drop it.
@@ -245,13 +323,20 @@ def assess(channel: Channel, acquisition=None) -> Quality:
     from afm_copilot.decide import choose_background_degree
     from afm_copilot.features import subtract_background
 
-    raw = np.asarray(channel.data, dtype=float)
+    checks: list[Check] = []
+    report = frame.inspect(channel)
+
+    # Judge the part that has data. A dead band is not a flat sample: its edge
+    # looks like a step, its interior like a saturated region, and its border
+    # with the live data rattles -- so every check downstream ends up
+    # describing where the scan stopped rather than what was measured.
+    measured = channel
+    if report["interrupted"] and report["worth_keeping"]:
+        measured, _ = frame.crop_to_data(channel)
+
+    raw = np.asarray(measured.data, dtype=float)
     degree, _ = choose_background_degree(raw)
     flat = subtract_background(raw, max(1, degree))
-
-    checks: list[Check] = []
-
-    report = frame.inspect(channel)
     if report["interrupted"]:
         dead = report["dead_fraction"]
         if report["worth_keeping"]:
@@ -272,6 +357,7 @@ def assess(channel: Channel, acquisition=None) -> Quality:
     checks.append(_check_banding(flat))
     checks.append(_check_glitches(flat))
     checks.append(_check_feedback(flat))
+    checks.append(_check_rattle(flat))
 
     # The one thing the pixels cannot tell us: that somebody changed the
     # settings part-way down the frame. The instrument writes it into the note
