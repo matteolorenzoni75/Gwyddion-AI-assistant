@@ -5,9 +5,20 @@ each of them. Enough to work on recognition and measurement without Gwyddion
 installed — which is 205 of the 207 tests.
 
 ```
-scans/scan-001.gwy … scan-056.gwy
+scans/scan-001.gwy … scan-056.gwy    as converted from the instrument
+clean/scan-0NN.gwy                   the same 44 after cleaning
 baseline.json
 ```
+
+Both are here on purpose. `scans/` is what the instrument produced, and it is
+what the quality checks, the cropping and the mask are judged on — it also
+still holds every channel, so the phase maps are in there. `clean/` is what
+the readings were computed from, and cleaning needs Gwyddion: shipping only
+the converted files made the baseline impossible to reproduce for exactly the
+people it was written for.
+
+Twelve scans have no cleaned version, and that is not a gap — they were not
+kept, or they are not height channels at all.
 
 ## The names are ids, and that is the point
 
@@ -55,19 +66,26 @@ For each scan: the verdict, the recipe chosen, the measurements, the family and
 the readings. **This is what the code says today, not what is correct.** Some of
 it is certainly wrong — the open questions in `AGENTS.md` say where to look.
 
-Use it as a regression net. Change a detector, regenerate, read the diff:
+Use it as a regression net. Before touching anything, and again after:
 
 ```bash
-python tools/make_export_corpus.py --out export
-git diff export/baseline.json
+python tools/diff_export_baseline.py
 ```
 
-A diff that surprises you is the finding. A change that moves nothing has not
-been tested.
+It recomputes every reading and prints only what moved; exit code 0 means
+nothing did. That is a statement of fact, not a verdict — a difference can be
+the improvement you were aiming for. Read it before accepting it. A change that
+moves nothing has not been tested, and saying so is better than claiming it
+works.
 
-Regenerating needs a completed batch run (`--run`), so it needs Gwyddion. On a
-machine without it, treat `baseline.json` as read-only and compare against it in
-your own script.
+It found its own first bug: the baseline had no `tip_radius_nm`, so the tip
+correction was silently skipped on recomputation and two particle sizes came
+out different. The net paying for itself on its first run is the argument for
+having one.
+
+Regenerating the baseline itself needs a completed batch run
+(`tools/make_export_corpus.py --run …`), so that part needs Gwyddion. The diff
+does not.
 
 ## What you cannot do with this
 

@@ -167,9 +167,16 @@ def main() -> int:
         take(entry["name"], "family: " + family)
 
     scans = args.out / "scans"
-    scans.mkdir(parents=True, exist_ok=True)
-    for stale in scans.glob("*.gwy"):
-        stale.unlink()
+    # And the cleaned versions beside them. Without these the corpus cannot
+    # check itself: every reading in the baseline was computed on the cleaned
+    # surface, and cleaning needs Gwyddion. Shipping only the converted files
+    # made the baseline unreproducible by anyone who could not run the batch,
+    # which is the whole audience it was written for.
+    cleaned_out = args.out / "clean"
+    for folder in (scans, cleaned_out):
+        folder.mkdir(parents=True, exist_ok=True)
+        for stale in folder.glob("*.gwy"):
+            stale.unlink()
 
     # Renamed, and for two reasons that happen to agree.
     #
@@ -201,6 +208,12 @@ def main() -> int:
             "verdict": entry.get("verdict"),
             "why": entry.get("why"),
             "recipe": entry.get("recipe"),
+            # Needed to reproduce the readings: without it the tip correction
+            # is silently skipped and two particle sizes come out different.
+            # The diff script caught that on its first run, which is the
+            # cheapest possible demonstration of why the net exists.
+            "tip_radius_nm": entry.get("tip_radius_nm"),
+            "tip_source": entry.get("tip_source"),
             # These point at other scans by name, so they are translated too --
             # a single untranslated one would undo the whole point.
             "cropped_from": as_id.get(entry.get("cropped_from") or "",
@@ -213,6 +226,10 @@ def main() -> int:
         }
         cleaned = run / "clean" / (name + ".gwy")
         if cleaned.is_file():
+            _copy_without_the_name(cleaned, cleaned_out / (scan_id + ".gwy"),
+                                   name)
+            total += cleaned.stat().st_size
+            record["cleaned"] = True
             try:
                 radius = entry.get("tip_radius_nm")
                 readings = readings_for(load_height(str(cleaned)),
