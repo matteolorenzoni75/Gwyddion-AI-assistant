@@ -178,10 +178,17 @@ def object_statistics(mask: np.ndarray, pixel_size: float) -> dict:
         if h * w >= 4:
             ratios.append(max(h, w) / max(1, min(h, w)))
 
+    # Spread the same way, and for the same reason: a standard deviation here
+    # reached 8.9 -- 890% -- on a field of even particles with one merged clump
+    # in it, because one large diameter squared dominates the sum. Read as
+    # "are these all much the same size", that answer was simply wrong. The
+    # median absolute deviation says what the standard deviation was meant to.
+    scatter = float(np.median(np.abs(diameters - median))) * 1.4826
+
     return {
         "object_count": int(areas.size),
         "object_median_size": median,
-        "object_size_spread": float(np.std(diameters) / median) if median > 0 else 0.0,
+        "object_size_spread": (scatter / median) if median > 0 else 0.0,
         "object_elongation": float(np.median(ratios)) if ratios else 0.0,
     }
 

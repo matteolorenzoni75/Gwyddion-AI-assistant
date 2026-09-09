@@ -100,10 +100,20 @@ def feature_radius(apparent_width: float, tip_radius: float) -> float:
     width** -- the catalog's own note writes "W (real) ~ 10 nm" for it, and
     reading that as a width doubles every answer. Anything that reports a size
     to a person has to say which of the two it is.
+
+    The relation holds while the feature is comparable to the tip or smaller.
+    Beyond that it inverts and starts reporting objects *wider* than they were
+    measured: a 469 nm particle with a 10 nm probe came back as 2744 nm across,
+    and one scan reached 67 micrometres. A tip only ever makes things look
+    wider, so a correction that enlarges an object is the formula outside its
+    range. The radius is capped at half the measured width, and where the cap
+    bites the reported size equals the measured one -- which is how the caller
+    can see that no correction was applied.
     """
     if tip_radius <= 0 or apparent_width <= 0:
         return apparent_width / 2.0 if apparent_width > 0 else 0.0
-    return (apparent_width ** 2) / (16.0 * tip_radius)
+    return min((apparent_width ** 2) / (16.0 * tip_radius),
+               apparent_width / 2.0)
 
 
 def sharpest_feature(data: np.ndarray, pixel_size: float) -> Tip | None:

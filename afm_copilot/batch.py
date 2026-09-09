@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 from afm_copilot import frame, instrument, quality, tip
-from afm_copilot.decide import plan_for
+from afm_copilot.decide import object_mask, plan_for
 from afm_copilot.features import measure
 from afm_copilot.gwy_io import Channel, load_height, save_height
 
@@ -520,6 +520,16 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         # size until this is applied, and which radius was used has to travel
         # with the number -- the same particle reads half again as wide through
         # a coated probe as through a bare one.
+        # Where there are objects, the mask travels with the file. Gwyddion's
+        # masked operations then work on the region this project identified by
+        # shape and clearance, not on one thresholded by height -- the two
+        # disagreed four to one on a real scan, and the wrong mask made the
+        # levelling worse than none.
+        if plan.has_objects and plan.levelling is not None:
+            source_for_cleaning = save_height(
+                cropped, out / "prepared" / (name + ".gwy"),
+                mask=object_mask(plan.levelling.flat))
+
         probe = tip.for_scan(plan.levelling.flat, cropped.pixel_size)
         entry.tip_radius_nm = round(probe.radius * 1e9, 2)
         entry.tip_source = probe.source

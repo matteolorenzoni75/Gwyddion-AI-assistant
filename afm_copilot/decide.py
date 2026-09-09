@@ -99,6 +99,40 @@ MIN_SIGNAL_TO_NOISE = 4.0
 # is background the fit did not remove. See _compact_only.
 MAX_FEATURE_FRACTION = 0.20
 
+# Past this share of the frame a mask has stopped being a mask: there is no
+# background left outside it for anything to be fitted on.
+# A background fit needs background. Past this share of the frame the mask has
+# stopped describing objects and started eating the surface the fit lives on,
+# so the growth gives way a stage at a time until it fits under this.
+MASK_LEAVES_NOTHING = 0.45
+
+# A drag tail is followed while the surface stays this far above the noise, and
+# no further than this fraction of the scan width. The clearance is deliberately
+# low -- a tail is a small fraction of the object's height -- and the reach is
+# what stops a low bar from walking the whole line.
+TAIL_CLEARS_NOISE = 1.5
+DRAG_REACH = 0.15
+
+# When the point is to keep a background fit away from an object rather than to
+# count objects, a single piece may cover this much of the frame. A flake or a
+# terrace is a real object at a third of the frame; the fifth that applies to
+# counting threw exactly those away.
+MASK_MAX_OBJECT = 0.45
+
+# And it clears a lower bar. Counting objects and hiding them from a fit are
+# different jobs with opposite costs: an object counted in error is a wrong
+# number, an object masked in error is a little less background to fit on.
+# At the counting threshold a flake covering a third of its frame came back as
+# 6% -- the threshold is a share of the height range, and the range there *is*
+# the flake, so the object hides behind its own height. Halving the bar found
+# it (36%) and left the bare substrates where they were (0.3 - 2.7%, one at
+# 12.8%), which the alternating fit then trims back.
+MASK_THRESHOLD = 0.15
+
+# The mask and the background are alternated until the mask stops moving --
+# fewer than this fraction of pixels changing hands between passes.
+MASK_HAS_SETTLED = 0.01
+
 
 @dataclass
 class Plan:
@@ -246,6 +280,7 @@ def residual_after_background(data: np.ndarray, degree: int,
 
 def detect_features(data: np.ndarray,
                     threshold: float = OBJECT_THRESHOLD,
+                    max_fraction: float = MAX_FEATURE_FRACTION,
                     ) -> tuple[np.ndarray, np.ndarray]:
     """
     What stands clear of the background -- upwards and downwards.
@@ -295,8 +330,8 @@ def detect_features(data: np.ndarray,
 
     clearance = max(threshold * span, MIN_SIGNAL_TO_NOISE * noise_level(data))
     filled = np.nan_to_num(data, nan=base)
-    return (_compact_only(filled > base + clearance),
-            _compact_only(filled < base - clearance))
+    return (_compact_only(filled > base + clearance, max_fraction),
+            _compact_only(filled < base - clearance, max_fraction))
 
 # Comparing each pixel to a local baseline instead of the global median was
 # tried here and reverted. It did reduce the polished-substrate false positive
@@ -306,7 +341,145 @@ def detect_features(data: np.ndarray,
 # trade worth taking. The two limitations below are documented instead.
 
 
-def _compact_only(mask: np.ndarray) -> np.ndarray:
+def object_mask(flat: np.ndarray, grow: int = 3, rounds: int = 3) -> np.ndarray:
+    """
+    The mask and the background, solved together instead of one before the
+    other.
+
+    Neither can be found first. A mask built on a surface that still has its
+    background on it is a mask of the background: on a scan carrying a 69 nm
+    bow, the flake covering 28% of the frame came back as 8%, and the row
+    alignment that trusted that mask bowed the substrate by 16 nm. But the
+    background cannot be fitted before the mask either, because the flake
+    drags the fit towards itself.
+
+    So they are alternated. Mask what stands clear, refit the background using
+    only what is left, mask again on the surface that leaves. Three passes is
+    where it stops moving on this batch.
+
+    This is the loop in miniature -- recognise, correct, recognise again --
+    and it is the answer to why a single ordered pass keeps needing new
+    thresholds.
+    """
+    values = np.nan_to_num(np.asarray(flat, dtype=float))
+    mask = _mask_once(values, grow)
+    for _ in range(max(0, rounds - 1)):
+        if not mask.any():
+            break
+        settled = _subtract_background(
+            values, max(1, choose_background_degree(values, mask)[0]), mask)
+        again = _mask_once(settled, grow)
+        # Stop on the pass that changes nothing, and never accept a pass that
+        # leaves no background to fit on.
+        if not again.any() or again.mean() > MASK_LEAVES_NOTHING:
+            break
+        if (again ^ mask).mean() < MASK_HAS_SETTLED:
+            mask = again
+            break
+        mask = again
+    return mask
+
+
+def _mask_once(flat: np.ndarray, grow: int = 3) -> np.ndarray:
+    """
+    The whole of every object, not just the part that cleared a threshold.
+
+    A threshold marks the top of a tall block and stops at its shoulder. What a
+    background fit has to exclude is the *object*, flanks and all -- the user's
+    words, that sometimes a piece escapes you -- so the marked tops are used as
+    seeds and grown down the sides until the surface stops falling away.
+
+    Then a few pixels more, because the outermost skirt is largely the tip's
+    own shape smeared around the object: neither background nor trustworthy
+    sample, and worst of all right where the background fit needs to be clean.
+
+    Handing this to Gwyddion instead of letting it threshold for itself is what
+    finally levelled the base under a tall object: the spread of the background
+    around it fell from 105 nm to 83, where the threshold mask had made it 121.
+    """
+    from scipy import ndimage
+
+    values = np.nan_to_num(np.asarray(flat, dtype=float))
+    above, below = detect_features(values, threshold=MASK_THRESHOLD,
+                                   max_fraction=MASK_MAX_OBJECT)
+    seeds = above | below
+    if not seeds.any():
+        return seeds
+
+    # Fill first: a threshold marks the bright rim and the textured top of a
+    # block as separate pieces, and the body between them belongs to the
+    # object as much as they do.
+    grown = ndimage.binary_fill_holes(seeds)
+    if grow > 0:
+        grown = ndimage.binary_dilation(grown, iterations=grow)
+
+    # And the drag. Where the tip carries material -- or simply lags -- an
+    # object trails a streak along the fast axis, at a fraction of the object's
+    # own height and so far below any threshold that finds the object. It is
+    # still not background. Left in the fit, every row that crosses it is
+    # pulled up by its own tail, which is exactly what a median of differences
+    # then writes into the surface. The user's note: the same operation holds
+    # with several objects, each dragging.
+    with_tails = grown | _drag_tails(values, grown, above.any(), below.any())
+
+    # Growing by "anything that departs from the background" was tried and is
+    # much worse: after levelling, a background still varies by several times
+    # the noise, so the region swallowed 81% of the frame and the base came out
+    # no flatter than untouched. A bounded dilation from the seeds gave 83 nm
+    # where that gave 103.
+    #
+    # So the growth gives way instead of being clamped. Each stage is a real
+    # answer on its own -- the object with its drag, the object alone, the tops
+    # that cleared the threshold -- and the first that leaves enough background
+    # to fit on is the one used. Without this ladder the flake that had just
+    # been found at 36% came back as a 55% mask, the growth having spent itself
+    # on background.
+    for candidate in (with_tails, grown, seeds):
+        if candidate.mean() <= MASK_LEAVES_NOTHING:
+            return candidate
+    return seeds
+
+
+def _drag_tails(values: np.ndarray, marked: np.ndarray,
+                raised: bool, recessed: bool) -> np.ndarray:
+    """
+    The streak an object leaves behind it along the fast scan axis.
+
+    Grown sideways from the object and no other way: a tail runs along the
+    line, never across it, so a directional growth follows the real thing
+    while the isotropic one that was tried here swallowed the frame. It stops
+    where the surface comes back to within noise of the background, and in any
+    case after a fixed reach -- a mask that runs to the frame edge has stopped
+    describing an object.
+    """
+    from scipy import ndimage
+
+    tails = np.zeros_like(marked)
+    background = values[~ndimage.binary_dilation(marked, iterations=2)]
+    if background.size < 64:
+        return tails
+
+    base = float(np.median(background))
+    scale = float(np.median(np.abs(background - base))) * 1.4826
+    if not scale > 0:
+        return tails
+
+    reach = max(4, int(round(values.shape[1] * DRAG_REACH)))
+    along_the_line = np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]], dtype=bool)
+
+    for present, elevated in ((raised, values > base + TAIL_CLEARS_NOISE * scale),
+                              (recessed, values < base - TAIL_CLEARS_NOISE * scale)):
+        if not present:
+            continue
+        reachable = elevated | marked
+        tails |= ndimage.binary_dilation(
+            marked, structure=along_the_line, iterations=reach, mask=reachable)
+
+    return tails & ~marked
+
+
+def _compact_only(mask: np.ndarray,
+                  max_fraction: float = MAX_FEATURE_FRACTION) -> np.ndarray:
     """
     Drop anything too large to be an object.
 
@@ -321,6 +494,12 @@ def _compact_only(mask: np.ndarray) -> np.ndarray:
     away. Anything covering more than a fifth of the frame in one connected
     piece is background that was not fully removed, and masking it would
     starve the next background fit of the very area it needs.
+
+    `max_fraction` is raised when the caller is building a mask rather than
+    counting objects. A flake covering a third of the frame is a real object
+    and is exactly what a background fit must be kept away from -- dropping it
+    at a fifth left one such scan with a mask of 8% where the flake is 28%,
+    and the row alignment then bowed the substrate by 16 nm.
     """
     if not mask.any():
         return mask
@@ -330,7 +509,7 @@ def _compact_only(mask: np.ndarray) -> np.ndarray:
     if count == 0:
         return mask
     areas = np.bincount(labels.ravel())
-    too_big = np.flatnonzero(areas > MAX_FEATURE_FRACTION * mask.size)
+    too_big = np.flatnonzero(areas > max_fraction * mask.size)
     if too_big.size == 0 or (too_big.size == 1 and too_big[0] == 0):
         return mask
     return mask & ~np.isin(labels, too_big[too_big > 0])
@@ -681,18 +860,13 @@ def _recipe_for_plan(plan: Plan) -> str:
         # instead invents curvature at the corners of a background that has
         # none. So: masked either way, curved only when there is curvature.
         #
-        # Held at the curved variant for now, and the flat one is not yet
-        # routed to, because measuring it settled nothing in its favour: on the
-        # scan this was built for, the background around the object came out
-        # *worse* levelled than not masked at all -- 121 nm of spread against
-        # 104. The cause is upstream of the recipe. Gwyddion's own threshold
-        # marks a different region from the detector in `decide`: on that scan
-        # 79% of the frame against our 19.5%, and correcting the threshold to
-        # match did not close the gap. The fix is to hand Gwyddion the mask we
-        # already computed instead of having it find one again, which is a
-        # piece of work in itself and the next thing to do here.
-        return ("isolate-objects" if plan.background_degree > 0
-                else "quick-clean")
+        # Both variants now work on the mask this module builds, written into
+        # the file beside the data, rather than on one Gwyddion thresholds for
+        # itself. That was the difference between levelling the base and
+        # spoiling it: around a tall block the background's spread fell from
+        # 105 nm to 83 with our mask, where the threshold mask had made it 121.
+        return ("isolate-objects" if plan.background_degree > 1
+                else "isolate-objects-flat")
     if plan.already_levelled and plan.background_degree == 0:
         # Unless the lines are damaged. 'Level only' says so in its own words
         # -- do not use it when the image has obvious banding or scars, it will

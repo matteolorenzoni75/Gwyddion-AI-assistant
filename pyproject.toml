@@ -14,7 +14,14 @@ keywords = ["AFM", "SPM", "Gwyddion", "microscopy", "image-processing"]
 
 dependencies = [
     "numpy>=1.24",
+    # Every detector in decide.py, features.py and tip.py is built on
+    # ndimage and signal. This was missing from the list, and a clean install
+    # would have imported nothing.
+    "scipy>=1.10",
     "matplotlib>=3.7",
+    # Reads and writes .gwy in Python 3 -- including the mask -- so the 2.7
+    # bridge is needed for importing instrument formats and for Gwyddion's own
+    # algorithms, and for nothing else.
     "gwyfile>=0.3",
     "pillow>=10",
     # Reads the Asylum scan note in Python 3, straight from the original file,
@@ -23,15 +30,25 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+# `mcp` belongs here and not in the core: the server is one way in among
+# several, but tests/test_mcp_server.py imports it at module level, so
+# without it the suite fails at collection rather than skipping.
+dev = ["pytest>=8", "mcp>=1.0"]
+gui = ["PySide6>=6.6", "pyqtgraph>=0.13"]
+mcp = ["mcp>=1.0"]
 
 [project.scripts]
 afm-copilot = "afm_copilot.cli:main"
 
-[tool.setuptools]
-# pygwy/ is deliberately NOT a package: those files are Python 2.7 and must
-# never be imported by the Python 3 side. They are executed as subprocesses.
-packages = ["afm_copilot"]
+[tool.setuptools.packages.find]
+# Only the afm_copilot tree. pygwy/ is deliberately NOT a package: those files
+# are Python 2.7 and must never be imported by the Python 3 side -- they are
+# executed as subprocesses.
+#
+# This used to name `afm_copilot` alone, which left afm_copilot.ops and
+# afm_copilot.gui out of any built wheel: the editable install used in
+# development hid it, because that puts the source tree itself on the path.
+include = ["afm_copilot*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

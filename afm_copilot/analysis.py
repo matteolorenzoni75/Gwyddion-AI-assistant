@@ -14,6 +14,7 @@ Every result therefore carries a confidence and a list of warnings, and
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -58,9 +59,29 @@ MAX_PLANE_FRACTION = 0.90
 # Gaussian already yields ~2.2, so this alone can never detect bimodality.
 MIN_SEPARATION_RATIO = 2.0
 
-# A population holding less than this fraction of the frame is too small to
-# characterise reliably -- typical for a scratch that barely clips the image.
-MIN_POPULATION_FRACTION = 0.02
+# A population holding less than this fraction of the frame is not a level.
+#
+# This was 2%, and the user's objection was exactly right: the histogram alone
+# is not enough, the surface share has to be checked too. Sorted by the smaller
+# of the two populations, the batch separates cleanly and by name -- and the
+# names were never read by any of this:
+#
+#     2.3%   NPs coated SiO2 50 nm006          a field of particles
+#     3.1%   NP on MICA 240228009006           a field of particles
+#     7.3%   Nanoparticles 1                   365 of them
+#     9.4%   150121Z Detector015               63 of them
+#    18.5%   DVD240122003005                   pits in a disc
+#     ---------------------------------------------------------
+#    24.9%   SKPM_0013                         a flake on a substrate
+#    32.1%   PEAPbBr002                        a perovskite film
+#    37.1%   ALEX_AS_SGHS_Br_I0022             a real step
+#    46.8%   Calibration grating - Vertical    a certified step
+#
+# Everything below the line is a minority of *objects* whose heights happen to
+# split the histogram. Two true steps sit just under the bar and are lost with
+# them (an electrode at 18.8%, an ITO feature at 14.3%). That is the direction
+# to lose them in.
+MIN_POPULATION_FRACTION = 0.20
 
 
 @dataclass
@@ -167,6 +188,43 @@ UNIFORM_ENOUGH = 0.03
 # Enough separate objects that their sizes say something.
 ENOUGH_PARTICLES = 5
 
+# A peak in the height histogram counts as a level when it reaches this much
+# of the tallest peak and stands this far clear of the valleys beside it. Both
+# are needed: a shoulder on one broad hump is tall but not prominent, and a
+# ripple in the tail is prominent but not tall.
+LEVEL_MIN_HEIGHT = 0.12
+LEVEL_MIN_PROMINENCE = 0.10
+
+# Between two real levels the histogram comes back down to this fraction of the
+# smaller of them, and each level is no wider at half height than this fraction
+# of the gap between them. Two populations that meet in a shallow dip, or that
+# are as broad as they are far apart, are one population with a bump in it.
+VALLEY_DROPS_TO = 0.55
+PEAK_IS_NARROW = 0.75
+
+# Objects this round are spheres rather than flakes or rods, and a field of
+# them is a particle layer -- the user's rule, and the condition under which a
+# size may be quoted without hedging.
+ROUND_ENOUGH = 1.4
+
+# This many separate pieces is a scattering, and a scattering has no step
+# height however cleanly its heights split. Set above the handful of grains a
+# real stepped surface can carry (a perovskite film shows 7, a flake 2) and
+# below the fields that were being called steps (51 fibres, 63 particles).
+MANY_SEPARATE_PIECES = 20
+
+# The tip correction is worth quoting while it actually shrinks the object.
+# Once the answer comes back at nearly the measured width the formula has left
+# its range -- the object is far bigger than the probe and the tip adds a rim,
+# not a factor -- and quoting two nearly equal numbers pretends to a precision
+# that is not there.
+TIP_CORRECTION_WORTH_IT = 0.90
+
+# A roughness of the background needs a background to measure. Below this share
+# of the frame the objects are the sample and what is left between them is not
+# a surface, it is the gaps.
+ENOUGH_BACKGROUND = 0.40
+
 
 @dataclass
 class Reading:
@@ -176,6 +234,141 @@ class Reading:
     headline: str
     detail: str = ""
     caveat: str = ""
+
+
+FAMILIES: dict[str, str] = {
+    "terraces": "terrazze e gradini",
+    "particles": "strati di nanoparticelle",
+    "objects": "oggetti su un fondo",
+    "pattern": "reticoli e strutture periodiche",
+    "pits": "cavita e fori",
+    "uniform": "superfici uniformi",
+    "other": "senza una famiglia decisa",
+}
+
+
+def family_of(readings: Sequence[Reading], measurements: dict) -> str:
+    """
+    Which pile a scan belongs on, so the like ones can be looked at together.
+
+    Ordered by how decisive each signal is rather than by how interesting it
+    is: a scan showing several of these lands in the pile whose evidence is
+    hardest to argue with. Levels in the histogram come first -- they are a
+    fact about the height distribution with no detector in between. A field of
+    round objects, all much the same size, is next. A lattice that agrees with
+    itself is third. Anything surviving none of those goes to 'other', which
+    here is a real answer and not a failure.
+    """
+    kinds = {r.kind for r in readings}
+
+    # Matched on how a headline starts, not on what it contains: a refusal
+    # reads "no step here, though the heights look split", and a substring
+    # test for "step" filed 58 of those under terraces.
+    if any(r.headline.startswith(("step ", "terraces at"))
+           for r in readings):
+        return "terraces"
+    # A lattice comes before a particle layer, not after. Round even objects
+    # repeating at a fixed pitch are a made structure; the periodicity is the
+    # harder evidence and it is what the scan is about.
+    if "pattern" in kinds:
+        return "pattern"
+    if any(r.headline.startswith("nanoparticle layer") for r in readings):
+        return "particles"
+    if "particles" in kinds:
+        polarity = measurements.get("object_polarity") or 0
+        return "pits" if polarity < 0 else "objects"
+    if "roughness" in kinds:
+        return "uniform"
+    return "other"
+
+
+def height_levels(channel: Channel, max_levels: int = 4) -> list[float]:
+    """
+    The distinct heights a surface sits at, when there clearly are some.
+
+    Terraces, a film beside its substrate, a patterned layer: the height
+    histogram shows two or three sharp peaks and the spacing between them is
+    the answer. The user's condition, and it is the right one -- *two or three
+    well-defined Gaussian peaks* -- because a broad or single-humped histogram
+    means one population, and quoting a step height for it is a number about
+    nothing.
+
+    Returns the peak positions in metres, or an empty list where the histogram
+    does not clearly separate.
+    """
+    from scipy import ndimage, signal
+
+    values = np.asarray(channel.data, dtype=float)
+    finite = values[np.isfinite(values)]
+    if finite.size < 1024:
+        return []
+
+    lo, hi = np.percentile(finite, (0.5, 99.5))
+    if hi <= lo:
+        return []
+    counts, edges = np.histogram(finite, bins=256, range=(lo, hi))
+    smooth = ndimage.gaussian_filter1d(counts.astype(float), 2.0)
+    if smooth.max() <= 0:
+        return []
+    smooth /= smooth.max()
+
+    found, _ = signal.find_peaks(
+        smooth, height=LEVEL_MIN_HEIGHT, prominence=LEVEL_MIN_PROMINENCE,
+        distance=len(smooth) // 20)
+    if not (2 <= len(found) <= max_levels):
+        return []
+    found = np.sort(found)
+
+    # Now the part that decides. On this batch the two tests above alone put
+    # 105 of 199 scans in the terrace pile, which is nonsense -- a shoulder or
+    # a ripple on one broad hump clears both. What separates real levels from
+    # one population is the shape between and around the peaks:
+    #
+    #   the valley between two levels comes back down       (VALLEY_DROPS_TO)
+    #   each level is narrow next to the gap beside it      (PEAK_IS_NARROW)
+    #
+    # Those are what "molto definiti" means when written down.
+    widths, _, _, _ = signal.peak_widths(smooth, found, rel_height=0.5)
+    for left, right, w_left, w_right in zip(found[:-1], found[1:],
+                                            widths[:-1], widths[1:]):
+        valley = float(smooth[left:right + 1].min())
+        if valley > VALLEY_DROPS_TO * min(smooth[left], smooth[right]):
+            return []
+        if max(w_left, w_right) > PEAK_IS_NARROW * (right - left):
+            return []
+
+    centres = (edges[:-1] + edges[1:]) / 2.0
+    return [float(centres[i]) for i in found]
+
+
+def background_roughness(channel: Channel) -> tuple[float, float] | None:
+    """
+    How smooth the surface is where nothing is sitting on it.
+
+    Returns the Sq of the unmasked region and the share of the frame that was
+    masked out, or None where too little background survives to measure.
+
+    The mask is the same one the levelling uses, grown a little further: the
+    skirt around an object is the tip's own shape smeared out, and counting it
+    as surface would inflate exactly the number this is meant to protect.
+    """
+    from scipy import ndimage
+
+    from afm_copilot.decide import level, object_mask
+
+    values = np.asarray(channel.data, dtype=float)
+    if values.ndim != 2 or values.size < 1024:
+        return None
+
+    settled = level(values)
+    mask = object_mask(settled.flat)
+    if mask.any():
+        mask = ndimage.binary_dilation(mask, iterations=2)
+
+    background = np.asarray(settled.flat)[~mask & np.isfinite(settled.flat)]
+    if background.size < ENOUGH_BACKGROUND * values.size:
+        return None
+    return float(np.std(background)), float(mask.mean())
 
 
 def readings_for(channel: Channel, measurements: dict,
@@ -201,7 +394,29 @@ def readings_for(channel: Channel, measurements: dict,
     rms = float(measurements.get("rms", 0.0) or 0.0)
     correlation = measurements.get("correlation_length")
 
-    if bimodality >= TWO_LEVELS:
+    # Three or more sharp peaks is a staircase, and the film-thickness routine
+    # -- which is built around exactly two populations -- has nothing to say
+    # about it. The peak spacings are the terrace heights and are reported
+    # directly. Two peaks go the usual route, which carries an error bar.
+    # A minority population made of dozens of separate pieces is a scattering
+    # of objects, not a level, whatever share of the frame it holds. That is
+    # what put a fibre network among the steps at 30% -- above the surface-share
+    # bar, and still 51 separate strands.
+    scattered = count >= MANY_SEPARATE_PIECES
+
+    levels = height_levels(channel)
+    if scattered and len(levels) < 3:
+        levels = []
+    if len(levels) >= 3:
+        gaps = np.diff(levels)
+        out.append(Reading(
+            "thickness",
+            "terraces at " + ", ".join(f"{g * 1e9:.1f}" for g in gaps) + " nm",
+            f"the height histogram has {len(levels)} sharp peaks, so the "
+            "surface sits at that many definite levels",
+            "A height is the one thing neither the tip nor the scanner "
+            "distorts, so these are the most trustworthy numbers here."))
+    elif (len(levels) == 2 or bimodality >= TWO_LEVELS) and not scattered:
         try:
             step = measure_film_thickness(channel)
         except Exception as exc:                               # noqa: BLE001
@@ -223,6 +438,12 @@ def readings_for(channel: Channel, measurements: dict,
                 "A height is the one thing neither the tip nor the scanner "
                 "distorts, so this is the most trustworthy number here."))
         else:
+            # There was a branch here that quoted the peak spacing when the
+            # routine above declined. It was wrong, and on a scan of crossing
+            # fibres it printed "step 35.1 nm" directly underneath that
+            # routine's own words: "this is one population, not two ... there
+            # is no measurable step in this image". A refusal is a result. It
+            # does not get a second opinion from a weaker test.
             out.append(Reading(
                 "thickness", "no step here, though the heights look split",
                 refusal or "the two levels are not separated enough to measure",
@@ -247,6 +468,38 @@ def readings_for(channel: Channel, measurements: dict,
             "The spacing is a lateral distance, so it carries the scanner's "
             "calibration with it -- two scans of one DVD in this set disagree "
             "by 12 to 16%."))
+
+    # A substrate with three specks on it fell between every rule: too busy
+    # for the whole-frame roughness (which needs under 3% of the frame in
+    # objects), too empty to count them (which needs five). Twenty-four scans
+    # of this batch sat in that gap, and the gap was an accident -- two
+    # thresholds chosen for unrelated reasons that were never checked against
+    # each other.
+    #
+    # The answer is not to widen either bar but to measure the thing the
+    # operator actually wants to know about such a scan: how smooth the
+    # background is. The objects are excluded rather than tolerated, using the
+    # same mask that keeps them out of the levelling.
+    # The test is "no step was reported", not "the heights did not look
+    # split". Ten of these scans have a split-looking histogram and a step
+    # routine that examined it and refused -- and a refusal there says *one
+    # population*, which is exactly the case where the roughness of that one
+    # population is the right answer. Reading the raw bimodality instead left
+    # them with nothing at all.
+    stepped = any(r.kind == "thickness" and not r.headline.startswith("no step")
+                  for r in out)
+    if UNIFORM_ENOUGH <= objects and count < ENOUGH_PARTICLES and not stepped:
+        clean = background_roughness(channel)
+        if clean is not None:
+            sq, share = clean
+            out.append(Reading(
+                "roughness", f"Sq {sq * 1e9:.2f} nm",
+                f"of the background alone, with {share:.0%} of the frame "
+                f"masked out -- {count} object"
+                f"{'s' if count != 1 else ''} on an otherwise even surface",
+                "Excluding the objects rather than tolerating them: over the "
+                f"whole frame this reads {rms * 1e9:.2f} nm, which is mostly "
+                "their height and says little about the surface."))
 
     if objects < UNIFORM_ENOUGH and bimodality < TWO_LEVELS:
         detail = "over the whole frame"
@@ -274,15 +527,47 @@ def readings_for(channel: Channel, measurements: dict,
         if elongation >= 1.6:
             detail_parts.append(f"elongated, about {elongation:.1f} to 1")
 
+        # Named only when the attribution is not in doubt: enough of them,
+        # round rather than elongated, all much the same size. That is a layer
+        # of particles and may be called one; anything else keeps the neutral
+        # word.
+        #
+        # Not where the objects sit on a lattice, though. Deposited particles
+        # do not arrange themselves at a regular 830 nm pitch; something that
+        # does is a manufactured structure, and two scans of a DVD were being
+        # called a nanoparticle layer on the strength of round, even bumps.
+        periodic = any(r.kind == "pattern" for r in out)
+        if (polarity > 0 and count >= ENOUGH_PARTICLES and not periodic
+                and 0 < elongation <= ROUND_ENOUGH and spread < 0.35):
+            what = "nanoparticle layer"
+
         headline = f"{what}, {median * 1e9:.0f} nm across"
         caveat = ""
         if tip_radius and median > 0:
             true_across = 2.0 * feature_radius(median, tip_radius)
-            headline = (f"{what}, {true_across * 1e9:.0f} nm across "
-                        f"({median * 1e9:.0f} nm as measured)")
-            caveat = (f"The measured width includes the tip; corrected for a "
-                      f"{tip_radius * 1e9:.0f} nm probe. A blunter probe would "
-                      "mean smaller objects still.")
+            if median <= 2.0 * tip_radius:
+                # Smaller than the probe: what was measured is the tip's own
+                # shape with the object somewhere inside it. The formula still
+                # returns a number -- 1 nm from a 7 nm measurement -- and it is
+                # a number about the tip.
+                caveat = (f"As measured. These are no larger than the "
+                          f"{tip_radius * 1e9:.0f} nm probe, so the width is "
+                          "mostly the tip's own shape and there is no object "
+                          "size to recover from it.")
+            elif true_across >= median * TIP_CORRECTION_WORTH_IT:
+                # The correction has run out of range -- these objects are far
+                # larger than the probe, and what the tip adds to their width
+                # is a rim, not a doubling. Reported as measured, and said so.
+                caveat = (f"As measured. These are much larger than the "
+                          f"{tip_radius * 1e9:.0f} nm probe, so the tip adds a "
+                          "rim rather than a factor, and the correction that "
+                          "suits small particles does not apply.")
+            else:
+                headline = (f"{what}, {true_across * 1e9:.0f} nm across "
+                            f"({median * 1e9:.0f} nm as measured)")
+                caveat = (f"The measured width includes the tip; corrected for "
+                          f"a {tip_radius * 1e9:.0f} nm probe. A blunter probe "
+                          "would mean smaller objects still.")
         out.append(Reading("particles", headline, ", ".join(detail_parts),
                            caveat))
 

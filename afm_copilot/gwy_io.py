@@ -141,7 +141,8 @@ def load_channels(path: str | Path) -> list[Channel]:
     return channels
 
 
-def save_height(channel: Channel, path: str | Path) -> Path:
+def save_height(channel: Channel, path: str | Path,
+                mask: np.ndarray | None = None) -> Path:
     """
     Write one channel back out as a .gwy Gwyddion can open.
 
@@ -161,9 +162,23 @@ def save_height(channel: Channel, path: str | Path) -> Path:
         xreal=float(channel.xreal), yreal=float(channel.yreal),
         si_unit_xy=channel.xy_unit, si_unit_z=channel.z_unit,
     )
-    container = GwyContainer({"/0/data": field,
-                              "/0/data/title": channel.name or "Height"})
-    container.tofile(str(path))
+    contents = {"/0/data": field,
+                "/0/data/title": channel.name or "Height"}
+
+    # A mask written alongside the data, so Gwyddion's masked operations work
+    # on the region *this* project identified rather than one they find for
+    # themselves. The two disagreed badly: on one scan our detector marked
+    # 19.5% of the frame and Gwyddion's threshold 79%, and a background fitted
+    # around the wrong fifth is worse than one fitted around nothing.
+    if mask is not None:
+        marked = np.ascontiguousarray(np.asarray(mask, dtype=bool),
+                                      dtype=float)
+        if marked.shape == channel.data.shape:
+            contents["/0/mask"] = GwyDataField(
+                marked, xreal=float(channel.xreal),
+                yreal=float(channel.yreal), si_unit_xy=channel.xy_unit)
+
+    GwyContainer(contents).tofile(str(path))
     return path
 
 

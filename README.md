@@ -203,11 +203,13 @@ That is what `tools/run_py27.ps1` sets up.
 |---|---|---|
 | Gwyddion 2.70 **32-bit** | `C:\Program Files (x86)\Gwyddion` | PyGwy exists **only** in 32-bit builds |
 | Python 2.7.16 (32-bit) | `C:\Python27` | For PyGwy only |
-| Python 3 | (to be created) | **Target 3.11**, not 3.13 — see below |
+| Python 3 | `.venv` | Built and tested on **3.13**; `requires-python` is `>=3.11` |
 
-**Why Python 3.11:** TopoStats (`<3.12`), pySPM on PyPI (`<3.13`), AFMReader and
-napari-AFMReader all cap below 3.13. 3.11 gets the whole AFM ecosystem; 3.13
-gets almost none of it.
+**A note on 3.11, which this is not.** TopoStats (`<3.12`), pySPM on PyPI
+(`<3.13`), AFMReader and napari-AFMReader all cap below 3.13. None of them are
+used here — the project reads `.gwy` with `gwyfile` and `.ibw` metadata with
+`igor2`, both of which are fine on 3.13. If any of that ecosystem is ever
+wanted, the environment has to drop to 3.11 first.
 
 Override the defaults with the `GWYDDION_ROOT` and `PYTHON27` environment
 variables if either moves.

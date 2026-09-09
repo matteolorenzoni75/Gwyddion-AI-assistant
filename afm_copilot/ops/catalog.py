@@ -172,8 +172,15 @@ _ALL: list[Operation] = [
             "by masking the block by hand and only then aligning rows -- so "
             "the mask has to still be there when this runs, which means "
             "clearing it comes afterwards, not before.",
-        caution="Needs a mask that actually covers the object; with none it "
-                "behaves like the plain version.",
+        caution="Needs a TIGHT mask around one object, drawn by someone who "
+                "can see it. Not for automatic use: with the masks this "
+                "project builds -- a third to a half of the frame -- whole "
+                "rows keep no background, their offset is invented, and the "
+                "surface comes back with a belly along the slow axis. "
+                "Measured across the batch: curvature grew on 30 of the 79 "
+                "masked scans, by up to 156 nm, and on none of the unmasked "
+                "ones. No threshold on mask coverage separates the 30 from "
+                "the rest, so it is out of the automatic recipes.",
         needs_mask=True,
         settings={
             "/module/linematch/method": LINEMATCH_MEDIAN_OF_DIFF,
