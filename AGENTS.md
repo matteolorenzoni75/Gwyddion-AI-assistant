@@ -50,6 +50,12 @@ ours. Measured: the bridge costs 0.05 s per scan, the Python 3 side 1.15 s.
 Practical consequence: with a folder of already-converted `.gwy` files you can
 do nearly everything. Without one you cannot run `afm-copilot batch` end to end.
 
+**`export/` is that folder.** 56 real scans covering every family and every
+verdict, plus `baseline.json` — what this code says about each of them today,
+to be used as a regression net and never as ground truth. Read
+`export/README.md` first. The scans are named `scan-001` … `scan-056` on
+purpose: the corpus is blind, and there is no name in it to read.
+
 | | |
 |---|---|
 | Gwyddion 2.70 **32-bit** | `GWYDDION_ROOT`, default `C:\Program Files (x86)\Gwyddion` |
@@ -58,9 +64,10 @@ do nearly everything. Without one you cannot run `afm-copilot batch` end to end.
 PyGwy exists **only** in the 32-bit build. There is no `--script` flag; the
 bridge imports `bin/gwy.pyd` from a plain 2.7 interpreter. See `README.md`.
 
-The sample corpus (`C:\AFM_Automation\OLD input IMAGES`, 241 scans) is **not in
-this repository** and is referenced by absolute path in a few tests, which skip
-without it.
+The full sample corpus (`C:\AFM_Automation\OLD input IMAGES`, 241 scans) is
+**not in this repository** — it is 453 MB of raw instrument files, and their
+filenames carry collaborators' names. A few tests reference it by absolute path
+and skip without it. Work from `export/` instead.
 
 ## Rules that are not up for discussion
 

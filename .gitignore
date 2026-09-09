@@ -14,3 +14,9 @@ data/smoketest/
 
 # Keep the API inventory and the data survey - they are deliverables,
 # not build artifacts.
+
+# The map from scan-0NN back to the original filenames. Those names carry
+# collaborators' names and unpublished samples, and this repository is public.
+# It stays on the machine that made the corpus; export/scans/ itself is
+# committed, and nothing in it can be traced back without this file.
+export/original-names.json

@@ -1,0 +1,2491 @@
+{
+  "what_this_is": "What this code says about these scans today. A regression net, NOT ground truth. Regenerate with tools/make_export_corpus.py and read the diff.",
+  "the_names_are_ids": "Deliberately. The corpus is blind: nothing may infer what a scan contains from what it is called, and there is nothing here to infer it from.",
+  "scans": [
+    {
+      "name": "scan-001",
+      "in_the_corpus_because": "family: objects",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 2.3477711102284755e-06,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 2.089305594716884e-37,
+          "1": 2.3477711102284755e-06,
+          "2": 2.4060671547142345e-06,
+          "3": 5.781440486098508e-06
+        },
+        "row_banding": 6.024324232438877e-06,
+        "row_step_fraction": 0.058823529411764705,
+        "object_fraction": 0.015228271484375,
+        "raised_fraction": 0.01470947265625,
+        "sunken_fraction": 0.000518798828125,
+        "object_polarity": 1,
+        "object_count": 6,
+        "object_median_size": 1.0997561204905123e-07,
+        "object_size_spread": 0.90039179894705,
+        "object_elongation": 1.2,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 7.06901475490319e-09,
+        "correlation_length": 2.03125e-07,
+        "skewness": 2.5679910539538335,
+        "kurtosis": 14.826553214663338,
+        "bimodality": 0.4260228802180748,
+        "scan_size": 4e-06,
+        "pixel_size": 1.5625e-08
+      },
+      "family": "objects",
+      "readings": [
+        {
+          "kind": "roughness",
+          "headline": "Sq 7.07 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 110 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-002",
+      "in_the_corpus_because": "the same area scanned again",
+      "kept": false,
+      "verdict": "good",
+      "why": [],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": "scan-001",
+      "measurements": {}
+    },
+    {
+      "name": "scan-003",
+      "in_the_corpus_because": "family: uniform",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "2.0% of the scan lines are out of line and should be replaced",
+        "signs of the feedback lagging along the scan direction; shapes will be smeared in that direction"
+      ],
+      "recipe": "isolate-objects",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.660152308030693,
+        "background_order": 2,
+        "explained_by_degree": {
+          "0": 1.181029151799966e-30,
+          "1": 0.7216108526670227,
+          "2": 0.9429964472639109,
+          "3": 0.967008663186681
+        },
+        "row_banding": 0.4021369759516037,
+        "row_step_fraction": 0.0784313725490196,
+        "object_fraction": 0.1124725341796875,
+        "raised_fraction": 0.1094818115234375,
+        "sunken_fraction": 0.00299072265625,
+        "object_polarity": 1,
+        "object_count": 4,
+        "object_median_size": 8.736768541774302e-07,
+        "object_size_spread": 0.6229657656240775,
+        "object_elongation": 6.15,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 8.283989777140645e-08,
+        "correlation_length": 5.6640625e-07,
+        "skewness": 1.494747289303085,
+        "kurtosis": 2.0030790018674782,
+        "bimodality": 0.6464380591228519,
+        "scan_size": 4.9999999999999996e-06,
+        "pixel_size": 1.9531249999999998e-08
+      },
+      "family": "uniform",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "roughness",
+          "headline": "Sq 24.25 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-004",
+      "in_the_corpus_because": "family: particles",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.9960358529325192,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 7.250442752113887e-29,
+          "1": 0.9960358529325192,
+          "2": 0.9961362595174096,
+          "3": 0.9961857376330481
+        },
+        "row_banding": 0.07596439491357836,
+        "row_step_fraction": 0.0,
+        "object_fraction": 0.011962890625,
+        "raised_fraction": 0.010406494140625,
+        "sunken_fraction": 0.001556396484375,
+        "object_polarity": 1,
+        "object_count": 36,
+        "object_median_size": 3.0537656993932496e-08,
+        "object_size_spread": 0.21399487727513472,
+        "object_elongation": 1.3333333333333333,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.5657878810849815e-09,
+        "correlation_length": 6.25e-08,
+        "skewness": 0.26230546873921295,
+        "kurtosis": 0.09187438755617316,
+        "bimodality": 0.3456662698779283,
+        "scan_size": 2e-06,
+        "pixel_size": 7.8125e-09
+      },
+      "family": "particles",
+      "readings": [
+        {
+          "kind": "roughness",
+          "headline": "Sq 1.57 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "nanoparticle layer, 12 nm across (31 nm as measured)"
+        }
+      ]
+    },
+    {
+      "name": "scan-005",
+      "in_the_corpus_because": "the cleaning took more than it should have",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "3.1% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.970925720583396,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 1.870950050094833e-31,
+          "1": 0.9772591089895549,
+          "2": 0.9975099426944755,
+          "3": 0.9980834620630544
+        },
+        "row_banding": 0.027171348786963024,
+        "row_step_fraction": 0.050980392156862744,
+        "object_fraction": 0.138458251953125,
+        "raised_fraction": 0.138458251953125,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 61,
+        "object_median_size": 2.92375806133559e-07,
+        "object_size_spread": 0.18999837704964023,
+        "object_elongation": 3.0,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.0937262222333605e-07,
+        "correlation_length": 4.9999999999999996e-06,
+        "skewness": 0.8608134187827113,
+        "kurtosis": -0.07881454170631352,
+        "bimodality": 0.5959628101712645,
+        "scan_size": 1.9999999999999998e-05,
+        "pixel_size": 7.812499999999999e-08
+      },
+      "family": "objects",
+      "readings": [
+        {
+          "kind": "particles",
+          "headline": "particles, 292 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-006",
+      "in_the_corpus_because": "family: pattern",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (9% of the surface variation) -- align the rows first",
+        "1.6% of the scan lines are out of line and should be replaced",
+        "over 4% of the frame the height alternates from pixel to pixel, 28 times harder than across the rest of the image, while the rest stays quiet -- either the surface is really like that there, or the feedback was slipping between regimes"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.07916504824898556,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 5.8874108190317495e-31,
+          "1": 0.07916504824898556,
+          "2": 0.08209068382084728,
+          "3": 0.29012898889639116
+        },
+        "row_banding": 0.26847578266820304,
+        "row_step_fraction": 0.058823529411764705,
+        "object_fraction": 0.0219268798828125,
+        "raised_fraction": 0.0174713134765625,
+        "sunken_fraction": 0.00445556640625,
+        "object_polarity": 1,
+        "object_count": 28,
+        "object_median_size": 1.246694626254477e-07,
+        "object_size_spread": 0.3332067463251699,
+        "object_elongation": 1.25,
+        "periodicity": 5.129603548881168,
+        "period_angle": 0.0,
+        "period_length": 1.4285714285714284e-06,
+        "period_confirmed": 0.6480932200313271,
+        "rms": 3.3103891662779966e-08,
+        "correlation_length": 4.6874999999999996e-07,
+        "skewness": 0.3891557455963148,
+        "kurtosis": 0.20994849611174216,
+        "bimodality": 0.3586951422859647,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "pattern",
+      "readings": [
+        {
+          "kind": "pattern",
+          "headline": "pitch 1429 nm"
+        },
+        {
+          "kind": "roughness",
+          "headline": "Sq 33.10 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 125 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-007",
+      "in_the_corpus_because": "family: other",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (17% of the surface variation) -- align the rows first",
+        "signs of the feedback lagging along the scan direction; shapes will be smeared in that direction"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.06356520289291766,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 4.7708947753147046e-30,
+          "1": 0.06356520289291766,
+          "2": 0.08010872048047894,
+          "3": 0.13304195742795363
+        },
+        "row_banding": 0.26892813873021243,
+        "row_step_fraction": 0.0196078431372549,
+        "object_fraction": 0.021728515625,
+        "raised_fraction": 0.021728515625,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 3,
+        "object_median_size": 1.5645893386229405e-07,
+        "object_size_spread": 1.2024149361582597,
+        "object_elongation": 1.5454545454545454,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.1727060828063456e-08,
+        "correlation_length": 1.7578125e-07,
+        "skewness": 2.825210829803705,
+        "kurtosis": 13.593048674118293,
+        "bimodality": 0.5412954587091445,
+        "scan_size": 3e-06,
+        "pixel_size": 1.171875e-08
+      },
+      "family": "other",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        }
+      ]
+    },
+    {
+      "name": "scan-008",
+      "in_the_corpus_because": "family: pits",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "1.2% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.9911779057154506,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 9.115264028228192e-31,
+          "1": 0.9911779057154506,
+          "2": 0.9917803786362799,
+          "3": 0.9919274045520766
+        },
+        "row_banding": 0.058287578560466805,
+        "row_step_fraction": 0.03137254901960784,
+        "object_fraction": 0.02557373046875,
+        "raised_fraction": 0.0,
+        "sunken_fraction": 0.02557373046875,
+        "object_polarity": -1,
+        "object_count": 23,
+        "object_median_size": 1.2850634067342853e-07,
+        "object_size_spread": 0.7198085930031491,
+        "object_elongation": 1.5,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 2.0832506849217445e-08,
+        "correlation_length": 2.3437499999999998e-07,
+        "skewness": -2.0544832688825245,
+        "kurtosis": 6.716643936683029,
+        "bimodality": 0.5373077108104916,
+        "scan_size": 4.9999999999999996e-06,
+        "pixel_size": 1.9531249999999998e-08
+      },
+      "family": "pits",
+      "readings": [
+        {
+          "kind": "particles",
+          "headline": "pits, 129 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-009",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.0730925683207799,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.1609808350868497,
+          "2": 0.28107633998035275,
+          "3": 0.38081025982435807
+        },
+        "row_banding": 0.11340913616550172,
+        "row_step_fraction": 0.0196078431372549,
+        "object_fraction": 0.0543975830078125,
+        "raised_fraction": 0.016265869140625,
+        "sunken_fraction": 0.0381317138671875,
+        "object_polarity": -1,
+        "object_count": 5,
+        "object_median_size": 2.5109307215869806e-07,
+        "object_size_spread": 1.1251133959250734,
+        "object_elongation": 1.6363636363636365,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 3.9156835001250824e-07,
+        "correlation_length": 6.95870527997613e-07,
+        "skewness": -0.2329708701814459,
+        "kurtosis": -0.10020255597541272,
+        "bimodality": 0.3635514265988412,
+        "scan_size": 6.142857074737549e-06,
+        "pixel_size": 2.399553544819355e-08
+      },
+      "family": "pits",
+      "readings": [
+        {
+          "kind": "particles",
+          "headline": "pits, 251 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-010",
+      "in_the_corpus_because": "the same area scanned again",
+      "kept": false,
+      "verdict": "fixable",
+      "why": [
+        "2.0% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": "scan-009",
+      "measurements": {}
+    },
+    {
+      "name": "scan-011",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "1.6% of the frame is pinned at the limits of the range",
+        "5.9% of the scan lines are out of line and should be replaced",
+        "signs of the feedback lagging along the scan direction; shapes will be smeared in that direction"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.1053676487069087,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 1.7146578397225164e-34,
+          "1": 0.16310590275723255,
+          "2": 0.35566140883422953,
+          "3": 0.3809623106491579
+        },
+        "row_banding": 0.04513054437694388,
+        "row_step_fraction": 0.10980392156862745,
+        "object_fraction": 0.1612396240234375,
+        "raised_fraction": 0.0,
+        "sunken_fraction": 0.1612396240234375,
+        "object_polarity": -1,
+        "object_count": 4,
+        "object_median_size": 1.0884453997585981e-05,
+        "object_size_spread": 0.14330343693749076,
+        "object_elongation": 1.536734693877551,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 9.252173164702519e-07,
+        "correlation_length": 4.921874999999999e-06,
+        "skewness": -1.2955306107835127,
+        "kurtosis": 0.7449612545559829,
+        "bimodality": 0.7151746472493754,
+        "scan_size": 4.4999999999999996e-05,
+        "pixel_size": 1.7578124999999998e-07
+      },
+      "family": "uniform",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "roughness",
+          "headline": "Sq 257.70 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-012",
+      "in_the_corpus_because": "family: pits",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "6.7% of the scan lines are out of line and should be replaced",
+        "signs of the feedback lagging along the scan direction; shapes will be smeared in that direction"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.06962591324877357,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 2.7011628937908917e-33,
+          "1": 0.16499603900770687,
+          "2": 0.32748844178030334,
+          "3": 0.3566108186249918
+        },
+        "row_banding": 0.05117921886689063,
+        "row_step_fraction": 0.054901960784313725,
+        "object_fraction": 0.124420166015625,
+        "raised_fraction": 4.57763671875e-05,
+        "sunken_fraction": 0.1243743896484375,
+        "object_polarity": -1,
+        "object_count": 6,
+        "object_median_size": 4.4436968765407615e-06,
+        "object_size_spread": 1.2682291980279403,
+        "object_elongation": 1.4833333333333334,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 7.971796024878443e-07,
+        "correlation_length": 5.09765625e-06,
+        "skewness": -1.3141820696726425,
+        "kurtosis": 1.2176306247487103,
+        "bimodality": 0.646568170077531,
+        "scan_size": 4.4999999999999996e-05,
+        "pixel_size": 1.7578124999999998e-07
+      },
+      "family": "pits",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "particles",
+          "headline": "pits, 4444 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-013",
+      "in_the_corpus_because": "family: pits",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "1.3% of the frame is pinned at the limits of the range",
+        "5.1% of the scan lines are out of line and should be replaced",
+        "signs of the feedback lagging along the scan direction; shapes will be smeared in that direction",
+        "over 2% of the frame the height alternates from pixel to pixel, 17 times harder than across the rest of the image, while the rest stays quiet -- either the surface is really like that there, or the feedback was slipping between regimes"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.10552234619735332,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 3.6737414053773556e-32,
+          "1": 0.24095185031856375,
+          "2": 0.40839047116871496,
+          "3": 0.4264216900312622
+        },
+        "row_banding": 0.0305976470340086,
+        "row_step_fraction": 0.08627450980392157,
+        "object_fraction": 0.140472412109375,
+        "raised_fraction": 0.0,
+        "sunken_fraction": 0.140472412109375,
+        "object_polarity": -1,
+        "object_count": 5,
+        "object_median_size": 9.160581343883708e-06,
+        "object_size_spread": 0.5595854152793637,
+        "object_elongation": 1.7708333333333333,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.0225068341682144e-06,
+        "correlation_length": 4.74609375e-06,
+        "skewness": -1.5962018394410589,
+        "kurtosis": 1.8287400001194447,
+        "bimodality": 0.7347174229574325,
+        "scan_size": 4.4999999999999996e-05,
+        "pixel_size": 1.7578124999999998e-07
+      },
+      "family": "pits",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "particles",
+          "headline": "pits, 9161 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-014",
+      "in_the_corpus_because": "family: objects",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "signs of the feedback lagging along the scan direction; shapes will be smeared in that direction"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.451645935221471,
+        "background_order": 2,
+        "explained_by_degree": {
+          "0": 2.0564940093872975e-30,
+          "1": 0.451645935221471,
+          "2": 0.8906590624981311,
+          "3": 0.9102784877170925
+        },
+        "row_banding": 0.10950518790630967,
+        "row_step_fraction": 0.00784313725490196,
+        "object_fraction": 0.0044403076171875,
+        "raised_fraction": 0.0041351318359375,
+        "sunken_fraction": 0.00030517578125,
+        "object_polarity": 1,
+        "object_count": 9,
+        "object_median_size": 8.079504602853766e-07,
+        "object_size_spread": 0.45950880171902575,
+        "object_elongation": 1.6666666666666667,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 6.10348662857058e-09,
+        "correlation_length": 2.34375e-06,
+        "skewness": 0.2248832676694555,
+        "kurtosis": 0.9759574142422047,
+        "bimodality": 0.26422219540687647,
+        "scan_size": 3.9999999999999996e-05,
+        "pixel_size": 1.5624999999999999e-07
+      },
+      "family": "objects",
+      "readings": [
+        {
+          "kind": "roughness",
+          "headline": "Sq 6.10 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 808 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-015",
+      "in_the_corpus_because": "family: uniform",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "the surface rises and falls lopsidedly along the scan direction only -- the tip was flying, not following"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.993861633489646,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.9979098555556097,
+          "2": 0.9985613561132951,
+          "3": 0.998788976131671
+        },
+        "row_banding": 0.014196076390260532,
+        "row_step_fraction": 0.01568627450980392,
+        "object_fraction": 0.071807861328125,
+        "raised_fraction": 0.0002288818359375,
+        "sunken_fraction": 0.0715789794921875,
+        "object_polarity": -1,
+        "object_count": 3,
+        "object_median_size": 1.246694626254477e-07,
+        "object_size_spread": 0.31050178525858996,
+        "object_elongation": 3.263157894736842,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 5.024563222737379e-09,
+        "correlation_length": 1.2109374999999998e-06,
+        "skewness": -2.058798763320725,
+        "kurtosis": 4.657049598205377,
+        "bimodality": 0.6841484206673855,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "uniform",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "roughness",
+          "headline": "Sq 2.58 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-016",
+      "in_the_corpus_because": "family: uniform",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.7270469880860193,
+        "background_order": 2,
+        "explained_by_degree": {
+          "0": 1.7554283184158916e-31,
+          "1": 0.7270469880860193,
+          "2": 0.9073911139049984,
+          "3": 0.9546292364293133
+        },
+        "row_banding": 0.2119516946451413,
+        "row_step_fraction": 0.00784313725490196,
+        "object_fraction": 0.003753662109375,
+        "raised_fraction": 0.001220703125,
+        "sunken_fraction": 0.002532958984375,
+        "object_polarity": -1,
+        "object_count": 4,
+        "object_median_size": 4.4307023235819007e-07,
+        "object_size_spread": 0.31492946530948096,
+        "object_elongation": 2.125,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 7.690332134156746e-08,
+        "correlation_length": 3.515625e-06,
+        "skewness": 0.09563641575933149,
+        "kurtosis": -0.126187020744029,
+        "bimodality": 0.3511356193709718,
+        "scan_size": 2.9999999999999997e-05,
+        "pixel_size": 1.1718749999999999e-07
+      },
+      "family": "uniform",
+      "readings": [
+        {
+          "kind": "roughness",
+          "headline": "Sq 76.90 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-017",
+      "in_the_corpus_because": "the same area scanned again",
+      "kept": false,
+      "verdict": "good",
+      "why": [],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": "scan-016",
+      "measurements": {}
+    },
+    {
+      "name": "scan-018",
+      "in_the_corpus_because": "family: objects",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.7396963830575742,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 1.8104065752912848e-29,
+          "1": 0.7396963830575742,
+          "2": 0.7584925132609832,
+          "3": 0.7597187452588035
+        },
+        "row_banding": 0.07617162398666065,
+        "row_step_fraction": 0.00392156862745098,
+        "object_fraction": 0.021240234375,
+        "raised_fraction": 0.0184173583984375,
+        "sunken_fraction": 0.0028228759765625,
+        "object_polarity": 1,
+        "object_count": 22,
+        "object_median_size": 7.67315597457212e-08,
+        "object_size_spread": 0.49939092304357924,
+        "object_elongation": 1.380952380952381,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.2695866841496744e-08,
+        "correlation_length": 1.26953125e-07,
+        "skewness": 0.31900791371555215,
+        "kurtosis": -0.26584742693145236,
+        "bimodality": 0.4029441228320546,
+        "scan_size": 2.4999999999999998e-06,
+        "pixel_size": 9.765624999999999e-09
+      },
+      "family": "objects",
+      "readings": [
+        {
+          "kind": "roughness",
+          "headline": "Sq 12.70 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 77 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-019",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "5.5% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 1.5516936963643925e-08,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 5.20439293589431e-33,
+          "1": 0.04918916436242878,
+          "2": 0.054987319889597056,
+          "3": 0.06393544125585364
+        },
+        "row_banding": 6.908458869699933e-08,
+        "row_step_fraction": 0.10980392156862745,
+        "object_fraction": 0.1121063232421875,
+        "raised_fraction": 0.1121063232421875,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 22,
+        "object_median_size": 1.5147131296200887e-07,
+        "object_size_spread": 0.5178968379384923,
+        "object_elongation": 1.5,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 4.03656366235636e-08,
+        "correlation_length": 2.734375e-07,
+        "skewness": 1.8768566870457095,
+        "kurtosis": 3.0197008839071264,
+        "bimodality": 0.7512811571392598,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "objects",
+      "readings": [
+        {
+          "kind": "particles",
+          "headline": "particles, 151 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-020",
+      "in_the_corpus_because": "family: other",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (10% of the surface variation) -- align the rows first",
+        "3.1% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 3.17270630772934e-19,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 3.17270630772934e-19,
+          "2": 0.02341717723410213,
+          "3": 0.02382264303605123
+        },
+        "row_banding": 5.09187701968041e-17,
+        "row_step_fraction": 0.03529411764705882,
+        "object_fraction": 0.00213623046875,
+        "raised_fraction": 0.00213623046875,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 2,
+        "object_median_size": 7.290119291099493e-07,
+        "object_size_spread": 0.22763246659745467,
+        "object_elongation": 4.071428571428571,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 5.061313045791676e-09,
+        "correlation_length": 3.9062499999999997e-07,
+        "skewness": 12.893564809027625,
+        "kurtosis": 261.04341543735137,
+        "bimodality": 0.633395558149071,
+        "scan_size": 1.9999999999999998e-05,
+        "pixel_size": 7.812499999999999e-08
+      },
+      "family": "other",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        }
+      ]
+    },
+    {
+      "name": "scan-021",
+      "in_the_corpus_because": "family: other",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.8591969341619184,
+        "background_order": 2,
+        "explained_by_degree": {
+          "0": 8.897352251681782e-30,
+          "1": 0.8591969341619184,
+          "2": 0.896068879082049,
+          "3": 0.9110846193572592
+        },
+        "row_banding": 0.198757001692812,
+        "row_step_fraction": 0.011764705882352941,
+        "object_fraction": 0.0024566650390625,
+        "raised_fraction": 0.0024566650390625,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 2,
+        "object_median_size": 7.789525241757903e-07,
+        "object_size_spread": 0.261092799780446,
+        "object_elongation": 4.309523809523809,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 5.721669051373837e-09,
+        "correlation_length": 3.9062499999999997e-07,
+        "skewness": 12.99329215072713,
+        "kurtosis": 247.73783961492788,
+        "bimodality": 0.6773032269751669,
+        "scan_size": 1.9999999999999998e-05,
+        "pixel_size": 7.812499999999999e-08
+      },
+      "family": "other",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        }
+      ]
+    },
+    {
+      "name": "scan-022",
+      "in_the_corpus_because": "not kept -- see its verdict",
+      "kept": false,
+      "verdict": "not topography",
+      "why": [
+        "no height channel in it — NCM Phase [deg]"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {}
+    },
+    {
+      "name": "scan-023",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "1.2% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.9726819934300669,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 7.63071500986671e-31,
+          "1": 0.9942877480104796,
+          "2": 0.9969286105578192,
+          "3": 0.9993580216961029
+        },
+        "row_banding": 0.4218409487591345,
+        "row_step_fraction": 0.16862745098039217,
+        "object_fraction": 0.06549072265625,
+        "raised_fraction": 0.0,
+        "sunken_fraction": 0.06549072265625,
+        "object_polarity": -1,
+        "object_count": 1,
+        "object_median_size": 2.887652643570908e-07,
+        "object_size_spread": 0.0,
+        "object_elongation": 15.058823529411764,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 5.450278013674361e-09,
+        "correlation_length": 1.09375e-07,
+        "skewness": -3.1907614025721527,
+        "kurtosis": 10.898532622149732,
+        "bimodality": 0.8044624673973362,
+        "scan_size": 1e-06,
+        "pixel_size": 3.90625e-09
+      },
+      "family": "other",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        }
+      ]
+    },
+    {
+      "name": "scan-024",
+      "in_the_corpus_because": "not kept -- see its verdict",
+      "kept": false,
+      "verdict": "not topography",
+      "why": [
+        "no height channel in it — NCM Phase [deg]"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {}
+    },
+    {
+      "name": "scan-025",
+      "in_the_corpus_because": "family: pattern",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "noisy: 31% of the height variation is noise, worth filtering before measuring",
+        "scan lines are offset from each other (15% of the surface variation) -- align the rows first"
+      ],
+      "recipe": "isolate-objects",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.9561783397861598,
+        "background_order": 2,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.9680978568255911,
+          "2": 0.9790071665377239,
+          "3": 0.9797255651097652
+        },
+        "row_banding": 0.12379923221349112,
+        "row_step_fraction": 0.00784313725490196,
+        "object_fraction": 0.086883544921875,
+        "raised_fraction": 0.001434326171875,
+        "sunken_fraction": 0.08544921875,
+        "object_polarity": -1,
+        "object_count": 95,
+        "object_median_size": 6.560147206107039e-09,
+        "object_size_spread": 0.43424348621282477,
+        "object_elongation": 1.3333333333333333,
+        "periodicity": 3.9203091866562447,
+        "period_angle": 53.13010235415598,
+        "period_length": 1.0524064302444457e-07,
+        "period_confirmed": 1.0474621333526088,
+        "rms": 9.658673473897456e-10,
+        "correlation_length": 2.6721257017925382e-08,
+        "skewness": -0.598055719993622,
+        "kurtosis": -0.344596092379041,
+        "bimodality": 0.5112594833290749,
+        "scan_size": 5.262032151222229e-07,
+        "pixel_size": 2.055481309071183e-09
+      },
+      "family": "pattern",
+      "readings": [
+        {
+          "kind": "pattern",
+          "headline": "pitch 105 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "pits, 7 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-026",
+      "in_the_corpus_because": "family: pattern",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "noisy: 31% of the height variation is noise, worth filtering before measuring",
+        "scan lines are offset from each other (17% of the surface variation) -- align the rows first"
+      ],
+      "recipe": "isolate-objects",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.956960620487109,
+        "background_order": 2,
+        "explained_by_degree": {
+          "0": 5.989622924367669e-27,
+          "1": 0.9693529787514975,
+          "2": 0.980116221089493,
+          "3": 0.9807024261450298
+        },
+        "row_banding": 0.12095410212641416,
+        "row_step_fraction": 0.00784313725490196,
+        "object_fraction": 0.0902862548828125,
+        "raised_fraction": 0.0011749267578125,
+        "sunken_fraction": 0.089111328125,
+        "object_polarity": -1,
+        "object_count": 78,
+        "object_median_size": 7.334467547630332e-09,
+        "object_size_spread": 0.5449214282068723,
+        "object_elongation": 1.4415584415584415,
+        "periodicity": 3.9579451047168144,
+        "period_angle": 53.13010235415598,
+        "period_length": 1.0524064302444457e-07,
+        "period_confirmed": 1.0710399369124615,
+        "rms": 9.603576604883181e-10,
+        "correlation_length": 2.6721257017925382e-08,
+        "skewness": -0.6300910653808451,
+        "kurtosis": -0.3083665159832112,
+        "bimodality": 0.5189946856690402,
+        "scan_size": 5.262032151222229e-07,
+        "pixel_size": 2.055481309071183e-09
+      },
+      "family": "pattern",
+      "readings": [
+        {
+          "kind": "pattern",
+          "headline": "pitch 105 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "pits, 7 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-027",
+      "in_the_corpus_because": "family: pattern",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "level-only",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 4.837453330774039e-18,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 4.837453330774039e-18,
+          "2": 0.008224531724324682,
+          "3": 0.0274364805715861
+        },
+        "row_banding": 8.20082150762826e-15,
+        "row_step_fraction": 0.0,
+        "object_fraction": 0.027130126953125,
+        "raised_fraction": 0.0172271728515625,
+        "sunken_fraction": 0.0099029541015625,
+        "object_polarity": 0,
+        "object_count": 100,
+        "object_median_size": 1.4943809401822096e-07,
+        "object_size_spread": 0.4114423465343408,
+        "object_elongation": 1.3333333333333333,
+        "periodicity": 2.777464185574731,
+        "period_angle": 171.86989764584405,
+        "period_length": 7.071067811865475e-07,
+        "period_confirmed": 0.6853570178131693,
+        "rms": 9.784923677172816e-09,
+        "correlation_length": 2.3437499999999998e-07,
+        "skewness": 0.11611455560030182,
+        "kurtosis": -0.1953909704102057,
+        "bimodality": 0.3613455399835282,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "pattern",
+      "readings": [
+        {
+          "kind": "pattern",
+          "headline": "pitch 707 nm"
+        },
+        {
+          "kind": "roughness",
+          "headline": "Sq 9.78 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-028",
+      "in_the_corpus_because": "family: terraces",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (15% of the surface variation) -- align the rows first",
+        "signs of the feedback lagging along the scan direction; shapes will be smeared in that direction"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.16569079337114437,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 1.5815687472403794e-30,
+          "1": 0.16569079337114437,
+          "2": 0.1666084753604891,
+          "3": 0.1671926457385059
+        },
+        "row_banding": 0.021799841174407107,
+        "row_step_fraction": 0.011764705882352941,
+        "object_fraction": 0.006561279296875,
+        "raised_fraction": 0.006561279296875,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 8,
+        "object_median_size": 2.88326497797779e-07,
+        "object_size_spread": 0.2730427537510511,
+        "object_elongation": 1.1180555555555556,
+        "periodicity": 2.899639288796754,
+        "period_angle": 108.434948822922,
+        "period_length": 7.905694150420947e-07,
+        "period_confirmed": 0.7749468092839376,
+        "rms": 3.845030611120531e-08,
+        "correlation_length": 1.5624999999999999e-07,
+        "skewness": 1.0049131528341304,
+        "kurtosis": 0.868483717861436,
+        "bimodality": 0.5195263161502489,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "terraces",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "step 71.7 nm"
+        },
+        {
+          "kind": "pattern",
+          "headline": "pitch 791 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 288 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-029",
+      "in_the_corpus_because": "family: terraces",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (15% of the surface variation) -- align the rows first",
+        "signs of the feedback lagging along the scan direction; shapes will be smeared in that direction"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.15961398029493207,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 1.5138503807006895e-30,
+          "1": 0.15961398029493207,
+          "2": 0.1603234199409731,
+          "3": 0.16085789197308595
+        },
+        "row_banding": 0.02402670273623642,
+        "row_step_fraction": 0.011764705882352941,
+        "object_fraction": 0.006561279296875,
+        "raised_fraction": 0.006561279296875,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 8,
+        "object_median_size": 2.795957513745037e-07,
+        "object_size_spread": 0.35014504359400467,
+        "object_elongation": 1.126984126984127,
+        "periodicity": 2.9881484759929378,
+        "period_angle": 108.434948822922,
+        "period_length": 7.905694150420947e-07,
+        "period_confirmed": 0.6813958386615725,
+        "rms": 3.9443755057022824e-08,
+        "correlation_length": 1.5624999999999999e-07,
+        "skewness": 1.0135003650653303,
+        "kurtosis": 0.9126543165251721,
+        "bimodality": 0.5180912172091519,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "terraces",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "step 72.9 nm"
+        },
+        {
+          "kind": "pattern",
+          "headline": "pitch 791 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 280 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-030",
+      "in_the_corpus_because": "family: particles",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "2.8% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.006764612210753354,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.00401770694770947,
+          "2": 0.028653728210587443,
+          "3": 0.05585656306934914
+        },
+        "row_banding": 0.07628353555036292,
+        "row_step_fraction": 0.12941176470588237,
+        "object_fraction": 0.1639404296875,
+        "raised_fraction": 0.1362457275390625,
+        "sunken_fraction": 0.0276947021484375,
+        "object_polarity": 1,
+        "object_count": 32,
+        "object_median_size": 1.5310095732507504e-07,
+        "object_size_spread": 0.18068894552317344,
+        "object_elongation": 1.1176470588235294,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 3.884332056968961e-08,
+        "correlation_length": 1.428571492433548e-07,
+        "skewness": 0.4325063632516081,
+        "kurtosis": 0.17233678169059363,
+        "bimodality": 0.37417539440314423,
+        "scan_size": 2.2857143878936767e-06,
+        "pixel_size": 8.928571827709675e-09
+      },
+      "family": "particles",
+      "readings": [
+        {
+          "kind": "particles",
+          "headline": "nanoparticle layer, 153 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-031",
+      "in_the_corpus_because": "interrupted, cropped to the part with data",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "the scan stopped early -- 46% of the frame carries no data and will be cropped away",
+        "2.9% of the scan lines are out of line and should be replaced",
+        "the surface rises and falls lopsidedly along the scan direction only -- the tip was flying, not following"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": "another scan, not in this corpus",
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.7089662958527482,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.9520684907935165,
+          "2": 0.9524479450901482,
+          "3": 0.9542219053661262
+        },
+        "row_banding": 0.16006327189055325,
+        "row_step_fraction": 0.08695652173913043,
+        "object_fraction": 0.04423336330935252,
+        "raised_fraction": 0.04423336330935252,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 5,
+        "object_median_size": 8.771274184006768e-07,
+        "object_size_spread": 0.10136514309673346,
+        "object_elongation": 6.25,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 3.392490861492324e-08,
+        "correlation_length": 3.1249999999999997e-07,
+        "skewness": 4.17213843275704,
+        "kurtosis": 18.0983266891891,
+        "bimodality": 0.8724160308439807,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "objects",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 877 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-032",
+      "in_the_corpus_because": "interrupted, cropped to the part with data",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "the scan stopped early -- 46% of the frame carries no data and will be cropped away",
+        "5.8% of the scan lines are out of line and should be replaced",
+        "the surface rises and falls lopsidedly along the scan direction only -- the tip was flying, not following"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": "another scan, not in this corpus",
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.7680271922660276,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 8.081914053212167e-31,
+          "1": 0.9716297686836471,
+          "2": 0.9722407342708348,
+          "3": 0.9727143885818161
+        },
+        "row_banding": 0.123097882420899,
+        "row_step_fraction": 0.09420289855072464,
+        "object_fraction": 0.043474595323741004,
+        "raised_fraction": 0.043474595323741004,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 5,
+        "object_median_size": 8.222515786803506e-07,
+        "object_size_spread": 0.04821013406356963,
+        "object_elongation": 4.8,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 3.048393481940537e-08,
+        "correlation_length": 3.1249999999999997e-07,
+        "skewness": 4.396959806813453,
+        "kurtosis": 19.84845394133239,
+        "bimodality": 0.8899083717376022,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "objects",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 822 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-033",
+      "in_the_corpus_because": "not kept -- see its verdict",
+      "kept": false,
+      "verdict": "not topography",
+      "why": [
+        "no height channel in it — NCM Phase [deg]"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {}
+    },
+    {
+      "name": "scan-034",
+      "in_the_corpus_because": "family: particles",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.9785645671690696,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.9785645671690696,
+          "2": 0.9788836829993103,
+          "3": 0.9792280188979129
+        },
+        "row_banding": 0.03328354955985825,
+        "row_step_fraction": 0.027450980392156862,
+        "object_fraction": 0.004547119140625,
+        "raised_fraction": 0.004547119140625,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 15,
+        "object_median_size": 1.4413346610321007e-07,
+        "object_size_spread": 0.12917756040473463,
+        "object_elongation": 1.25,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 3.488457043532547e-09,
+        "correlation_length": 2.0859031379222869e-07,
+        "skewness": 3.429777791846846,
+        "kurtosis": 19.10381024085472,
+        "bimodality": 0.5774251706405764,
+        "scan_size": 1.3349780082702636e-05,
+        "pixel_size": 5.214757844805717e-08
+      },
+      "family": "particles",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "particles",
+          "headline": "nanoparticle layer, 144 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-035",
+      "in_the_corpus_because": "family: particles",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.9779949682297681,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 1.9717567149620259e-29,
+          "1": 0.9779949682297681,
+          "2": 0.9782979309685051,
+          "3": 0.9786718791529945
+        },
+        "row_banding": 0.03384548863227199,
+        "row_step_fraction": 0.058823529411764705,
+        "object_fraction": 0.0041961669921875,
+        "raised_fraction": 0.0041961669921875,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 12,
+        "object_median_size": 1.3157525112689064e-07,
+        "object_size_spread": 0.15652224662352474,
+        "object_elongation": 1.3333333333333333,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 3.5370781238194898e-09,
+        "correlation_length": 1.5644273534417152e-07,
+        "skewness": 3.4305630572714856,
+        "kurtosis": 18.493138442538566,
+        "bimodality": 0.5940817500985192,
+        "scan_size": 1.3349780082702636e-05,
+        "pixel_size": 5.214757844805717e-08
+      },
+      "family": "particles",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "particles",
+          "headline": "nanoparticle layer, 132 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-036",
+      "in_the_corpus_because": "not kept -- see its verdict",
+      "kept": false,
+      "verdict": "not topography",
+      "why": [
+        "no height channel in it — NCM Phase [deg]"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {}
+    },
+    {
+      "name": "scan-037",
+      "in_the_corpus_because": "not kept -- see its verdict",
+      "kept": false,
+      "verdict": "not topography",
+      "why": [
+        "no height channel in it — NCM Phase [deg]"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {}
+    },
+    {
+      "name": "scan-038",
+      "in_the_corpus_because": "not kept -- see its verdict",
+      "kept": false,
+      "verdict": "not topography",
+      "why": [
+        "no height channel in it — NCM Phase [deg]"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {}
+    },
+    {
+      "name": "scan-039",
+      "in_the_corpus_because": "not kept -- see its verdict",
+      "kept": false,
+      "verdict": "not topography",
+      "why": [
+        "no height channel in it — NCM Phase [deg]"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {}
+    },
+    {
+      "name": "scan-040",
+      "in_the_corpus_because": "family: terraces",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (34% of the surface variation) -- align the rows first",
+        "17.7% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.3660421871127731,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 2.726812192439945e-31,
+          "1": 0.3660421871127731,
+          "2": 0.3881283153903247,
+          "3": 0.43907581243761423
+        },
+        "row_banding": 0.05932774156336372,
+        "row_step_fraction": 0.17647058823529413,
+        "object_fraction": 0.0141754150390625,
+        "raised_fraction": 0.0141754150390625,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 2,
+        "object_median_size": 2.1934903524681314e-06,
+        "object_size_spread": 1.2298043425030187,
+        "object_elongation": 4.979166666666667,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.2108048322922067e-07,
+        "correlation_length": 1.6406249999999999e-06,
+        "skewness": 2.0634603925091923,
+        "kurtosis": 11.82790738960123,
+        "bimodality": 0.35458948827861825,
+        "scan_size": 2.9999999999999997e-05,
+        "pixel_size": 1.1718749999999999e-07
+      },
+      "family": "terraces",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "terraces at 155.7, 95.8 nm"
+        },
+        {
+          "kind": "roughness",
+          "headline": "Sq 121.08 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-041",
+      "in_the_corpus_because": "not kept -- see its verdict",
+      "kept": false,
+      "verdict": "not topography",
+      "why": [
+        "no height channel in it — NCM Phase [deg]"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {}
+    },
+    {
+      "name": "scan-042",
+      "in_the_corpus_because": "family: terraces",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (10% of the surface variation) -- align the rows first",
+        "4.3% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.05188328223822556,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 4.569957090034397e-31,
+          "1": 0.05188328223822556,
+          "2": 0.5539688336284639,
+          "3": 0.5646141121804193
+        },
+        "row_banding": 0.1151954449398753,
+        "row_step_fraction": 0.07058823529411765,
+        "object_fraction": 0.011474609375,
+        "raised_fraction": 0.0,
+        "sunken_fraction": 0.011474609375,
+        "object_polarity": -1,
+        "object_count": 2,
+        "object_median_size": 2.029533035733658e-06,
+        "object_size_spread": 0.21750947350522085,
+        "object_elongation": 4.4527777777777775,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 7.625268874381582e-08,
+        "correlation_length": 3.75e-06,
+        "skewness": -0.674454402151437,
+        "kurtosis": 1.340915377510516,
+        "bimodality": 0.3351465270219713,
+        "scan_size": 2.4e-05,
+        "pixel_size": 9.375e-08
+      },
+      "family": "terraces",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "terraces at 49.7, 116.9 nm"
+        },
+        {
+          "kind": "roughness",
+          "headline": "Sq 76.25 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-043",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "the surface rises and falls lopsidedly along the scan direction only -- the tip was flying, not following"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.8104868613759011,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.8281794441593009,
+          "2": 0.9037799628786705,
+          "3": 0.924622816195784
+        },
+        "row_banding": 1.2271026279974331e-12,
+        "row_step_fraction": 0.023529411764705882,
+        "object_fraction": 0.2706667877906977,
+        "raised_fraction": 0.19976380813953487,
+        "sunken_fraction": 0.0709029796511628,
+        "object_polarity": 1,
+        "object_count": 1,
+        "object_median_size": 7.335557410326052e-07,
+        "object_size_spread": 0.0,
+        "object_elongation": 1.4576271186440677,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 5.930184006607616e-08,
+        "correlation_length": 4.019607843137255e-07,
+        "skewness": 0.2526457169964467,
+        "kurtosis": -1.0215596050396039,
+        "bimodality": 0.5376002533115365,
+        "scan_size": 2.5098039215686274e-06,
+        "pixel_size": 9.803921568627451e-09
+      },
+      "family": "terraces",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "terraces at 129.5, 27.8 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-044",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (20% of the surface variation) -- align the rows first",
+        "5.1% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.8057881499632686,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.8057881499632686,
+          "2": 0.8063618412165907,
+          "3": 0.8071826749851698
+        },
+        "row_banding": 0.02673277214250505,
+        "row_step_fraction": 0.08235294117647059,
+        "object_fraction": 0.005096435546875,
+        "raised_fraction": 0.005096435546875,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 25,
+        "object_median_size": 4.6281176775401883e-07,
+        "object_size_spread": 0.15647597139363834,
+        "object_elongation": 6.0,
+        "periodicity": 82.35303424161368,
+        "period_angle": 90.0,
+        "period_length": 2.9166666666666666e-06,
+        "period_confirmed": 1.8977455105356726,
+        "rms": 5.127209808253617e-08,
+        "correlation_length": 8.203124999999999e-07,
+        "skewness": 0.07441085824390327,
+        "kurtosis": -0.9975029108873303,
+        "bimodality": 0.5021071061057125,
+        "scan_size": 3.5e-05,
+        "pixel_size": 1.3671875e-07
+      },
+      "family": "pattern",
+      "readings": [
+        {
+          "kind": "pattern",
+          "headline": "pitch 2917 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 463 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-045",
+      "in_the_corpus_because": "interrupted, cropped to the part with data",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "the scan stopped early -- 31% of the frame carries no data and will be cropped away",
+        "scan lines are offset from each other (20% of the surface variation) -- align the rows first",
+        "13.1% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": "another scan, not in this corpus",
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.6925840077157086,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.6925840077157086,
+          "2": 0.7024356664256597,
+          "3": 0.7654644006329938
+        },
+        "row_banding": 0.24948893105729283,
+        "row_step_fraction": 0.19318181818181818,
+        "object_fraction": 0.013131179378531074,
+        "raised_fraction": 0.013131179378531074,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 4,
+        "object_median_size": 4.4928650017698174e-07,
+        "object_size_spread": 0.4891534620751487,
+        "object_elongation": 1.1925925925925926,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 5.4387858634718353e-08,
+        "correlation_length": 1.7578125e-06,
+        "skewness": 2.33446571515763,
+        "kurtosis": 12.831363131684979,
+        "bimodality": 0.40739696242747575,
+        "scan_size": 2.4999999999999998e-05,
+        "pixel_size": 9.765624999999999e-08
+      },
+      "family": "uniform",
+      "readings": [
+        {
+          "kind": "roughness",
+          "headline": "Sq 54.39 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-046",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.7917815507676432,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.976908718558008,
+          "2": 0.978379070254157,
+          "3": 0.9784481203129121
+        },
+        "row_banding": 0.026289236040142026,
+        "row_step_fraction": 0.023529411764705882,
+        "object_fraction": 0.1797027587890625,
+        "raised_fraction": 0.1797027587890625,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 86,
+        "object_median_size": 4.6852989634864243e-07,
+        "object_size_spread": 0.25872239570499483,
+        "object_elongation": 1.0976190476190477,
+        "periodicity": 13.098553139268745,
+        "period_angle": 48.36646066342979,
+        "period_length": 8.304547985373996e-07,
+        "period_confirmed": 1.714987503091296,
+        "rms": 3.6576781313437955e-08,
+        "correlation_length": 2.3437499999999998e-07,
+        "skewness": 1.6151189063557374,
+        "kurtosis": 1.125560228125023,
+        "bimodality": 0.8746664110744446,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "pattern",
+      "readings": [
+        {
+          "kind": "pattern",
+          "headline": "pitch 830 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 469 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-047",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (13% of the surface variation) -- align the rows first",
+        "8.3% of the scan lines are out of line and should be replaced",
+        "the surface rises and falls lopsidedly along the scan direction only -- the tip was flying, not following"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 3.2981247233815536e-18,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 3.2981247233815536e-18,
+          "2": 0.012004901871016872,
+          "3": 0.015501568207286917
+        },
+        "row_banding": 2.1391785466791248e-15,
+        "row_step_fraction": 0.12941176470588237,
+        "object_fraction": 0.002044677734375,
+        "raised_fraction": 0.0010986328125,
+        "sunken_fraction": 0.000946044921875,
+        "object_polarity": 0,
+        "object_count": 5,
+        "object_median_size": 4.2845036493807025e-07,
+        "object_size_spread": 0.21297721192473879,
+        "object_elongation": 15.0,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 3.6859486413510555e-08,
+        "correlation_length": 9.80392156862745e-08,
+        "skewness": -0.7859106021516791,
+        "kurtosis": 240.38890081815293,
+        "bimodality": 0.006646377695733689,
+        "scan_size": 2.5098039215686273e-05,
+        "pixel_size": 9.80392156862745e-08
+      },
+      "family": "uniform",
+      "readings": [
+        {
+          "kind": "roughness",
+          "headline": "Sq 36.86 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-048",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.8296214319092754,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 1.387024024307196e-28,
+          "1": 0.9612206962927817,
+          "2": 0.9670189664844312,
+          "3": 0.9670798272171788
+        },
+        "row_banding": 0.013829330528038902,
+        "row_step_fraction": 0.003913894324853229,
+        "object_fraction": 0.053730010986328125,
+        "raised_fraction": 0.053730010986328125,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 365,
+        "object_median_size": 1.2660243778180808e-07,
+        "object_size_spread": 0.0872851735658307,
+        "object_elongation": 1.4,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.1931849756606504e-08,
+        "correlation_length": 9.765624999999999e-08,
+        "skewness": 3.282282185602142,
+        "kurtosis": 11.085867613887931,
+        "bimodality": 0.835826941757399,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 1.9531249999999998e-08
+      },
+      "family": "particles",
+      "readings": [
+        {
+          "kind": "particles",
+          "headline": "nanoparticle layer, 127 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-049",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (8% of the surface variation) -- align the rows first",
+        "4.7% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 2.0753631906819555e-18,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 4.09153045569059e-33,
+          "1": 0.11404627878820292,
+          "2": 0.29731893719760133,
+          "3": 0.3927502481308117
+        },
+        "row_banding": 1.3649021933769783e-16,
+        "row_step_fraction": 0.13333333333333333,
+        "object_fraction": 0.0574188232421875,
+        "raised_fraction": 0.00634765625,
+        "sunken_fraction": 0.0510711669921875,
+        "object_polarity": -1,
+        "object_count": 1,
+        "object_median_size": 6.40004081667452e-06,
+        "object_size_spread": 0.0,
+        "object_elongation": 2.5098039215686274,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.0509040236611545e-07,
+        "correlation_length": 3.2352941176470585e-06,
+        "skewness": -1.1309646410018757,
+        "kurtosis": 2.9263344359739367,
+        "bimodality": 0.3845594996235031,
+        "scan_size": 2.5098039215686273e-05,
+        "pixel_size": 9.80392156862745e-08
+      },
+      "family": "uniform",
+      "readings": [
+        {
+          "kind": "roughness",
+          "headline": "Sq 30.70 nm"
+        }
+      ]
+    },
+    {
+      "name": "scan-050",
+      "in_the_corpus_because": "not kept -- see its verdict",
+      "kept": false,
+      "verdict": "discard",
+      "why": [
+        "the scan stopped almost immediately -- 89% of the frame is empty, too little left to measure",
+        "89% of the frame is pinned at the top or bottom of the range -- the scanner ran out of travel",
+        "scan lines are offset from each other (23% of the surface variation) -- align the rows first",
+        "11.0% of the scan lines are out of line and should be replaced",
+        "over 5% of the frame the height alternates from pixel to pixel, 999 times harder than across the rest of the image, while the rest stays quiet -- either the surface is really like that there, or the feedback was slipping between regimes"
+      ],
+      "recipe": "",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {}
+    },
+    {
+      "name": "scan-051",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "the scan stopped early -- 68% of the frame carries no data and will be cropped away"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": "another scan, not in this corpus",
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.5818181212203969,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 6.858673828273517e-32,
+          "1": 0.5818181212203969,
+          "2": 0.582799368500399,
+          "3": 0.6059559961298631
+        },
+        "row_banding": 0.0026300971809303463,
+        "row_step_fraction": 0.012345679012345678,
+        "object_fraction": 0.008479420731707318,
+        "raised_fraction": 0.008479420731707318,
+        "sunken_fraction": 0.0,
+        "object_polarity": 1,
+        "object_count": 8,
+        "object_median_size": 7.021031019136057e-07,
+        "object_size_spread": 0.5738385565603955,
+        "object_elongation": 2.5,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.634003052850778e-08,
+        "correlation_length": 1.8749999999999998e-06,
+        "skewness": 2.31545889936079,
+        "kurtosis": 11.219729678260153,
+        "bimodality": 0.4473473290105307,
+        "scan_size": 3.9999999999999996e-05,
+        "pixel_size": 1.5624999999999999e-07
+      },
+      "family": "objects",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "roughness",
+          "headline": "Sq 16.34 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 702 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-052",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "4.7% of the scan lines are out of line and should be replaced"
+      ],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 4.116973453109345e-21,
+        "background_order": 0,
+        "explained_by_degree": {
+          "0": 1.772617301838821e-33,
+          "1": 0.012716444176309849,
+          "2": 0.21188912329754436,
+          "3": 0.35549019789923275
+        },
+        "row_banding": 5.412852006753094e-18,
+        "row_step_fraction": 0.12720156555772993,
+        "object_fraction": 0.18312454223632812,
+        "raised_fraction": 0.043781280517578125,
+        "sunken_fraction": 0.13934326171875,
+        "object_polarity": -1,
+        "object_count": 10,
+        "object_median_size": 9.0659719725035e-08,
+        "object_size_spread": 0.25085014886276097,
+        "object_elongation": 2.0,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.1561506146996566e-07,
+        "correlation_length": 2.964774951076321e-06,
+        "skewness": -0.4422827417708903,
+        "kurtosis": -0.4794085704467559,
+        "bimodality": 0.47433222399263264,
+        "scan_size": 1.5029354207436398e-05,
+        "pixel_size": 2.9354207436399215e-08
+      },
+      "family": "terraces",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "terraces at 181.9, 118.1 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "pits, 91 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-053",
+      "in_the_corpus_because": "the cleaning took more than it should have",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.9448619136606482,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 3.1028885995411857e-31,
+          "1": 0.9619906572588368,
+          "2": 0.9954690530668754,
+          "3": 0.9971810804518171
+        },
+        "row_banding": 0.05192471844096626,
+        "row_step_fraction": 0.03131115459882583,
+        "object_fraction": 0.12275314331054688,
+        "raised_fraction": 0.0,
+        "sunken_fraction": 0.12275314331054688,
+        "object_polarity": -1,
+        "object_count": 8,
+        "object_median_size": 3.480247958884811e-08,
+        "object_size_spread": 0.22527844765946348,
+        "object_elongation": 1.8333333333333335,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 2.4897055476912183e-07,
+        "correlation_length": 1.11328125e-06,
+        "skewness": -1.4490743711093284,
+        "kurtosis": 1.7653043874887997,
+        "bimodality": 0.650492381552115,
+        "scan_size": 4.9999999999999996e-06,
+        "pixel_size": 9.765624999999999e-09
+      },
+      "family": "pits",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "particles",
+          "headline": "pits, 15 nm across (35 nm as measured)"
+        }
+      ]
+    },
+    {
+      "name": "scan-054",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "fixable",
+      "why": [
+        "scan lines are offset from each other (13% of the surface variation) -- align the rows first",
+        "26% of the scan lines jump away from their neighbours -- the tip was not tracking",
+        "over 5% of the frame the height alternates from pixel to pixel, 19 times harder than across the rest of the image, while the rest stays quiet -- either the surface is really like that there, or the feedback was slipping between regimes"
+      ],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.3423836438557051,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 0.0,
+          "1": 0.3423836438557051,
+          "2": 0.5915368247378686,
+          "3": 0.5918980795525929
+        },
+        "row_banding": 0.5928038888038725,
+        "row_step_fraction": 0.25098039215686274,
+        "object_fraction": 0.0,
+        "raised_fraction": 0.0,
+        "sunken_fraction": 0.0,
+        "object_polarity": 0,
+        "object_count": 0,
+        "object_median_size": 0.0,
+        "object_size_spread": 0.0,
+        "object_elongation": 0.0,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 4.282867555254018e-08,
+        "correlation_length": 1.9140625e-06,
+        "skewness": -1.1004068151621353,
+        "kurtosis": -0.5632871456170805,
+        "bimodality": 0.9072757806375811,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "other",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        }
+      ]
+    },
+    {
+      "name": "scan-055",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "quick-clean",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.46036361256203884,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 2.9816919568250255e-31,
+          "1": 0.46036361256203884,
+          "2": 0.5113047769790867,
+          "3": 0.6280827819343671
+        },
+        "row_banding": 0.1454703246844289,
+        "row_step_fraction": 0.00784313725490196,
+        "object_fraction": 0.00689697265625,
+        "raised_fraction": 0.0050201416015625,
+        "sunken_fraction": 0.0018768310546875,
+        "object_polarity": 1,
+        "object_count": 16,
+        "object_median_size": 1.4943809401822096e-07,
+        "object_size_spread": 0.5047713175875944,
+        "object_elongation": 2.625,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 1.4243920555503618e-07,
+        "correlation_length": 9.374999999999999e-07,
+        "skewness": 0.5001971265423326,
+        "kurtosis": 2.4248176597077524,
+        "bimodality": 0.23045300216690442,
+        "scan_size": 9.999999999999999e-06,
+        "pixel_size": 3.9062499999999997e-08
+      },
+      "family": "objects",
+      "readings": [
+        {
+          "kind": "roughness",
+          "headline": "Sq 142.44 nm"
+        },
+        {
+          "kind": "particles",
+          "headline": "particles, 149 nm across"
+        }
+      ]
+    },
+    {
+      "name": "scan-056",
+      "in_the_corpus_because": "argued about in the knowledge notes",
+      "kept": true,
+      "verdict": "good",
+      "why": [],
+      "recipe": "isolate-objects-flat",
+      "cropped_from": null,
+      "duplicate_of": null,
+      "measurements": {
+        "tilt": 0.9949049755317471,
+        "background_order": 1,
+        "explained_by_degree": {
+          "0": 9.605743565740753e-32,
+          "1": 0.9972593678363446,
+          "2": 0.9996081901184082,
+          "3": 0.9997308923965187
+        },
+        "row_banding": 0.08359705300783994,
+        "row_step_fraction": 0.025440313111545987,
+        "object_fraction": 0.09209060668945312,
+        "raised_fraction": 0.0,
+        "sunken_fraction": 0.09209060668945312,
+        "object_polarity": -1,
+        "object_count": 4,
+        "object_median_size": 4.8114356666327055e-08,
+        "object_size_spread": 1.2890504382468573,
+        "object_elongation": 3.25,
+        "periodicity": 0.0,
+        "period_angle": NaN,
+        "period_length": NaN,
+        "period_confirmed": 0.0,
+        "rms": 7.298184538421263e-09,
+        "correlation_length": 2.109375e-07,
+        "skewness": -1.613923195863901,
+        "kurtosis": 2.747588913449814,
+        "bimodality": 0.6271719505196831,
+        "scan_size": 1e-06,
+        "pixel_size": 1.953125e-09
+      },
+      "family": "uniform",
+      "readings": [
+        {
+          "kind": "thickness",
+          "headline": "no step here, though the heights look split"
+        },
+        {
+          "kind": "roughness",
+          "headline": "Sq 0.59 nm"
+        }
+      ]
+    }
+  ]
+}
