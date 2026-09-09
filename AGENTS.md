@@ -114,7 +114,7 @@ These come from the owner. They are not style preferences; each was paid for.
 8. **The test corpus is blind.** Filenames are uninformative or deliberately
    wrong. Never infer content from a name. Where a filename *does* agree with a
    measurement, that is evidence precisely because nothing read it: a file
-   called `Silaver Film - Kiril 20nm005` measuring 20.0 nm is a free check.
+   whose name ends in `20nm005`, measuring 20.0 nm, is a free check.
 
 ## How to work here
 

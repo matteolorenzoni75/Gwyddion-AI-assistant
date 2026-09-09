@@ -17,7 +17,7 @@ part is good data, and throwing away half a pool this size is not affordable.
 ## But there is a point where cropping is not worth it
 
 Reviewing the six, the user cropped five and discarded one. The one discarded
-(`Silaver Film - Kiril 20nm001`) has **89% of the frame empty** — a few rows
+has **89% of the frame empty** — a few rows
 survive. The ones kept were 68%, 56%, 38%, 31% and 27% empty, including two
 that carry a film-thickness scratch worth measuring.
 

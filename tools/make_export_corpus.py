@@ -24,26 +24,19 @@ import json
 import shutil
 from pathlib import Path
 
-# The scans the knowledge notes and AGENTS.md argue about by name. They are
-# named here so a selection by family cannot quietly drop the evidence behind a
-# decision -- not because their names say anything about what they contain.
-ARGUED_ABOUT = [
-    "SKPM_Muk_per_GRAP0003good",     # the flake whose mask came back 8% of 28%
-    "Single object high z step 2",   # the block the owner masked by hand
-    "121127-Topography-005",         # 150 nm of belly, now 1.4
-    "terrace - 130909Topography003", # named for terraces, measures none
-    "140307Topography021",           # fibres once reported as a 35 nm step
-    "Calibration grating - Vertical",
-    "Silaver Film - Kiril 20nm005",  # measures 20.0 nm, nothing read the name
-    "DVD240122003005",               # round even bumps that are not particles
-    "Nanoparticles 1",
-    "fibers 2 trace",                # feedback bistability
-    "IN2O3PAA0000",                  # over-flattening flag
-    "ebl pattern retrace",           # over-flattening flag
-    "ALEX_AS_SGHS_Br_I0023",         # XY piezo lag, still open
-    "150113Topography001",
-    "130408Topography001",
-]
+# The scans the knowledge notes argue about are named in a local file, not
+# here.
+#
+# Listing them in tracked source would undo the anonymisation this same script
+# performs. Each entry pairs an original filename with the reason it matters --
+# "the flake whose mask came back 8% of 28%" -- and that reason appears in
+# baseline.json beside a scan id. Publish both halves and anyone can join them
+# back into the mapping the rest of this file works to remove.
+#
+# The file is a JSON object of {original filename: why it is in}, git-ignored,
+# living beside the corpus. Without it the selection falls back to families and
+# verdicts alone, which is a smaller corpus but not a wrong one.
+ARGUED_ABOUT_FILE = "argued-about.json"
 
 PER_FAMILY = 4
 
@@ -60,7 +53,7 @@ def _copy_without_the_name(source: Path, destination: Path,
       * `/filename` -- the full original path, in all 56 files
       * `/N/log` -- Gwyddion's processing log, which can quote paths
       * `/N/meta/BaseName` -- the Asylum metadata, which holds the sample's
-        own name: `ALEX_AS_SGHS_Br_I`, `SKPM_Muk_per_GRAP`
+        own name, in every channel of the file
 
     The last one is why the scrub is written against the original name rather
     than a list of keys: the next vendor will hide it somewhere else, and a
@@ -115,8 +108,12 @@ def main() -> int:
         if name in by_name and (run / "_gwy" / (name + ".gwy")).is_file():
             chosen.setdefault(name, why)
 
-    for name in ARGUED_ABOUT:
-        take(name, "argued about in the knowledge notes")
+    argued = args.out / ARGUED_ABOUT_FILE
+    if argued.is_file():
+        for name in json.loads(argued.read_text(encoding="utf-8")):
+            take(name, "argued about in the knowledge notes")
+    else:
+        print("nessun %s: la scelta usa solo famiglie e verdetti" % argued)
 
     # Every verdict, not only the kept ones: an agent that never sees a
     # discarded scan cannot tell whether it would discard the right things.

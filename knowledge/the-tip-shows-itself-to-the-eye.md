@@ -17,8 +17,8 @@ object in the frame is the **same triangle**, and often pointing the same way.
 A pyramidal tip whose apex has broken off no longer measures particles; its
 facets image themselves onto everything smaller than the truncation. Ground
 truth from the user for six scans: `tip artifact retrace` / `trace` and
-`121127-Topography-005` (truncated, blunt), `RZ6 mono Molinaro017` (deformed),
-and three `SINPYs` scans (tip-geometry convolution).
+`121127-Topography-005` (truncated, blunt), one of nanoparticles on silicon
+(deformed), and three `SINPYs` scans (tip-geometry convolution).
 
 ## Four measurements that did not work
 

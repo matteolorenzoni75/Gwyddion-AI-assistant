@@ -20,3 +20,15 @@ data/smoketest/
 # It stays on the machine that made the corpus; export/scans/ itself is
 # committed, and nothing in it can be traced back without this file.
 export/original-names.json
+
+# And the list of which originals matter and why. Each entry pairs a real
+# filename with a reason that also appears in baseline.json beside a scan id --
+# publish both halves and the mapping reassembles itself.
+export/argued-about.json
+
+# The owner's own labels for 31 scans, keyed by the original filenames and
+# describing what each sample is. Nothing in the code reads it; it is reference
+# for whoever is working, and it belongs on the machine, not on a public repo.
+# data/reference_samples.json stays tracked -- that one is the owner's own
+# catalog with no third party in it, and it is the acceptance test.
+data/real_labels.json

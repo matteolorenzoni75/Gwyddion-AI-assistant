@@ -13,7 +13,7 @@ the tip's own shape written into it.
 The user raised this twice while labelling, unprompted, on two different
 samples:
 
-- On the nanoparticles on silicon (`RZ6 mono Molinaro017`): *"probabilmente
+- On the nanoparticles on silicon: *"probabilmente
   qualche artefatto per la punta deformata"* — a damaged or double tip.
 - On the oxide grains (`SINPYs`, three scans): *"possibile effetto convoluzione
   dovuto alla geometria della punta"*.

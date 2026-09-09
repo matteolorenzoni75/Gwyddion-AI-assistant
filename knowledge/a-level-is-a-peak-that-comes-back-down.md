@@ -34,7 +34,7 @@ most 75% of the distance to its neighbour. Populations as broad as they are far
 apart do not have a step between them, they have a slope.
 
 With those two added the count fell to **20 of 199** -- and one of the twenty
-is a file named `Silaver Film - Kiril 20nm005`, measured at **20.0 nm**. The
+is a file whose name ends in `20nm005`, measured at **20.0 nm**. The
 filenames are never read by any of this, so that is an independent check that
 came for free.
 
