@@ -60,9 +60,14 @@ def _connection(db_path: str | Path = DEFAULT_DB) -> sqlite3.Connection:
         sample_group TEXT NOT NULL,
         dataset_role TEXT NOT NULL,
         notes TEXT NOT NULL,
+        metrics_json TEXT NOT NULL DEFAULT '{}',
         updated_at TEXT NOT NULL
       );
     """)
+    # Safe migration if the user has already launched the first preview.
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(labels)")}
+    if "metrics_json" not in columns:
+        conn.execute("ALTER TABLE labels ADD COLUMN metrics_json TEXT NOT NULL DEFAULT '{}'")
     return conn
 
 
@@ -102,12 +107,13 @@ def get_scans(db_path: str | Path = DEFAULT_DB) -> list[dict]:
     with _connection(db_path) as conn:
         rows = conn.execute(
             "SELECT s.*, l.family, l.artifacts_json, l.quality, l.confidence,"
-            " l.sample_group, l.dataset_role, l.notes, l.updated_at"
+            " l.sample_group, l.dataset_role, l.notes, l.metrics_json, l.updated_at"
             " FROM scans s LEFT JOIN labels l USING (scan_id)"
             " ORDER BY s.scan_id").fetchall()
         result = [dict(r) for r in rows]
     for row in result:
         row["artifacts"] = json.loads(row.pop("artifacts_json")) if row["artifacts_json"] else []
+        row["metrics"] = json.loads(row.pop("metrics_json")) if row["metrics_json"] else {}
     return result
 
 
@@ -122,6 +128,7 @@ def _sha256(path: Path) -> str:
 def save_label(scan_id: int, *, family: str, artifacts: list[str],
                quality: str, confidence: int, sample_group: str,
                dataset_role: str, notes: str = "",
+               metrics: dict | None = None,
                db_path: str | Path = DEFAULT_DB) -> dict:
     """Save one operator label; enforce sample-group-level split isolation."""
     if family not in FAMILIES or quality not in QUALITIES or dataset_role not in ROLES:
@@ -138,6 +145,7 @@ def save_label(scan_id: int, *, family: str, artifacts: list[str],
     # Never let an uncertain/unclassified entry be an eligible training label.
     if family in ("unclassified", "uncertain") and dataset_role == "train":
         raise ValueError("Uncertain scans cannot be assigned to training")
+    metrics_text = json.dumps(metrics or {}, allow_nan=False, sort_keys=True)
     now = datetime.now(timezone.utc).isoformat()
     with _connection(db_path) as conn:
         row = conn.execute("SELECT * FROM scans WHERE scan_id=?", (scan_id,)).fetchone()
@@ -159,18 +167,29 @@ def save_label(scan_id: int, *, family: str, artifacts: list[str],
                 "AND l.scan_id!=?", (group, scan_id)).fetchall()
             if any(r[0] != dataset_role for r in conflicts):
                 raise ValueError("Same specimen/session already belongs to another dataset split")
+        # Content-identical copies must be in the SAME partition, even if
+        # the operator entered different sample groups.
+        if dataset_role != "unassigned":
+            same_data = conn.execute(
+                "SELECT DISTINCT l.dataset_role FROM labels l "
+                "JOIN scans s ON s.scan_id=l.scan_id "
+                "WHERE s.sha256=? AND s.scan_id!=? "
+                "AND l.dataset_role!='unassigned'", (digest, scan_id)).fetchall()
+            if any(other[0] != dataset_role for other in same_data):
+                raise ValueError("Identical image bytes already assigned to another split")
         conn.execute("UPDATE scans SET bytes=?, modified_ns=?, sha256=? WHERE scan_id=?",
                      (stat.st_size, stat.st_mtime_ns, digest, scan_id))
         conn.execute(
             "INSERT INTO labels (scan_id,family,artifacts_json,quality,confidence,"
-            "sample_group,dataset_role,notes,updated_at) VALUES (?,?,?,?,?,?,?,?,?) "
+            "sample_group,dataset_role,notes,metrics_json,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) "
             "ON CONFLICT(scan_id) DO UPDATE SET "
             "family=excluded.family,artifacts_json=excluded.artifacts_json,"
             "quality=excluded.quality,confidence=excluded.confidence,"
             "sample_group=excluded.sample_group,dataset_role=excluded.dataset_role,"
-            "notes=excluded.notes,updated_at=excluded.updated_at",
+            "notes=excluded.notes,metrics_json=excluded.metrics_json,"
+            "updated_at=excluded.updated_at",
             (scan_id, family, json.dumps(sorted(set(artifacts))), quality,
-             confidence, group, dataset_role, notes.strip(), now))
+             confidence, group, dataset_role, notes.strip(), metrics_text, now))
     return {"scan_id": scan_id, "saved": True, "dataset_role": dataset_role}
 
 
