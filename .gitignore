@@ -44,3 +44,4 @@ CHATGPT_REVIEW.zip
 operator_feedback.jsonl
 .private_hmac_key
 learning_feedback/
+private_source_index.jsonl
