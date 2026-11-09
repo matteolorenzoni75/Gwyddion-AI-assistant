@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import sys
@@ -44,18 +45,27 @@ def make_entries(paths: list[Path], root: Path) -> tuple[list[dict], list[dict]]
     for p in paths:
         by_stem[p.stem.casefold()].append(p)
     private, public = [], []
+    seen_digests: set[str] = set()
     for idx, path in enumerate(paths, 1):
         scan_id = f"AFM-{idx:05d}"
         stat = path.stat()
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(block)
+        signature = digest.hexdigest()
+        duplicate_bytes = signature in seen_digests
+        seen_digests.add(signature)
         private.append({
             "id": scan_id, "relative_path": str(path.relative_to(root)),
             "absolute_path": str(path), "bytes": stat.st_size,
-            "extension": path.suffix.lower(),
+            "extension": path.suffix.lower(), "sha256": signature,
         })
         public.append({
             "id": scan_id, "format": path.suffix.lower(),
             "bytes": stat.st_size,
             "basename_collision": len(by_stem[path.stem.casefold()]) > 1,
+            "byte_identical_duplicate": duplicate_bytes,
             "status": "not_probed", "channels": [], "n_height": None,
             "trace_retrace_height": None, "igor_note_present": None,
         })
@@ -172,6 +182,10 @@ def build_summary(rows: list[dict], root: Path, probed: bool) -> dict:
         "source_root_exists": root.is_dir(), "n_files": len(rows),
         "formats": dict(sorted(formats.items())), "statuses": dict(sorted(statuses.items())),
         "basename_collisions": sum(r["basename_collision"] for r in rows),
+        "byte_identical_duplicate_files": sum(
+            r.get("byte_identical_duplicate", False) for r in rows),
+        "distinct_byte_sequences": len(rows) - sum(
+            r.get("byte_identical_duplicate", False) for r in rows),
         "calibration_flags": dict(sorted(calibration.items())),
         "extent_outlier_anonymous_ids": extent_outlier_ids,
         "with_trace_retrace_height_pair": sum(r["trace_retrace_height"] is True for r in rows),
@@ -199,6 +213,8 @@ def write_reports(out: Path, private: list[dict], public: list[dict], summary: d
         f"- Formats: **{summary['formats']}**",
         f"- Import statuses: **{summary['statuses']}**",
         f"- Files with basename collisions: **{summary['basename_collisions']}**",
+        f"- Identical-bytes duplicate files: **{summary['byte_identical_duplicate_files']}**",
+        f"- Distinct byte sequences: **{summary['distinct_byte_sequences']}**",
         f"- Height trace+retrace pairs: **{summary['with_trace_retrace_height_pair']}**",
         f"- Calibration probed with Gwyddion: **{summary['calibration_probed']}**",
         f"- Calibration flags: **{summary['calibration_flags']}**",
