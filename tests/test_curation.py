@@ -5,6 +5,12 @@ import pytest
 
 from afm_copilot.curation import curation_summary
 from afm_copilot.feedback import record_feedback
+import afm_copilot.feedback as feedback
+
+
+@pytest.fixture(autouse=True)
+def approved_training_test_root(monkeypatch, tmp_path):
+    monkeypatch.setattr(feedback, "TRAINING_ROOT", tmp_path)
 
 
 def event(scan, store, family="terraces", verdict="confirmed"):
