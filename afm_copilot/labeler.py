@@ -7,6 +7,7 @@ There is no training, no auto-classification and no source modification.
 from __future__ import annotations
 
 import hashlib
+import math
 import sys
 import tempfile
 from pathlib import Path
@@ -22,6 +23,7 @@ from afm_copilot.bridge import BridgeError, GwyBridge
 from afm_copilot.gui.viewer import ScanViewer
 from afm_copilot.gui.workers import TaskRunner
 from afm_copilot.gwy_io import load_height
+from afm_copilot.features import measure as measure_features
 from afm_copilot.labeling import (ARTIFACTS, DEFAULT_DB, FAMILIES, QUALITIES,
                                  ROLES, counts, get_scans, register_folder,
                                  save_label)
@@ -51,22 +53,38 @@ ARTIFACT_LABELS = {
 
 
 def _load(path: Path, work_dir: Path):
-    """Convert each raw file to its own temporary directory to avoid stem collisions."""
+    """Import raw scans into unique temporary directories and measure features."""
     if path.suffix.lower() == ".gwy":
-        return load_height(path)
-    # Derived destination is unique per path; original inputs remain read-only.
-    identity = hashlib.sha256(str(path).encode("utf-8")).hexdigest()[:20]
-    into = work_dir / identity
-    target = into / (path.stem + ".gwy")
-    if not target.is_file():
-        result = GwyBridge().convert_raw([path], into)
-        results = result.get("results", [])
-        ok = [r for r in results if r.get("ok")]
-        if not ok:
-            raise BridgeError(results[0].get("error", "Import failed")
-                              if results else "No result from Gwyddion")
-        target = Path(ok[0]["gwy"])
-    return load_height(target)
+        target = path
+    else:
+        # Derived destination is unique per path; raw inputs remain read-only.
+        identity = hashlib.sha256(str(path).encode("utf-8")).hexdigest()[:20]
+        into = work_dir / identity
+        target = into / (path.stem + ".gwy")
+        if not target.is_file():
+            result = GwyBridge().convert_raw([path], into)
+            records = result.get("results", [])
+            ok = [row for row in records if row.get("ok")]
+            if not ok:
+                raise BridgeError(records[0].get("error", "Import failed")
+                                  if records else "No result from Gwyddion")
+            target = Path(ok[0]["gwy"])
+    channel = load_height(target)
+    features = {
+        "xres": channel.xres, "yres": channel.yres,
+        "xreal_m": channel.xreal, "yreal_m": channel.yreal,
+        "rms_raw_m": channel.rms, "z_range_m": channel.z_range,
+    }
+    # Numerical descriptors are evidence, not automatic morphology labels.
+    try:
+        measured = measure_features(channel).as_dict()
+        for key, value in measured.items():
+            if isinstance(value, (int, float)):
+                number = float(value)
+                features[key] = number if math.isfinite(number) else None
+    except (ValueError, RuntimeError, ArithmeticError):
+        features["feature_extraction_incomplete"] = True
+    return channel, features
 
 
 class LabelerWindow(QMainWindow):
@@ -80,6 +98,7 @@ class LabelerWindow(QMainWindow):
         self.rows = []
         self.position = -1
         self.pending = False
+        self.current_metrics = {}
         self._build()
         self._refresh()
         if not self.rows and DEFAULT_FOLDER.is_dir():
@@ -237,17 +256,20 @@ class LabelerWindow(QMainWindow):
             box.setChecked(key in entry["artifacts"])
         self.notes.setPlainText(entry.get("notes") or "")
         self.pending = True
-        self.status.setText("Loading raw scan through Gwyddion (read-only)...")
+        self.current_metrics = {}
+        self.status.setText("Loading raw scan and measuring descriptors (read-only)...")
         self.runner.submit(
             "Load AFM topography", _load, path, self.work_dir,
             on_result=lambda ch, scan_id=entry["scan_id"]: self._loaded(ch, scan_id),
             on_failed=lambda _desc, error: self._failed(error),
         )
 
-    def _loaded(self, channel, scan_id):
+    def _loaded(self, result, scan_id):
         if self.position < 0 or self.rows[self.position]["scan_id"] != scan_id:
             return
+        channel, metrics = result
         self.pending = False
+        self.current_metrics = metrics
         self.viewer.show_channel(channel)
         self.status.setText(
             f"Loaded {channel.xres}×{channel.yres} px; "
@@ -259,6 +281,7 @@ class LabelerWindow(QMainWindow):
 
     def _failed(self, error):
         self.pending = False
+        self.current_metrics = {}
         self.viewer.show_channel(None)
         self.status.setText(f"Image could not be loaded: {error}. "
                             "You can skip it and continue the batch.")
@@ -276,6 +299,7 @@ class LabelerWindow(QMainWindow):
                 sample_group=self.group.text(),
                 dataset_role=self.role.currentData(),
                 notes=self.notes.toPlainText(),
+                metrics=self.current_metrics,
             )
         except (OSError, ValueError, KeyError) as exc:
             QMessageBox.warning(self, "Label not saved", str(exc))
