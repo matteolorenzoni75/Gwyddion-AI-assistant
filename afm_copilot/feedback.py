@@ -19,6 +19,13 @@ from typing import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STORE_DIR = Path.home() / "AFM_Copilot_Private_Audits" / "learning_feedback"
+# The original lab scan folder contains the declared 244-image evaluation set.
+# Its source files must not become training labels, even by operator checkbox.
+TEST_CORPUS_ROOT = Path(os.environ.get(
+    "AFM_TEST_CORPUS_ROOT", r"C:\AFM_Automation\OLD input IMAGES"))
+# Deliberate, separate opt-in training location. Never infer from file names.
+TRAINING_ROOT = Path(os.environ.get(
+    "AFM_TRAINING_ROOT", str(Path.home() / "AFM_Copilot_Training_Approved")))
 VERDICTS = frozenset({"confirmed", "rejected", "uncertain"})
 BLOCKED_PATH_PARTS = frozenset({"blind", "blind_test", "blind-test", "holdout", "test_set", "test-set"})
 ANONYMOUS_STEM = re.compile(r"scan-\d{3,}$", re.I)
@@ -47,12 +54,19 @@ def _key(directory: Path) -> bytes:
     return key
 
 
+def _within(path: Path, folder: Path) -> bool:
+    folder = folder.expanduser().resolve()
+    return path == folder or folder in path.parents
+
+
 def _is_holdout(path: Path) -> bool:
     lowered = {part.lower().replace(" ", "_") for part in path.parts}
     export_root = PROJECT_ROOT / "export"
-    return (export_root == path or export_root in path.parents or
+    return (_within(path, TEST_CORPUS_ROOT) or
+            _within(path, export_root) or
             bool(lowered & BLOCKED_PATH_PARTS) or
-            any(part.startswith("blind_test") or part.startswith("holdout") for part in lowered) or
+            any(part.startswith("blind_test") or part.startswith("holdout")
+                for part in lowered) or
             bool(ANONYMOUS_STEM.fullmatch(path.stem)))
 
 
@@ -81,6 +95,10 @@ def record_feedback(
         raise ValueError("Operator must explicitly confirm training-set membership")
     if _is_holdout(scan):
         raise ValueError("Blind/test scans cannot be used as learning labels")
+    if not _within(scan, TRAINING_ROOT):
+        raise ValueError(
+            "This scan is outside the dedicated training collection: "
+            "use a separately approved training scan, not a test scan")
     if family not in FAMILIES or effect not in EFFECTS or verdict not in VERDICTS:
         raise ValueError("Unknown morphology family, effect or feedback verdict")
     if isinstance(evidence, (str, bytes)):
