@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFileDialog,
                                QVBoxLayout, QWidget)
 
 from afm_copilot.decide import plan_for
+from afm_copilot.feedback import record_feedback, feedback_counts
 from afm_copilot.gui.panels.base import Panel
 from afm_copilot.gwy_io import load_height, load_mask, save_height
 from afm_copilot.mask_proposals import propose as propose_masks
@@ -112,6 +113,19 @@ class LearningPanel(Panel):
         plan_row.addWidget(self.save_btn)
         layout.addLayout(plan_row)
 
+        layout.addWidget(QLabel("Operator feedback (private; does not train a model)"))
+        self.feedback_verdict = QComboBox()
+        self.feedback_verdict.addItem("Uncertain (record, not a training label)", "uncertain")
+        self.feedback_verdict.addItem("Confirmed morphology", "confirmed")
+        self.feedback_verdict.addItem("Rejected morphology", "rejected")
+        layout.addWidget(self.feedback_verdict)
+        self.training_consent = QCheckBox(
+            "This is a reviewed TRAINING scan (not blind/test)")
+        layout.addWidget(self.training_consent)
+        self.feedback_btn = QPushButton("Record operator feedback privately")
+        self.feedback_btn.clicked.connect(self._record_training_feedback)
+        layout.addWidget(self.feedback_btn)
+
         mask_row = QHBoxLayout()
         self.masks_btn = QPushButton("Generate mask candidates")
         self.masks_btn.clicked.connect(self._generate_masks)
@@ -153,6 +167,7 @@ class LearningPanel(Panel):
         stem = path.stem if path else "current scan"
         self.current.setText(f"Reviewing: {stem}")
         self._manifest = None
+        self.training_consent.setChecked(False)
         self.candidate.clear()
         self.candidate.setEnabled(False)
         self.use_candidate.setChecked(False)
@@ -238,6 +253,30 @@ class LearningPanel(Panel):
             return
         self.ctx.set_review(review)
         self.status.setText(f"Saved in {destination.name}. The source scan was untouched.")
+
+    def _record_training_feedback(self) -> None:
+        review = self._review()
+        source = self.ctx.channel_path
+        if review is None or source is None:
+            self.status.setText("Select a scan and a morphology before recording feedback.")
+            return
+        try:
+            outcome = record_feedback(
+                source, family=review.family, effect=review.effect,
+                verdict=self.feedback_verdict.currentData(),
+                evidence=review.evidence,
+                confirmed_training=self.training_consent.isChecked(),
+            )
+            counts = feedback_counts()
+        except (OSError, ValueError, TypeError) as exc:
+            self.status.setText(f"Feedback not recorded: {exc}")
+            return
+        self.training_consent.setChecked(False)
+        self.status.setText(
+            f"Private feedback recorded ({outcome['verdict']}); "
+            f"{counts['confirmed']} confirmed examples. "
+            "No automatic training or processing change."
+        )
 
     def _proposal_source(self) -> Path | None:
         source = getattr(self.ctx.channel, "source", None)
