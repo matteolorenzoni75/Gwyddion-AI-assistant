@@ -101,3 +101,19 @@ def test_probe_whitelists_sensitive_importer_fields(tmp_path, monkeypatch):
     assert "secret" not in report
     assert shared[0]["status"] == "ok"
     assert shared[0]["channels"][0]["calibration_ok"] is True
+
+
+def test_unrealistic_metric_extent_is_flagged_not_corrected(tmp_path):
+    rows = [{
+        "id": "AFM-99999", "format": ".ibw", "status": "ok",
+        "basename_collision": False, "n_height": 1,
+        "trace_retrace_height": False, "igor_note_present": False,
+        "channels": [{
+            "kind": "height", "calibration_ok": True,
+            "xreal_m": 13.46, "yreal_m": 12.46,
+        }],
+    }]
+    summary = audit.build_summary(rows, tmp_path, True)
+    assert summary["calibration_flags"]["height_xy_extent_gt_1mm_review"] == 1
+    assert summary["extent_outlier_anonymous_ids"] == ["AFM-99999"]
+    assert rows[0]["channels"][0]["xreal_m"] == 13.46
