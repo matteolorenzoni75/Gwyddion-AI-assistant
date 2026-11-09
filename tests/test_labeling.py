@@ -115,3 +115,11 @@ def test_db_cannot_be_inside_public_project(tmp_path):
     folder, _db = make_data(tmp_path)
     with pytest.raises(ValueError, match="outside the public Git checkout"):
         register_folder(folder, PROJECT_ROOT / "temp_labeling.db")
+
+
+def test_blank_morphology_is_not_saved_as_an_expert_label(tmp_path):
+    folder, db = make_data(tmp_path)
+    register_folder(folder, db)
+    with pytest.raises(ValueError, match="Choose a morphology"):
+        label(get_scans(db)[0], db, family="unclassified", role="unassigned")
+    assert counts(db)["labeled"] == 0
