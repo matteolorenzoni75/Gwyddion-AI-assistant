@@ -32,6 +32,16 @@ def direction_of(title):
     return "unspecified"
 
 
+def finite_number(value):
+    try:
+        number = float(value)
+        if math.isnan(number) or math.isinf(number):
+            return None
+        return number
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
 def probe(entry):
     record = {"id": entry["id"], "status": "read_failed", "n_height": 0,
               "trace_retrace_height": False, "channels": []}
@@ -69,9 +79,9 @@ def probe(entry):
             record["channels"].append({
                 "kind": label, "direction": direction,
                 "xres": field.get_xres(), "yres": field.get_yres(),
-                "xreal_m": xreal, "yreal_m": yreal,
+                "xreal_m": finite_number(xreal), "yreal_m": finite_number(yreal),
                 "xy_unit": xy_unit, "z_unit": z_unit,
-                "z_range_si": field.get_max() - field.get_min(),
+                "z_range_si": finite_number(field.get_max() - field.get_min()),
                 "calibration_ok": bool(calibrated) if label == "height" else None,
             })
         record["n_height"] = len([c for c in record["channels"] if c["kind"] == "height"])
