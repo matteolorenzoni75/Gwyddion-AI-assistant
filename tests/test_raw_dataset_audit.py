@@ -68,3 +68,36 @@ def test_inventory_only_without_instrument(tmp_path):
         summary = json.loads(z.read("CHATGPT_summary.json"))
         assert summary["calibration_probed"] is False
         assert summary["formats"] == {".ibw": 1}
+
+
+def test_probe_whitelists_sensitive_importer_fields(tmp_path, monkeypatch):
+    import afm_copilot.bridge as bridge
+
+    source = tmp_path / "raw"
+    source.mkdir()
+    filename = "private_collaborator_42.tiff"
+    (source / filename).write_bytes(b"sample")
+    private, shared = audit.make_entries(audit.discover(source), source)
+
+    class FakeGwyBridge:
+        def run_script(self, script, args, timeout):
+            assert script == "audit_raw_channels.py"
+            return {"results": [{
+                "id": private[0]["id"], "status": "ok",
+                "n_height": 1, "trace_retrace_height": False,
+                "source": filename, "private_notes": "secret sample name",
+                "channels": [{
+                    "title": filename, "kind": "height", "direction": "retrace",
+                    "xres": 256, "yres": 256, "xreal_m": 5e-6, "yreal_m": 5e-6,
+                    "xy_unit": "m", "z_unit": "m", "z_range_si": 1e-8,
+                    "calibration_ok": True, "metadata": {"secret": filename},
+                }],
+            }]}
+
+    monkeypatch.setattr(bridge, "GwyBridge", FakeGwyBridge)
+    audit._run_probes(private, shared, tmp_path / "report", 2)
+    report = json.dumps(shared)
+    assert "private" not in report
+    assert "secret" not in report
+    assert shared[0]["status"] == "ok"
+    assert shared[0]["channels"][0]["calibration_ok"] is True
