@@ -38,3 +38,9 @@ AFM_Copilot_Private_Audits/
 PRIVATE_manifest.csv
 PRIVATE_probe_job.json
 CHATGPT_REVIEW.zip
+
+# Local human-label evidence is private, never source-controlled.
+.afm-copilot-reviews.json
+operator_feedback.jsonl
+.private_hmac_key
+learning_feedback/
