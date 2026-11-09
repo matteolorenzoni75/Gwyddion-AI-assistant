@@ -150,14 +150,22 @@ def build_summary(rows: list[dict], root: Path, probed: bool) -> dict:
     statuses = Counter(r["status"] for r in rows)
     formats = Counter(r["format"] for r in rows)
     calibration = Counter()
+    extent_outlier_ids = []
     for row in rows:
         if row["status"] == "ok":
             if not row["channels"]:
                 calibration["no_2d_channel"] += 1
             if row["n_height"] == 0:
                 calibration["no_height_channel"] += 1
-            if any(c.get("calibration_ok") is False for c in row["channels"] if c.get("kind") == "height"):
+            height_channels = [c for c in row["channels"] if c.get("kind") == "height"]
+            if any(c.get("calibration_ok") is False for c in height_channels):
                 calibration["unverified_height_calibration"] += 1
+            # A 1 mm field is unusually large for the intended AFM corpus.
+            # This is only a *review flag*, never an automatic recalibration.
+            if any((c.get("xreal_m") or 0) > 1e-3 or
+                   (c.get("yreal_m") or 0) > 1e-3 for c in height_channels):
+                calibration["height_xy_extent_gt_1mm_review"] += 1
+                extent_outlier_ids.append(row["id"])
     return {
         "schema_version": 1, "generated": datetime.now().astimezone().isoformat(),
         "source": "local_private_folder", "recursive": True,
@@ -165,6 +173,7 @@ def build_summary(rows: list[dict], root: Path, probed: bool) -> dict:
         "formats": dict(sorted(formats.items())), "statuses": dict(sorted(statuses.items())),
         "basename_collisions": sum(r["basename_collision"] for r in rows),
         "calibration_flags": dict(sorted(calibration.items())),
+        "extent_outlier_anonymous_ids": extent_outlier_ids,
         "with_trace_retrace_height_pair": sum(r["trace_retrace_height"] is True for r in rows),
         "calibration_probed": probed,
         "igor_notes_present": sum(r["igor_note_present"] is True for r in rows),
@@ -192,7 +201,8 @@ def write_reports(out: Path, private: list[dict], public: list[dict], summary: d
         f"- Files with basename collisions: **{summary['basename_collisions']}**",
         f"- Height trace+retrace pairs: **{summary['with_trace_retrace_height_pair']}**",
         f"- Calibration probed with Gwyddion: **{summary['calibration_probed']}**",
-        f"- Calibration flags: **{summary['calibration_flags']}**", "",
+        f"- Calibration flags: **{summary['calibration_flags']}**",
+        f"- Extents exceeding 1 mm (anonymous IDs): **{summary['extent_outlier_anonymous_ids']}**", "",
         "The private filename/ID map is NOT in the shareable ZIP.",
         "No raw images, note values, or sample names are included.",
     ]
