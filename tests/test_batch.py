@@ -342,3 +342,19 @@ def test_an_unreadable_file_does_not_stop_the_batch(tmp_path):
     summary = batch.run([source], tmp_path / "out", do_clean=False)
     assert summary["kept"] == 1
     assert summary["unreadable"] == 1
+
+
+def test_raw_files_with_colliding_stems_are_not_converted_or_lost(tmp_path):
+    """Different raw files named alike cannot share the converter's <stem>.gwy."""
+    from afm_copilot.batch import convert
+    first = tmp_path / "a" / "same.ibw"
+    second = tmp_path / "b" / "SAME.tiff"
+    first.parent.mkdir()
+    second.parent.mkdir()
+    first.write_bytes(b"one")
+    second.write_bytes(b"two")
+    processed, errors = convert([first, second], tmp_path / "converted")
+    assert processed == []
+    assert {path for path, _ in errors} == {first, second}
+    assert all("collision" in reason for _, reason in errors)
+    assert list((tmp_path / "converted").glob("*.gwy")) == []
