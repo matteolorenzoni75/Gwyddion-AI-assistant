@@ -274,7 +274,7 @@ class LearningPanel(Panel):
         self.training_consent.setChecked(False)
         self.status.setText(
             f"Private feedback recorded ({outcome['verdict']}); "
-            f"{counts['confirmed']} confirmed examples. "
+            f"{counts['confirmed']} confirmed feedback events. "
             "No automatic training or processing change."
         )
 
