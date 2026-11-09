@@ -143,7 +143,9 @@ def save_label(scan_id: int, *, family: str, artifacts: list[str],
     if dataset_role != "unassigned" and not group:
         raise ValueError("Sample/group ID is required before assigning a split")
     # Never let an uncertain/unclassified entry be an eligible training label.
-    if family in ("unclassified", "uncertain") and dataset_role == "train":
+    if family == "unclassified":
+        raise ValueError("Choose a morphology class or explicitly mark uncertain")
+    if family == "uncertain" and dataset_role == "train":
         raise ValueError("Uncertain scans cannot be assigned to training")
     metrics_text = json.dumps(metrics or {}, allow_nan=False, sort_keys=True)
     now = datetime.now(timezone.utc).isoformat()
