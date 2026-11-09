@@ -14,6 +14,7 @@ conversation.
 | One-click recipes, each explaining itself | Automatic artifact detection |
 | Profiles: drag, measure, export | Learning from your decisions |
 | Visual morphology review and competing mask proposals | Trained automatic mask selection |
+| Private operator feedback and conflict-safe curation (no model training yet) | Validated supervised learning on independently held-out samples |
 | Film thickness, with honest refusals | |
 
 This project continues [`C:\AFM_Automation`](file:///C:/AFM_Automation), which is
