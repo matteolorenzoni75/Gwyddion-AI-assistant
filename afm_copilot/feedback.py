@@ -111,8 +111,24 @@ def record_feedback(
         "origin": "explicit-operator-feedback",
         "model_updated": False,
     }
+    # The public/shareable ledger never exposes filenames or paths. A separate
+    # PRIVATE source index is needed to find the approved source again when
+    # curating future datasets. It lives beside the private key, outside Git.
+    # Index first: an orphaned path entry is harmless, whereas a feedback event
+    # without a retrievable source would be silently unusable for training.
+    source_entry = json.dumps({
+        "schema_version": 1, "scan_id": private_id,
+        "path": str(scan), "file_size": scan.stat().st_size,
+        "recorded_at": row["recorded_at"],
+    }, ensure_ascii=False, allow_nan=False) + "\n"
+    fd = os.open(str(out / "private_source_index.jsonl"),
+                 os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    with os.fdopen(fd, "a", encoding="utf-8") as stream:
+        stream.write(source_entry)
+
     line = json.dumps(row, allow_nan=False, ensure_ascii=False) + "\n"
-    fd = os.open(str(out / "operator_feedback.jsonl"), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    fd = os.open(str(out / "operator_feedback.jsonl"),
+                 os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
     with os.fdopen(fd, "a", encoding="utf-8") as stream:
         stream.write(line)
     return {"scan_id": private_id, "verdict": verdict,
