@@ -24,7 +24,20 @@ is separate from this application and has not been promoted as its model.
 5. Every event is appended to
    `%USERPROFILE%\AFM_Copilot_Private_Audits\learning_feedback\operator_feedback.jsonl`.
    A private random key in the same directory allows content-derived IDs
-   without recording original filenames or paths. Keep this folder private.
+   without recording original filenames or paths **in the shareable ledger**.
+   A separate local `private_source_index.jsonl` maps anonymised IDs back
+   to approved files for future curation. It includes confidential paths:
+   **never upload or commit it**. The entire folder remains private.
+
+   The 244-image **test** set declared by the operator (and the entire raw
+   archive `C:\AFM_Automation\OLD input IMAGES` that hosts it) is excluded
+   from feedback for training. The earlier inventory of **268 TIFF/IBW files**
+   counts instrument files, not necessarily unique evaluation images.
+   Approved training scans must be stored separately under
+   `%USERPROFILE%\AFM_Copilot_Training_Approved` (or an explicitly
+   configured `AFM_TRAINING_ROOT`). This directory is **not created or
+   populated automatically**. Do not copy holdout material there.
+   Physical-specimen lineage still needs independent review before training.
 6. Only confirmed, non-uncertain labels with evidence are marked eligible for
    future training. Rejections and uncertainty are retained as review history,
    not silently converted into positive labels.
