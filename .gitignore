@@ -45,3 +45,13 @@ operator_feedback.jsonl
 .private_hmac_key
 learning_feedback/
 private_source_index.jsonl
+
+# Original instrument scans are private; public repo uses only reviewed .gwy corpus.
+*.ibw
+*.tif
+*.tiff
+*.spm
+*.jpk
+*.sxm
+*.nid
+*.mi
