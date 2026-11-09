@@ -22,6 +22,8 @@ from pathlib import Path
 DEFAULT_INPUT = Path(r"C:\AFM_Automation\OLD input IMAGES")
 EXTENSIONS = {".ibw", ".tif", ".tiff"}
 REPO = Path(__file__).resolve().parent.parent
+if str(REPO) not in sys.path:
+    sys.path.insert(0, str(REPO))
 
 
 def discover(root: Path) -> list[Path]:
@@ -75,6 +77,7 @@ def _run_probes(private: list[dict], public: list[dict], out: Path, chunk_size: 
     from afm_copilot.bridge import BridgeError, GwyBridge
 
     bridge = GwyBridge()
+    out.mkdir(parents=True, exist_ok=True)
     by_id = {r["id"]: r for r in public}
     job = out / "PRIVATE_probe_job.json"
     total_errors = 0
