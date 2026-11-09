@@ -32,3 +32,9 @@ export/argued-about.json
 # data/reference_samples.json stays tracked -- that one is the owner's own
 # catalog with no third party in it, and it is the acceptance test.
 data/real_labels.json
+
+# External raw-data audits are private; never commit outputs or raw inputs.
+AFM_Copilot_Private_Audits/
+PRIVATE_manifest.csv
+PRIVATE_probe_job.json
+CHATGPT_REVIEW.zip
