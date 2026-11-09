@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QFileDialog, QHBoxLayout,
 from afm_copilot.bridge import BridgeError, GwyBridge
 from afm_copilot.gui.panels.base import Panel
 from afm_copilot.gwy_io import load_height
+from afm_copilot.morphology import load_reviews
 
 RAW_SUFFIXES = {".ibw", ".tiff", ".tif", ".spm", ".jpk", ".sxm", ".top",
                 ".stp", ".nid", ".mi", ".par", ".ezd", ".afm"}
@@ -72,6 +73,20 @@ class ScansPanel(Panel):
     def load_folder(self, folder: Path) -> None:
         self._folder = folder
         self.folder_label.setText(str(folder))
+        review_file = folder / ".afm-copilot-reviews.json"
+        if review_file.is_file():
+            try:
+                reviews = load_reviews(review_file)
+            except (OSError, ValueError) as exc:
+                self.ctx.set_reviews({}, review_file)
+                self.ctx.log(f"Could not read {review_file.name}: {exc}")
+            else:
+                self.ctx.set_reviews(reviews, review_file)
+                self.ctx.log(
+                    f"Loaded {len(reviews)} morphology review(s) from "
+                    f"{review_file.name}")
+        else:
+            self.ctx.set_reviews({}, review_file)
         self._reload()
 
     def _reload(self) -> None:

@@ -12,7 +12,8 @@ import numpy as np
 import pytest
 
 from afm_copilot import batch
-from afm_copilot.gwy_io import Channel, load_height, save_height
+from afm_copilot.gwy_io import Channel, load_height, load_mask, save_height
+from afm_copilot.morphology import MorphologyReview
 
 SIZE = 128
 
@@ -27,6 +28,63 @@ def surface(seed=1, roughness=5e-9, smoothness=20):
 def write(folder, name, data, xreal=10e-6, yreal=10e-6):
     return save_height(Channel(name="Height", data=data, xreal=xreal,
                                yreal=yreal), folder / f"{name}.gwy")
+
+
+def test_an_operator_mask_round_trips_with_the_height_channel(tmp_path):
+    """A hand-drawn Gwyddion mask remains usable input evidence."""
+    data = np.zeros((32, 32))
+    marked = np.zeros_like(data, dtype=bool)
+    marked[8:20, 10:24] = True
+    path = save_height(
+        Channel(name="Height", data=data, xreal=2e-6, yreal=2e-6),
+        tmp_path / "operator-mask.gwy", mask=marked)
+
+    loaded = load_mask(path, load_height(path))
+    assert loaded is not None
+    assert np.array_equal(loaded, marked)
+
+
+def test_an_operator_mask_is_used_for_the_background_fit(tmp_path):
+    """A manual mask overrules a missed automatic object proposal, not data."""
+    source = tmp_path / "in"
+    data = surface()
+    marked = np.zeros_like(data, dtype=bool)
+    marked[20:80, 30:95] = True
+    path = save_height(Channel(name="Height", data=data, xreal=10e-6,
+                               yreal=10e-6), source / "manual.gwy",
+                       mask=marked)
+
+    summary = batch.run([path], tmp_path / "out", do_clean=False)
+    result = summary["results"][0]
+    assert result["recipe"] == "isolate-objects-flat"
+    prepared = load_mask(tmp_path / "out" / "prepared" / "manual.gwy")
+    assert prepared is not None
+    assert np.array_equal(prepared, marked)
+
+
+def test_a_restrictive_morphology_review_is_audited_in_the_batch(tmp_path):
+    source = tmp_path / "in"
+    data = surface()
+    data[30:90, 35:95] += 200e-9
+    path = write(source, "continuous", data)
+    review = MorphologyReview(
+        scan="continuous",
+        family="granular_continuous",
+        effect="restrict",
+        source="vision-review",
+        evidence=("morphology fills the image",),
+    )
+
+    summary = batch.run(
+        [path], tmp_path / "out", do_clean=False,
+        morphology_reviews={"continuous": review})
+    result = summary["results"][0]
+
+    assert result["recipe"] == "level-only"
+    assert result["morphology_family"] == "granular_continuous"
+    assert result["morphology_review_source"] == "vision-review"
+    assert result["morphology_restricted"] is True
+    assert not (tmp_path / "out" / "prepared" / "continuous.gwy").exists()
 
 
 def test_a_folder_of_good_scans_is_all_kept(tmp_path):
@@ -146,6 +204,18 @@ def test_over_flattening_is_measured_against_what_the_background_explains():
         measurements={"background_order": 2,
                       "explained_by_degree": {2: 0.06}})
     assert lost_too_much(flat_surface_scrubbed)
+
+
+def test_a_flat_frame_is_not_published_after_cleaning_bends_it():
+    """Flatness is a fixed point, not merely a warning beside a changed map."""
+    from afm_copilot.batch import _curvature_grew
+
+    # Values measured on the training batch: 0 -> 4.557 nm was a visibly
+    # curved result.  A 0.017 nm numerical difference must remain acceptable.
+    assert _curvature_grew(0.0, 4.557)
+    assert not _curvature_grew(0.0, 0.017)
+    # A larger already-present bow needs a proportionate, not absolute, guard.
+    assert _curvature_grew(10.0, 11.1)
 
 
 def test_a_file_that_will_not_convert_is_listed_not_lost(tmp_path):

@@ -56,6 +56,21 @@ class Operation:
 
 _ALL: list[Operation] = [
     Operation(
+        key="facet_level",
+        gwy_func="facet-level",
+        title="Level facets upright",
+        menu="/Level/Facet Level",
+        what="Finds the prevalent facet orientations and removes the global "
+             "tilt that stops those facets from pointing upward.",
+        why="Terraces and stepped films have definite flat levels, not a "
+            "single background to fit through.  Facet levelling preserves that "
+            "interpretation while bringing the levels into their physical "
+            "orientation.",
+        caution="Use only after the strict terrace test has found distinct "
+                "height levels.  On rounded objects or rough morphology it can "
+                "mistake the sample's slopes for a facet orientation.",
+    ),
+    Operation(
         key="plane_level",
         gwy_func="level",
         title="Subtract mean plane",

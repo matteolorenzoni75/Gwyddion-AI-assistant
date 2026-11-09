@@ -16,7 +16,8 @@ from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QPushButton,
 
 from afm_copilot.bridge import GwyBridge
 from afm_copilot.gui.panels.base import Panel
-from afm_copilot.gwy_io import load_height
+from afm_copilot.decide import plan_for
+from afm_copilot.gwy_io import load_height, load_mask
 from afm_copilot.ops import RECIPES, get_recipe
 
 
@@ -109,6 +110,25 @@ class RecipesPanel(Panel):
         if raw:
             report = bridge.convert_raw(raw, out / "_gwy")
             gwy.extend(Path(r["gwy"]) for r in report["results"] if r["ok"])
+        # A visual veto has to constrain the execution path, not merely appear
+        # in a note.  It may be overruled only by concrete operator evidence:
+        # a mask saved with the reviewed .gwy file.
+        for path in gwy:
+            review = self.ctx.review_for(path.stem)
+            if review is None or not review.restricts_automatic_masking:
+                continue
+            channel = load_height(path)
+            plan = plan_for(
+                channel,
+                operator_mask=load_mask(path, channel),
+                morphology_review=review,
+            )
+            if recipe.key != plan.recipe_key:
+                raise ValueError(
+                    f"{path.name} has a restrictive morphology review. "
+                    f"The permitted recipe is '{plan.recipe_key}', not "
+                    f"'{recipe.key}'. Change the review or export an "
+                    "operator-approved mask first.")
         return bridge.run_recipe(recipe, sorted(set(gwy)), out / "processed")
 
     def _done(self, result: dict) -> None:

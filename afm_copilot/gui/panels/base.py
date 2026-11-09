@@ -44,6 +44,10 @@ class AppContext:
     # The scan currently under the cursor, as an afm_copilot.gwy_io.Channel.
     channel: Any | None = None
     channel_path: Path | None = None
+    # Reviews are batch evidence, shared by the visual-review and recipe
+    # panels.  They are keyed by the blind scan stem, never inferred from it.
+    morphology_reviews: dict[str, Any] = field(default_factory=dict)
+    review_file: Path | None = None
 
     _channel_listeners: list[Callable[[Any, Path | None], None]] = \
         field(default_factory=list, repr=False)
@@ -67,6 +71,18 @@ class AppContext:
     def set_files(self, files: list[Path]) -> None:
         for fn in list(self._files_listeners):
             fn(files)
+
+    # -- morphology review ------------------------------------------------
+    def set_reviews(self, reviews: dict[str, Any],
+                    path: Path | None = None) -> None:
+        self.morphology_reviews = dict(reviews)
+        self.review_file = path
+
+    def set_review(self, review: Any) -> None:
+        self.morphology_reviews[review.scan] = review
+
+    def review_for(self, path_or_stem: str | Path) -> Any | None:
+        return self.morphology_reviews.get(Path(path_or_stem).stem)
 
 
 class Panel(QWidget):

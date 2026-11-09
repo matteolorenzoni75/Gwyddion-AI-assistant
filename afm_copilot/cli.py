@@ -19,6 +19,8 @@ from afm_copilot import __version__
 from afm_copilot.bridge import BridgeError, GwyBridge
 from afm_copilot.compare import build_comparison_report
 from afm_copilot.gwy_io import Channel, load_channels, load_height
+from afm_copilot.mask_proposals import propose as propose_masks
+from afm_copilot.morphology import load_reviews
 from afm_copilot.ops import (RECIPES, compare_logs, describe_source,
                              get_recipe, read_log, recipe_from_log)
 from afm_copilot.report import build_thickness_report
@@ -74,6 +76,39 @@ def cmd_selftest(args: argparse.Namespace) -> int:
     print("\nWhat this proves: Gwyddion's processing modules load and run "
           "headlessly,\nso no Gwyddion window is ever needed.")
     return 0 if result["ok"] else 1
+
+
+def cmd_propose_masks(args: argparse.Namespace) -> int:
+    """Create several Gwyddion mask candidates; do not process the heights."""
+    gwy_files, raw_files = _collect_inputs(args.inputs)
+    if not gwy_files and not raw_files:
+        print("No readable files found.", file=sys.stderr)
+        return 1
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if raw_files:
+        print(f"Converting {len(raw_files)} raw file(s) through Gwyddion...")
+        try:
+            converted = GwyBridge().convert_raw(raw_files, out_dir / "_gwy")
+        except BridgeError as exc:
+            print(f"Conversion failed: {exc}", file=sys.stderr)
+            return 1
+        gwy_files.extend(Path(record["gwy"]) for record in converted["results"]
+                         if record.get("ok"))
+    if not gwy_files:
+        print("No topography files could be prepared.", file=sys.stderr)
+        return 1
+    try:
+        report = propose_masks(sorted(set(gwy_files)), out_dir)
+    except BridgeError as exc:
+        print(f"Mask proposals failed: {exc}", file=sys.stderr)
+        return 1
+    print(f"Created {report['n_masks']}/{len(report['results'])} candidate masks.")
+    print("No height data were levelled, replaced, or removed.")
+    print(f"Review manifest: {out_dir / 'mask-proposals.json'}")
+    if report.get("review_image"):
+        print(f"Overlay review: {report['review_image']}")
+    return 0 if report["n_masks"] else 1
 
 
 def cmd_batch_images(args: argparse.Namespace) -> int:
@@ -482,6 +517,13 @@ def cmd_plan(args: argparse.Namespace) -> int:
         print("Nothing to look at.", file=sys.stderr)
         return 1
 
+    try:
+        reviews = (load_reviews(args.morphology_reviews)
+                   if args.morphology_reviews else {})
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Could not read morphology reviews: {exc}", file=sys.stderr)
+        return 1
+
     plans = []
     for path in sorted(set(gwy_files)):
         try:
@@ -489,7 +531,8 @@ def cmd_plan(args: argparse.Namespace) -> int:
         except (ValueError, OSError) as exc:
             print(f"  ! {path.name}: {exc}", file=sys.stderr)
             continue
-        plans.append((path, plan_for(channel)))
+        plans.append((path, plan_for(
+            channel, morphology_review=reviews.get(path.stem))))
 
     if args.detail:
         for path, plan in plans:
@@ -517,6 +560,10 @@ def cmd_plan(args: argparse.Namespace) -> int:
             "background_degree": plan.background_degree,
             "already_levelled": plan.already_levelled,
             "recipe": plan.recipe_key,
+            "morphology_family": plan.morphology_family,
+            "morphology_review_source": plan.morphology_review_source,
+            "morphology_restricted": plan.morphology_restricted,
+            "morphology_evidence": plan.morphology_evidence,
             "explained_by_degree": plan.explained_by_degree,
             "notes": plan.notes,
         } for p, plan in plans]
@@ -530,12 +577,20 @@ def cmd_batch(args: argparse.Namespace) -> int:
     """Everything, on a folder: the normal level of operation."""
     from afm_copilot import batch
 
+    try:
+        reviews = (load_reviews(args.morphology_reviews)
+                   if args.morphology_reviews else {})
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"Could not read morphology reviews: {exc}", file=sys.stderr)
+        return 1
+
     out = Path(args.out)
     summary = batch.run([Path(p) for p in args.inputs], out,
                         deduplicate=not args.keep_duplicates,
                         do_clean=not args.no_clean,
                         do_draw=not args.no_images,
-                        do_despike=args.despike)
+                        do_despike=args.despike,
+                        morphology_reviews=reviews)
 
     if not summary["scans_read"]:
         print("Nothing to read.", file=sys.stderr)
@@ -648,6 +703,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_self = sub.add_parser(
         "selftest", help="check that Gwyddion can be driven headlessly")
     p_self.set_defaults(func=cmd_selftest)
+
+    p_masks = sub.add_parser(
+        "propose-masks",
+        help="generate competing grain masks for visual/AI review",
+        description=(
+            "Runs Gwyddion's independent height, slope, curvature, edge, "
+            "Otsu and watershed grain markers on separate copies of each "
+            "scan. It never levels, interpolates, or removes height data."))
+    p_masks.add_argument("inputs", nargs="+", help="files or folders")
+    p_masks.add_argument("--out", required=True,
+                         help="directory for candidate .gwy masks and manifest")
+    p_masks.set_defaults(func=cmd_propose_masks)
 
     p_img = sub.add_parser(
         "batch-images",
@@ -797,6 +864,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="show the full reasoning for each scan")
     p_plan.add_argument("--out", default=None,
                         help="also write the measurements to this directory")
+    p_plan.add_argument(
+        "--morphology-reviews", default=None, metavar="REVIEWS.json",
+        help="audited visual/AI morphology reviews; restrictive reviews can "
+             "only make processing more conservative")
     p_plan.set_defaults(func=cmd_plan)
 
     p_batch = sub.add_parser(
@@ -820,6 +891,10 @@ def build_parser() -> argparse.ArgumentParser:
                          help="repair isolated pixels first — only when you "
                               "know the sample has no small tall features of "
                               "its own, which nothing here can tell apart")
+    p_batch.add_argument(
+        "--morphology-reviews", default=None, metavar="REVIEWS.json",
+        help="audited visual/AI morphology reviews; restrictive reviews can "
+             "only make processing more conservative")
     p_batch.set_defaults(func=cmd_batch)
 
     return parser

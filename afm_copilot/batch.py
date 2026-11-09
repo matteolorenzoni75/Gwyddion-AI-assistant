@@ -25,7 +25,8 @@ import numpy as np
 from afm_copilot import frame, instrument, quality, tip
 from afm_copilot.decide import object_mask, plan_for
 from afm_copilot.features import measure
-from afm_copilot.gwy_io import Channel, load_height, save_height
+from afm_copilot.gwy_io import Channel, load_height, load_mask, save_height
+from afm_copilot.morphology import MorphologyReview
 
 RAW_SUFFIXES = {".ibw", ".tiff", ".tif", ".spm", ".nid", ".mi", ".sxm", ".jpk"}
 
@@ -44,6 +45,9 @@ class ScanResult:
     size_um: float = 0.0
     pixel_nm: float = 0.0
     recipe: str = ""
+    morphology_family: str = ""
+    morphology_review_source: str = ""
+    morphology_restricted: bool = False
     # From the instrument's own note, when the original file is still around.
     # Session dates scans taken together, which is what lets one calibration
     # sample speak for the rest of them.
@@ -65,6 +69,9 @@ class ScanResult:
     rms_before_nm: float | None = None
     rms_after_nm: float | None = None
     over_flattened: bool = False
+    belly_before_nm: float | None = None
+    belly_after_nm: float | None = None
+    curvature_regressed: bool = False
     steps: list[str] = field(default_factory=list)
     measurements: dict = field(default_factory=dict)
 
@@ -285,6 +292,52 @@ def clean(work: list[tuple[ScanResult, Path]], out: Path,
                 s["title"] for s in record.get("steps", []) if s.get("applied")
             ]
             entry.over_flattened = lost_too_much(entry)
+            output = Path(record.get("output") or out / "clean" /
+                          (path.stem + ".gwy"))
+            _withhold_curved_result(entry, path, output)
+
+
+def _slow_axis_belly_nm(data: np.ndarray) -> float:
+    """Residual slow-axis curvature after removing the best straight line."""
+    profile = np.nanmean(np.asarray(data, dtype=float), axis=1)
+    good = np.isfinite(profile)
+    if good.sum() < 3:
+        return float("nan")
+    axis = np.linspace(-1.0, 1.0, profile.size)
+    slope = np.polyfit(axis[good], profile[good], 1)
+    return float(np.std(profile[good] - np.polyval(slope, axis[good])) * 1e9)
+
+
+def _curvature_grew(before_nm: float, after_nm: float) -> bool:
+    """Whether cleaning wrote a meaningful new slow-axis bow into a frame.
+
+    Measured on the 199-scan training batch.  Small numerical differences are
+    common, but a rise above both 0.25 nm and 10% of the incoming curvature
+    made a formerly flat terrace visibly bend in 21 scans.  The output is
+    withheld rather than repaired: guessing which operation to undo could
+    remove real feedback structure.
+    """
+    if not (np.isfinite(before_nm) and np.isfinite(after_nm)):
+        return False
+    return after_nm - before_nm > max(0.25, abs(before_nm) * 0.10)
+
+
+def _withhold_curved_result(entry: ScanResult, before: Path, after: Path) -> None:
+    """Keep the prepared input as the published result when flatness regresses."""
+    try:
+        before_nm = _slow_axis_belly_nm(load_height(before).data)
+        after_nm = _slow_axis_belly_nm(load_height(after).data)
+    except (OSError, ValueError):
+        return
+    entry.belly_before_nm = round(before_nm, 4)
+    entry.belly_after_nm = round(after_nm, 4)
+    if not _curvature_grew(before_nm, after_nm):
+        return
+    entry.curvature_regressed = True
+    entry.cleaned = False
+    entry.steps = []
+    entry.why.append(
+        "cleaning withheld: it increased slow-axis curvature on the prepared frame")
 
 
 def lost_too_much(entry: ScanResult) -> bool:
@@ -410,7 +463,8 @@ def _gwyddion_ranges(paths: list[Path]) -> dict[str, list[float]]:
 
 def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         do_clean: bool = True, do_draw: bool = True,
-        do_despike: bool = False) -> dict:
+        do_despike: bool = False,
+        morphology_reviews: dict[str, MorphologyReview] | None = None) -> dict:
     """
     Take a batch through every stage and report what happened.
 
@@ -488,6 +542,10 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
             continue
 
         cropped, report = frame.crop_to_data(channel)
+        operator_mask = load_mask(path, channel)
+        if operator_mask is not None and report["interrupted"]:
+            operator_mask = operator_mask[
+                report["first_row"]:report["last_row"] + 1, :]
         source_for_cleaning = path
         if report["interrupted"]:
             entry.cropped_from = report["rows_total"]
@@ -507,8 +565,13 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
                 continue
             seen.append((name, mark))
 
-        plan = plan_for(cropped)
+        review = (morphology_reviews or {}).get(name)
+        plan = plan_for(cropped, operator_mask=operator_mask,
+                        morphology_review=review)
         entry.recipe = plan.recipe_key
+        entry.morphology_family = plan.morphology_family
+        entry.morphology_review_source = plan.morphology_review_source
+        entry.morphology_restricted = plan.morphology_restricted
         entry.needs_despike = plan.needs_despike
         entry.spike_fraction = round(plan.spike_fraction, 5)
         # One levelling for the whole scan. Measuring on its own would fit the
@@ -528,7 +591,8 @@ def run(inputs: list[Path], out: Path, *, deduplicate: bool = True,
         if plan.has_objects and plan.levelling is not None:
             source_for_cleaning = save_height(
                 cropped, out / "prepared" / (name + ".gwy"),
-                mask=object_mask(plan.levelling.flat))
+                mask=(plan.operator_mask if plan.operator_mask is not None
+                      else object_mask(plan.levelling.flat)))
 
         probe = tip.for_scan(plan.levelling.flat, cropped.pixel_size)
         entry.tip_radius_nm = round(probe.radius * 1e9, 2)

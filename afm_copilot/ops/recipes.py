@@ -76,6 +76,22 @@ class Recipe:
 
 _ALL: list[Recipe] = [
     Recipe(
+        key="facet-terraces",
+        title="Level distinct terraces by their facets",
+        purpose="Orient a stepped or terraced surface with its facets upright, "
+                "without fitting a curved background through its step heights.",
+        when_to_use="Only when the strict height-histogram test finds two or "
+                    "more narrow, clearly separated levels.",
+        when_not_to_use="Particle fields, fibre networks, broad slopes or a "
+                        "single rough population.  These are not terraces even "
+                        "when their height range is large.",
+        steps=(
+            "facet_level",
+            "remove_scars",
+            "fix_zero",
+        ),
+    ),
+    Recipe(
         key="quick-clean",
         title="Quick clean",
         purpose="The routine tidy-up that most scans need before anything else: "

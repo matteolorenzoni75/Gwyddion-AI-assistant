@@ -24,6 +24,7 @@ import math
 import numpy as np
 
 from afm_copilot.gwy_io import Channel
+from afm_copilot.morphology import MorphologyReview
 
 # Below this, a scan's height variation contains no plane worth removing.
 # A genuinely raw scan essentially never reads this low -- the instrument's own
@@ -187,9 +188,25 @@ class Plan:
     already_levelled: bool = False
     notes: list[str] = field(default_factory=list)
     recipe_key: str = "level-only"
+    # Terraces are not objects on a background.  Their distinct, narrow height
+    # levels make the facet-oriented levelling route safer than fitting a
+    # background through their steps.
+    has_terraces: bool = False
     # The surface this plan was decided on, so the stages after it can use the
     # same one rather than each fitting its own background.
     levelling: "Levelling | None" = None
+    # An operator-drawn Gwyddion mask takes precedence over a proposed mask.
+    # It is held on the Plan so the batch can write precisely the region the
+    # decision was measured around, rather than detecting it again later.
+    operator_mask: np.ndarray | None = None
+    # Semantic review is deliberately asymmetric.  It may veto an automatic
+    # object mask when the image is continuous morphology with no defensible
+    # background, but it never enables a stronger correction.  A real
+    # operator-drawn mask remains authoritative.
+    morphology_family: str = ""
+    morphology_review_source: str = ""
+    morphology_restricted: bool = False
+    morphology_evidence: list[str] = field(default_factory=list)
 
     def explain(self) -> str:
         lines = [f"Recommended: {self.recipe_key}", ""]
@@ -661,14 +678,17 @@ def choose_background_degree(
     return 0, explained
 
 
-def plan_for(channel: Channel) -> Plan:
+def plan_for(channel: Channel,
+             operator_mask: np.ndarray | None = None,
+             morphology_review: MorphologyReview | None = None) -> Plan:
     """
     Measure a scan and say what it needs, with the numbers.
 
     The levelling it settles on is carried on the returned Plan, so the stages
     that follow describe the same surface instead of each working out its own.
     """
-    from afm_copilot.analysis import plane_fraction
+    from afm_copilot.analysis import (MANY_SEPARATE_PIECES, height_levels,
+                                      plane_fraction)
 
     data = np.asarray(channel.data, dtype=float)
     tilt = plane_fraction(data)
@@ -679,15 +699,98 @@ def plan_for(channel: Channel) -> Plan:
     # out, find the objects in what is left, then choose the real background
     # with those excluded, and look once more.
     above, below = _find_features(data)
-    objects = above | below
+    automatic_objects = above | below
+    supplied_mask = None
+    if operator_mask is not None:
+        proposed = np.asarray(operator_mask, dtype=bool)
+        # A manual mask is authoritative only when it is genuinely associated
+        # with this frame and still leaves a majority background for a fit.
+        # Otherwise it may be a stale selection from another channel.
+        if proposed.shape == data.shape and proposed.any() \
+                and proposed.mean() <= MASK_LEAVES_NOTHING:
+            supplied_mask = proposed
+
+    # A semantic review can say that the apparent pieces tile the surface and
+    # therefore do not define an unmasked background.  This is a veto only:
+    # it cannot manufacture a mask or authorise material removal.  A manual
+    # operator mask is a concrete correction target and takes precedence.
+    morphology_restricted = bool(
+        morphology_review is not None
+        and morphology_review.restricts_automatic_masking
+        and supplied_mask is None)
+
+    objects = supplied_mask if supplied_mask is not None else automatic_objects
     fraction = float(objects.mean())
     raised, sunken = float(above.mean()), float(below.mean())
     # Below the lower bound there is nothing worth protecting; above the upper
     # one there is too little background left to fit anything on.
-    has_objects = MIN_OBJECT_FRACTION < fraction < 0.60
+    has_objects = (not morphology_restricted
+                   and (supplied_mask is not None
+                        or MIN_OBJECT_FRACTION < fraction < 0.60))
 
+    # A terrace is a small set of narrow, separated height populations.  This
+    # starts with the same strict histogram test that authorises a terrace
+    # height in the report.  A network of many separate grains can split a
+    # histogram too, but is not a terrace and must not be facet-levelled.
+    from scipy import ndimage
+    _, pieces = ndimage.label(automatic_objects)
+    # Do not plane-level before finding peaks.  A plane fitted through a
+    # staircase turns its discrete populations into ramps and hides the very
+    # facets that should determine the correction.
+    terrace_levels = height_levels(channel)
+    terrace_surface = data
+    terrace_source = "directly in the raw map"
+    # A global least-squares plane is a poor preconditioner for terraces: the
+    # step itself pulls the plane and turns each plateau into a ramp.  Estimate
+    # the prevalent facet from the median *local* slope instead.  Sharp edges
+    # are discarded before taking the median, so subtracting this plane keeps
+    # the height offsets between broad plateaux.  This fallback was measured on
+    # all 44 kept blind scans: it produced two or more candidate levels on five
+    # scans, but the independent within-level flatness test accepted only the
+    # visually unambiguous two-plateau scan (scan-043).  Particle layers
+    # scan-028/029 and the four ambiguous candidates stayed rejected.
+    if not _levels_are_flat(terrace_surface, terrace_levels):
+        facet_surface = _subtract_dominant_facet(data)
+        facet_channel = Channel(
+            name=channel.name,
+            data=facet_surface,
+            xreal=channel.xreal,
+            yreal=channel.yreal,
+            xy_unit=channel.xy_unit,
+            z_unit=channel.z_unit,
+            source=channel.source,
+            meta=channel.meta,
+        )
+        facet_levels = height_levels(facet_channel)
+        if _levels_are_flat(facet_surface, facet_levels):
+            terrace_levels = facet_levels
+            terrace_surface = facet_surface
+            terrace_source = ("after estimating and removing the dominant "
+                              "local facet")
+    has_terraces = (not morphology_restricted
+                    and supplied_mask is None
+                    and _levels_are_flat(terrace_surface, terrace_levels)
+                    and (pieces < MANY_SEPARATE_PIECES
+                         or len(terrace_levels) >= 3))
+
+    # Once broad flat levels are established, the minority level is not an
+    # "object" to hide from a background fit.  Carrying both conclusions made
+    # the recipe say Facet Level while the measurements still reused a masked
+    # object levelling.  Chain the stronger semantic conclusion instead.
+    if has_terraces:
+        has_objects = False
     mask = objects if has_objects else None
     settled = level(data, mask)
+    if morphology_restricted and settled.degree > 1:
+        # The review says there is no reliable background population.  Higher
+        # orders may then be fitting the morphology itself.  Plane removal is
+        # still defensible as acquisition tilt and matches the conservative
+        # `level-only` recipe that will be applied by Gwyddion.
+        settled = Levelling(
+            degree=1,
+            explained=settled.explained,
+            flat=_subtract_background(data, 1),
+        )
     degree, explained = settled.degree, settled.explained
 
     from afm_copilot.features import row_banding, row_step_fraction
@@ -711,6 +814,15 @@ def plan_for(channel: Channel) -> Plan:
         tilt=tilt,
         explained_by_degree=explained,
         already_levelled=tilt < FLAT_ENOUGH,
+        has_terraces=has_terraces,
+        operator_mask=supplied_mask,
+        morphology_family=(morphology_review.family
+                           if morphology_review is not None else ""),
+        morphology_review_source=(morphology_review.source
+                                  if morphology_review is not None else ""),
+        morphology_restricted=morphology_restricted,
+        morphology_evidence=(list(morphology_review.evidence)
+                             if morphology_review is not None else []),
     )
 
     if plan.already_levelled:
@@ -723,7 +835,22 @@ def plan_for(channel: Channel) -> Plan:
             f"A plane accounts for {tilt * 100:.0f}% of the height variation, "
             f"so there is real tilt to remove.")
 
-    if has_objects:
+    if supplied_mask is not None:
+        plan.notes.append(
+            f"An operator mask protects {fraction * 100:.0f}% of the frame. "
+            "The background is fitted only on its unmasked pixels; the mask "
+            "is not an instruction to remove or interpolate the marked "
+            "material.")
+    elif morphology_restricted:
+        plan.notes.append(
+            "A semantic morphology review identifies a continuous granular "
+            "surface rather than isolated objects on a defensible flat "
+            "background. Automatic masking, curved-background fitting and "
+            "row-by-row correction are therefore blocked; only plane "
+            "levelling is proposed.")
+        for evidence in plan.morphology_evidence:
+            plan.notes.append(f"Review evidence: {evidence}")
+    elif has_objects:
         # Which way they depart matters more than how many there are: the same
         # count means grains on a substrate or pores in a film, and those are
         # not the same sample.
@@ -751,7 +878,20 @@ def plan_for(channel: Channel) -> Plan:
             "Nothing stands clear of the surface, in either direction — no "
             "separate features to protect from the fit.")
 
-    if plan.rows_are_structure:
+    if has_terraces:
+        plan.notes.append(
+            "The height histogram has distinct, narrow levels rather than one "
+            "broad population, so facet levelling is preferred over fitting a "
+            f"background through the steps. They were found {terrace_source}, "
+            "and each population separately fits a flat facet.")
+
+    if plan.morphology_restricted and plan.line_defects:
+        plan.notes.append(
+            f"The numerical diagnostics still flag {plan.stepped_rows:.0%} "
+            "of the rows as displaced, but the semantic review makes that "
+            "ambiguous with the continuous sample texture. Row-by-row "
+            "correction is not applied.")
+    elif plan.rows_are_structure:
         plan.notes.append(
             "The row-to-row variation repeats, so it is the sample and not an "
             "offset — this surface has structure running along the slow scan "
@@ -773,7 +913,13 @@ def plan_for(channel: Channel) -> Plan:
             f"two apart. Nothing is repaired on this number alone; use "
             f"`--despike` if you know the sample has no such features.")
 
-    if degree == 0:
+    if plan.morphology_restricted:
+        plan.notes.append(
+            f"A plane accounts for {explained[1] * 100:.0f}% of the height "
+            "variation. Higher polynomial orders are deliberately ignored: "
+            "without a separate background they could be fitting the "
+            "morphology itself.")
+    elif degree == 0:
         plan.notes.append(
             "The background needs no curvature removed: a higher order does "
             "not flatten it further, and fitting one anyway would remove real "
@@ -788,6 +934,84 @@ def plan_for(channel: Channel) -> Plan:
     plan.levelling = settled
     plan.recipe_key = _recipe_for_plan(plan)
     return plan
+
+
+def _levels_are_flat(data: np.ndarray, levels: list[float]) -> bool:
+    """Require geometrically flat levels, not merely peaks in a histogram.
+
+    A smooth sine or a bowl dwells near its turning points and can make two
+    narrow histogram peaks.  Assigning every pixel to its nearest proposed
+    level, then fitting a plane to each assigned level separately, exposes the
+    difference: a genuine terrace leaves only its local roughness, while a
+    curved surface leaves a substantial fraction of the level separation.  A
+    separate plane is essential: the terraces may share a global tilt, which
+    Facet Level is about to remove.
+    """
+    if len(levels) < 2:
+        return False
+    centres = np.asarray(levels, dtype=float)
+    gaps = np.diff(np.sort(centres))
+    minimum_gap = float(gaps.min()) if gaps.size else 0.0
+    if not minimum_gap > 0:
+        return False
+    values = np.asarray(data, dtype=float)
+    finite = values[np.isfinite(values)]
+    if finite.size < 1024:
+        return False
+    all_values = np.asarray(data, dtype=float)
+    usable = np.isfinite(all_values)
+    assigned = np.argmin(np.abs(all_values[..., None] - centres), axis=2)
+    design = _design(all_values.shape, 1)
+    residuals = []
+    for index in range(len(centres)):
+        take = usable & (assigned == index)
+        # A level occupying less than 5% has no stable area from which to
+        # establish a facet.  The histogram peak alone is not enough.
+        if take.mean() < 0.05:
+            return False
+        flat = take.ravel()
+        try:
+            coef, *_ = np.linalg.lstsq(design[flat], all_values.ravel()[flat],
+                                       rcond=None)
+        except np.linalg.LinAlgError:
+            return False
+        residuals.append(all_values.ravel()[flat] - design[flat] @ coef)
+    residual = np.concatenate(residuals)
+    return float(np.std(residual)) <= 0.15 * minimum_gap
+
+
+def _subtract_dominant_facet(data: np.ndarray) -> np.ndarray:
+    """Remove prevalent local slope while preserving offsets between levels.
+
+    The usual plane fit minimises height residuals, so a large step rotates the
+    fitted plane towards itself.  Here the plane is estimated from local
+    gradients instead.  The steepest fifth of gradients is ignored (terrace
+    edges, particles and scars), and the median of the rest describes the
+    prevalent facet.  This is only evidence for the terrace detector; it is
+    not the output image and it never replaces Gwyddion's Facet Level.
+    """
+    from scipy import ndimage
+
+    values = np.asarray(data, dtype=float)
+    finite = np.isfinite(values)
+    if values.ndim != 2 or finite.sum() < 1024:
+        return values.copy()
+    fill = float(np.nanmedian(values))
+    smooth = ndimage.gaussian_filter(
+        np.where(finite, values, fill), sigma=1.0)
+    dy, dx = np.gradient(smooth)
+    magnitude = np.hypot(dx, dy)
+    usable = finite & np.isfinite(magnitude)
+    if usable.sum() < 1024:
+        return values.copy()
+    limit = float(np.percentile(magnitude[usable], 80.0))
+    prevalent = usable & (magnitude <= limit)
+    if prevalent.sum() < 1024:
+        return values.copy()
+    slope_x = float(np.median(dx[prevalent]))
+    slope_y = float(np.median(dy[prevalent]))
+    yy, xx = np.indices(values.shape, dtype=float)
+    return values - slope_x * xx - slope_y * yy
 
 
 def rows_carry_structure(flat: np.ndarray,
@@ -841,6 +1065,10 @@ def rows_carry_structure(flat: np.ndarray,
 
 def _recipe_for_plan(plan: Plan) -> str:
     """Which of the written recipes matches what was measured."""
+    if plan.morphology_restricted:
+        return "level-only"
+    if plan.has_terraces:
+        return "facet-terraces"
     if plan.rows_are_structure:
         # Nothing that aligns rows may touch this scan: the row medians are
         # the sample. 'Roughness ready' is the recipe that levels and repairs
