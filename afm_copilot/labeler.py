@@ -82,7 +82,9 @@ def _load(path: Path, work_dir: Path):
             if isinstance(value, (int, float)):
                 number = float(value)
                 features[key] = number if math.isfinite(number) else None
-    except (ValueError, RuntimeError, ArithmeticError):
+    except Exception:
+        # Never hide a readable topography just because a nonessential
+        # descriptor failed on an unusual instrument export.
         features["feature_extraction_incomplete"] = True
     return channel, features
 
