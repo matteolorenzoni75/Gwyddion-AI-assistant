@@ -4,6 +4,13 @@ import json
 import pytest
 
 from afm_copilot.feedback import feedback_counts, record_feedback
+import afm_copilot.feedback as feedback
+
+
+@pytest.fixture(autouse=True)
+def approved_training_test_root(monkeypatch, tmp_path):
+    # Test fixtures only; production uses a separate approved training folder.
+    monkeypatch.setattr(feedback, "TRAINING_ROOT", tmp_path)
 
 
 def record(path, store, **opts):
@@ -103,3 +110,37 @@ def test_blind_test_folder_with_spaces_is_not_trainable(tmp_path):
     path.write_bytes(b"data")
     with pytest.raises(ValueError, match="Blind/test"):
         record(path, tmp_path / "private")
+
+
+def test_private_index_keeps_original_path_only_locally(tmp_path):
+    scan = tmp_path / "Private_sample_42.ibw"
+    scan.write_bytes(b"instrument data")
+    store = tmp_path / "private"
+    info = record(scan, store)
+    paths = [json.loads(x) for x in
+             (store / "private_source_index.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert paths[0]["path"] == str(scan.resolve())
+    assert paths[0]["scan_id"] == info["scan_id"]
+    assert paths[0]["file_size"] == scan.stat().st_size
+    assert str(scan) not in (store / "operator_feedback.jsonl").read_text(encoding="utf-8")
+
+
+def test_declared_raw_test_corpus_is_excluded_even_if_training_root_overlaps(
+        tmp_path, monkeypatch):
+    folder = tmp_path / "OLD input IMAGES"
+    folder.mkdir()
+    scan = folder / "s001.IBW"
+    scan.write_bytes(b"test corpus data")
+    monkeypatch.setattr(feedback, "TEST_CORPUS_ROOT", folder)
+    with pytest.raises(ValueError, match="Blind/test"):
+        record(scan, tmp_path / "private")
+
+
+def test_scans_outside_approved_training_root_are_rejected(tmp_path, monkeypatch):
+    scan = tmp_path / "unapproved.ibw"
+    scan.write_bytes(b"raw")
+    approved = tmp_path / "approved"
+    approved.mkdir()
+    monkeypatch.setattr(feedback, "TRAINING_ROOT", approved)
+    with pytest.raises(ValueError, match="outside the dedicated training"):
+        record(scan, tmp_path / "private")
