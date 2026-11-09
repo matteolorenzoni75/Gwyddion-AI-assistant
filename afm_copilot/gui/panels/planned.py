@@ -22,7 +22,8 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QFileDialog,
                                QVBoxLayout, QWidget)
 
 from afm_copilot.decide import plan_for
-from afm_copilot.feedback import record_feedback, feedback_counts
+from afm_copilot.feedback import record_feedback
+from afm_copilot.curation import curation_summary
 from afm_copilot.gui.panels.base import Panel
 from afm_copilot.gwy_io import load_height, load_mask, save_height
 from afm_copilot.mask_proposals import propose as propose_masks
@@ -267,14 +268,15 @@ class LearningPanel(Panel):
                 evidence=review.evidence,
                 confirmed_training=self.training_consent.isChecked(),
             )
-            counts = feedback_counts()
+            counts = curation_summary()
         except (OSError, ValueError, TypeError) as exc:
             self.status.setText(f"Feedback not recorded: {exc}")
             return
         self.training_consent.setChecked(False)
         self.status.setText(
             f"Private feedback recorded ({outcome['verdict']}); "
-            f"{counts['confirmed']} confirmed feedback events. "
+            f"{counts['candidate_scans']} unique candidates; "
+            f"{counts['needs_resolution']} needing review. "
             "No automatic training or processing change."
         )
 
