@@ -124,9 +124,26 @@ def convert(raw: list[Path], into: Path,
     done: list[Path] = []
     failed: list[tuple[Path, str]] = []
 
-    todo = [p for p in raw if not (into / (p.stem + ".gwy")).exists()]
+    # Gwyddion's converter writes <stem>.gwy. Two different source files
+    # sharing a stem would overwrite one another, including when extensions
+    # or parent folders differ. Refuse those files, but continue the others.
+    by_stem: dict[str, list[Path]] = {}
+    for source in sorted(set(raw)):
+        by_stem.setdefault(source.stem.casefold(), []).append(source)
+    safe_raw: list[Path] = []
+    for sources in by_stem.values():
+        if len(sources) > 1:
+            failed.extend(
+                (source, "source-name collision: conversion skipped to "
+                 "prevent overwriting a different scan")
+                for source in sources
+            )
+        else:
+            safe_raw.extend(sources)
+
+    todo = [p for p in safe_raw if not (into / (p.stem + ".gwy")).exists()]
     done.extend(into / (p.stem + ".gwy")
-                for p in raw if (into / (p.stem + ".gwy")).exists())
+                for p in safe_raw if (into / (p.stem + ".gwy")).exists())
 
     if todo:
         try:
