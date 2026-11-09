@@ -1,4 +1,4 @@
-"""Read-only inventory and calibration audit of private AFM instrument files.
+r"""Read-only inventory and calibration audit of private AFM instrument files.
 
 Run from the repository root:
     .venv\Scripts\python.exe tools\audit_raw_dataset.py
