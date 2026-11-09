@@ -117,3 +117,23 @@ def test_unrealistic_metric_extent_is_flagged_not_corrected(tmp_path):
     assert summary["calibration_flags"]["height_xy_extent_gt_1mm_review"] == 1
     assert summary["extent_outlier_anonymous_ids"] == ["AFM-99999"]
     assert rows[0]["channels"][0]["xreal_m"] == 13.46
+
+
+def test_exact_raw_duplicates_are_counted_without_publishing_digests(tmp_path):
+    folder = tmp_path / "raw"
+    folder.mkdir()
+    (folder / "a.ibw").write_bytes(b"same raw bytes")
+    (folder / "b.TIFF").write_bytes(b"same raw bytes")
+    (folder / "c.ibw").write_bytes(b"unique contents")
+    private, shared = audit.make_entries(audit.discover(folder), folder)
+    assert len({r["sha256"] for r in private}) == 2
+    assert sum(r["byte_identical_duplicate"] for r in shared) == 1
+    summary = audit.build_summary(shared, folder, False)
+    assert summary["distinct_byte_sequences"] == 2
+    assert summary["byte_identical_duplicate_files"] == 1
+    archive = audit.write_reports(tmp_path / "report", private, shared, summary)
+    with zipfile.ZipFile(archive) as z:
+        contents = "\n".join(z.read(name).decode("utf-8") for name in z.namelist())
+    assert private[0]["sha256"] not in contents
+    assert "same raw bytes" not in contents
+    assert "a.ibw" not in contents
