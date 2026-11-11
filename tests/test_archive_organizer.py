@@ -33,7 +33,7 @@ def test_preview_detects_identical_repeated_files_without_move(tmp_path):
     assert one.read_bytes() == two.read_bytes() == b"abc"
     targets = [r["destination"].casefold() for r in result["entries"]]
     assert len(set(targets)) == 3
-    assert all(Path(x).parent == root for x in targets)
+    assert all(Path(r["destination"]).parent == root for r in result["entries"])
 
 
 def test_explicit_execute_flattens_and_only_removes_empty_subdirs(tmp_path):
