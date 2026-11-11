@@ -65,3 +65,20 @@ Il dedup attuale opera sulle immagini gia' etichettate e produce un
 usare esclusivamente gli ID candidati dopo gli ulteriori controlli.
 Per la valutazione finale, coppie trace/retrace e conversioni della stessa
 acquisizione non potranno finire in partizioni opposte.
+
+### Preparare la lista depurata in locale (nessuna cancellazione)
+
+```powershell
+.\.venv\Scripts\python.exe -B -m afm_copilot.dedup --prepare
+```
+
+Scrive unicamente nella cartella privata del Labeler il file
+`PRIVATE_dedup_selection.json`, contenente gli ID interni da utilizzare
+in un futuro trainer, le copie esatte soppresse e gli eventuali conflitti.
+Il database originale di 244 etichette e i file TIFF/IBW/GWY **non cambiano**.
+Non caricare né pubblicare il JSON privato. Il comando stampa solo aggregati.
+
+Il futuro pool di testing, ampliabile senza etichettatura iniziale,
+deve essere mantenuto separato: i suoi file non diventano
+automaticamente esempi supervisionati, né possono fornire metriche
+di accuratezza senza riferimenti verificati a posteriori.
