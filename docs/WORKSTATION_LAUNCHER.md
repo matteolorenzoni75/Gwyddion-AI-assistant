@@ -96,3 +96,26 @@ reported **8 candidate original/manual pairs among 328 scanned files**;
 zero matching automated counterparts and no ambiguous pairs. These are
 filename/adjacency matches and must still be validated by opening the
 calibrated AFM images. No source material is modified by the search.
+
+## Comparison viewer: instrument raw import fix
+
+A real operator screenshot exposed an `AssertionError` while opening an
+original `.ibw` in the three-way viewer. The viewer previously tried to
+parse every file with `gwyfile` as GWY first, and on IBW this can raise
+`AssertionError` before Gwyddion's instrument converter can run.
+
+The corrected viewer sends raw IBW/TIFF/SPM directly through the existing
+`GwyBridge` into its private temporary conversion directory. Files known
+to be `.gwy` use the native GWY reader. Operator-corrected files with
+unusual suffixes still attempt native GWY first, catching parser errors
+and falling back to the bridge.
+
+An unassociated automatic result is explicitly described as not paired,
+not as a missing original. A new 'Associa risultato automatico...' button
+lets the operator select an existing processed image; selection is checked
+for readability and cannot point to the original or the manual target.
+Accepted associations are saved to a private JSON manifest outside Git.
+
+The eight manual/original pairs are preserved; no processed image is
+created, inferred or silently fabricated by the association button.
+Run `tests/test_compare_gui_import.py` on Windows to verify the import fix.
