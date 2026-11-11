@@ -120,9 +120,14 @@ class CompareWindow(QMainWindow):
         if not path:
             return None, {}
         file = Path(path)
-        if file.suffix.lower() == ".gwy":
+        # Operator-corrected Gwyddion files sometimes have names like
+        # "sample.ibw corrected with facet level" (no .gwy extension).
+        # First try the native Gwyddion reader by file content.
+        try:
             ch = load_height(file)
             return ch, {}
+        except (OSError, ValueError, TypeError):
+            pass
         ch, metrics = _load(file, self.work_dir)
         return ch, metrics
 
