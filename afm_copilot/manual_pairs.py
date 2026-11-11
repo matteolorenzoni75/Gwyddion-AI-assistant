@@ -135,6 +135,24 @@ def main(argv=None):
                "pairs": [], "summary": {}}
     chunks = [scan_folder(Path(root), max_files=args.max_files) for root in roots]
     results["pairs"] = [p for part in chunks for p in part["pairs"]]
+    # Preserve manually associated / generated automatic derivatives when
+    # the operator reruns discovery. Matching needs both exact paths.
+    existing_manifest = PRIVATE_ROOT / "PRIVATE_manual_pair_candidates.json"
+    if existing_manifest.is_file():
+        try:
+            existing_rows = json.loads(existing_manifest.read_text(
+                encoding="utf-8")).get("pairs", [])
+            prior = {
+                (r["original"], r["manual"]): r.get("automated")
+                for r in existing_rows
+                if isinstance(r, dict) and r.get("original") and r.get("manual")
+            }
+            for row in results["pairs"]:
+                previous = prior.get((row["original"], row["manual"]))
+                if previous and Path(previous).is_file():
+                    row["automated"] = previous
+        except (ValueError, OSError, KeyError, TypeError):
+            pass
     results["summary"] = {
         "directories_searched": sum(Path(x).is_dir() for x in roots),
         "files_inspected": sum(c["scanned"] for c in chunks),
