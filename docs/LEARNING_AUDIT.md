@@ -82,3 +82,33 @@ Il futuro pool di testing, ampliabile senza etichettatura iniziale,
 deve essere mantenuto separato: i suoi file non diventano
 automaticamente esempi supervisionati, né possono fornire metriche
 di accuratezza senza riferimenti verificati a posteriori.
+
+## Baseline ML offline — sperimentale
+
+Il primo classificatore usa esclusivamente descrittori numerici calcolati
+dal motore AFM (mai filename, note, ID di campione o tag degli artefatti).
+Confronta un classificatore di maggioranza e ExtraTrees mediante CV
+esplorativa a gruppi; le coppie trace/retrace plausibili restano nello
+stesso fold. Le classi con meno di cinque immagini non entrano in questo
+primo benchmark, ma conservano tutte le etichette nel database.
+
+Prerequisito ML opzionale:
+
+```powershell
+cd C:\AFM_image_wizard
+.\.venv\Scripts\python.exe -m pip install -e ".[ml]"
+.\.venv\Scripts\python.exe -B -m pytest tests\test_ml_baseline.py -q
+.\.venv\Scripts\python.exe -B -m afm_copilot.ml_baseline
+```
+
+Il comando esegue il training **solo temporaneamente** sul PC;
+non salva modelli, non modifica immagini o ricette Gwyddion e stampa
+metriche aggregate (out-of-fold macro-F1, accuracy e recall per classe).
+Non e' una stima di generalizzazione indipendente: la separazione
+trace/retrace e la dedup SHA non certificano l'indipendenza di campioni
+o l'equivalenza fra esportazioni TIFF e IBW.
+
+Si devono verificare in seguito i duplicati cross-format e la coppia
+di etichette in conflitto senza riscrivere i dati etichettati.
+Un futuro pool non etichettato puo' servire a osservare i risultati
+del modello, ma non a misurare l'accuratezza senza riferimento esperto.
