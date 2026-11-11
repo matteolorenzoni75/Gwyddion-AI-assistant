@@ -34,10 +34,12 @@ def test_mismatched_calibration_refused():
     assert not result["comparable"]
 
 
-def test_synoptic_window_uses_splitter_and_visible_navigation():
+def test_synoptic_window_uses_splitter_and_visible_navigation(monkeypatch):
     from PySide6.QtWidgets import QApplication, QSplitter
     from afm_copilot.compare_gui import CompareWindow
     app = QApplication.instance() or QApplication([])
+    # Do not invoke local instrument conversion in a layout smoke test.
+    monkeypatch.setattr(CompareWindow, "_load_private_manifest", lambda self: None)
     window = CompareWindow()
     try:
         assert isinstance(window.viewer_splitter, QSplitter)
