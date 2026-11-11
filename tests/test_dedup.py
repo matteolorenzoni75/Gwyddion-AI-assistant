@@ -1,7 +1,8 @@
 """No source/label deletion; keep distinct trace and retrace acquisitions."""
 import json
 
-from afm_copilot.dedup import _direction, plan_rows, safe_report
+from afm_copilot.dedup import (_direction, plan_rows, safe_report,
+                              prepare_private_selection)
 
 
 def row(n, name, digest=None, family="terraces", quality="unknown",
@@ -89,3 +90,19 @@ def test_direction_recognizes_only_clear_terminal_tokens():
     assert _direction("C:/folder/a_trace.ibw") == ("a", "trace")
     assert _direction("C:/folder/a_retrace.tiff") == ("a", "retrace")
     assert _direction("C:/folder/traceability.ibw") is None
+
+
+def test_prepare_selection_is_private_reversible_and_no_originals_deleted(tmp_path):
+    rows = [row(1, "first.ibw", digest("a")),
+            row(2, "copy.ibw", digest("a")),
+            row(3, "second.ibw", digest("b"))]
+    private = tmp_path / "private" / "PRIVATE_dedup_selection.json"
+    result = prepare_private_selection(rows, private)
+    assert private.is_file()
+    payload = json.loads(private.read_text(encoding="utf-8"))
+    assert payload["candidate_scan_ids"] == [1, 3]
+    assert payload["suppressed_exact_copy_scan_ids"] == [2]
+    assert payload["no_original_files_changed"] is True
+    assert payload["not_a_validated_training_split"] is True
+    assert result["exact_duplicates_excluded"] == 1
+    assert "candidate_scan_ids" not in str(result)
