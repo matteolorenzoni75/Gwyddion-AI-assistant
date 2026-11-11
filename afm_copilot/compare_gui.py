@@ -22,6 +22,7 @@ from afm_copilot.gui.viewer import ScanViewer
 from afm_copilot.labeler import _load
 from afm_copilot.manual_pairs import PRIVATE_ROOT, scan_folder
 from afm_copilot.gwy_io import load_height
+from afm_copilot.comparison_metrics import shape_comparison
 
 VERDICTS = (
     ("Manual correction preferred", "manual_preferred"),
@@ -354,6 +355,7 @@ class CompareWindow(QMainWindow):
             return
         row = self.rows[index]
         lines = []
+        measurements = {}
         for viewer, key in zip(self.viewers, ("original", "manual", "automated")):
             path = row.get(key)
             if not path:
@@ -364,6 +366,7 @@ class CompareWindow(QMainWindow):
                 channel, _ = self._channel(
                     path, operator_corrected=(key == "manual"))
                 viewer.show_channel(channel)
+                measurements[key] = channel
                 lines.append(
                     f"{key}: {channel.xres}x{channel.yres}, "
                     f"RMS={channel.rms * 1e9:.3g} nm, "
@@ -373,9 +376,19 @@ class CompareWindow(QMainWindow):
                 lines.append(
                     f"{key}: import failed ({type(error).__name__})"
                     + (f" — {str(error)[:180]}" if str(error) else ""))
+        if "manual" in measurements and "automated" in measurements:
+            comparison = shape_comparison(measurements["manual"],
+                                          measurements["automated"])
+            if comparison["comparable"]:
+                lines.append(
+                    f"Manuale vs automatico: RMSE profilo = "
+                    f"{comparison['shape_rmse_nm']:.2f} nm "
+                    "(dopo offset Z; non misura l'accuratezza)")
+            else:
+                lines.append("Confronto numerico non possibile: " +
+                             comparison["reason"])
         self.info.setText("  |  ".join(lines) +
-                          "\nDisplay ranges can differ: compare numerical values, "
-                          "not only image colors.")
+                          "\nI colori possono usare scale differenti.")
         self.verdict.setCurrentIndex(4)
 
     def _validate(self):
