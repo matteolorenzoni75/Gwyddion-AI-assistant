@@ -7,13 +7,14 @@ from __future__ import annotations
 
 import json
 import sys
+import numpy as np
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QProcess
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QFileDialog, QHBoxLayout, QLabel,
+    QApplication, QCheckBox, QComboBox, QFileDialog, QHBoxLayout, QLabel,
     QMainWindow, QMessageBox, QPushButton, QVBoxLayout, QWidget,
     QSplitter, QSizePolicy,
 )
@@ -87,6 +88,13 @@ class CompareWindow(QMainWindow):
         self.next_button = QPushButton("Successiva ▶")
         self.next_button.clicked.connect(self._next)
         selection.addWidget(self.next_button)
+        self.common_colors = QCheckBox("Scala Z comune")
+        self.common_colors.setChecked(True)
+        self.common_colors.setToolTip(
+            "Usa lo stesso intervallo fisico di altezze, dopo l'offset di "
+            "zero di ciascuna immagine. Non cambia i valori Z.")
+        self.common_colors.toggled.connect(self._apply_common_scale)
+        selection.addWidget(self.common_colors)
         layout.addLayout(selection)
 
         self.viewer_splitter = QSplitter(Qt.Horizontal)
@@ -98,6 +106,7 @@ class CompareWindow(QMainWindow):
             heading.setAlignment(Qt.AlignCenter)
             column.addWidget(heading)
             viewer = ScanViewer()
+            viewer.profile_check.setChecked(False)
             column.addWidget(viewer, 1)
             self.viewers.append(viewer)
             holder = QWidget()
@@ -341,6 +350,36 @@ class CompareWindow(QMainWindow):
                 pass
         return _load(file, self.work_dir)
 
+    def _apply_common_scale(self, *_):
+        loaded = [v for v in self.viewers if v.channel is not None]
+        if not loaded:
+            return
+        if self.common_colors.isChecked():
+            # Every viewer shows (Z - local min) / selected display unit.
+            # Use one common robust physical span to avoid color deception.
+            limits = []
+            for viewer in loaded:
+                image = np.asarray(viewer.channel.data, dtype=float)
+                finite = image[np.isfinite(image)]
+                if finite.size:
+                    limits.append(float(
+                        np.percentile(finite, 99.5) - np.min(finite)))
+            span = max(limits, default=1e-9)
+            if span <= 0:
+                span = 1e-9
+            for viewer in loaded:
+                viewer.hist.setLevels(0, span / viewer._unit_factor)
+        else:
+            # Restore the individual robust histogram intervals.
+            for viewer in loaded:
+                displayed = np.asarray(viewer.image.image, dtype=float)
+                finite = displayed[np.isfinite(displayed)]
+                if finite.size:
+                    lo, hi = np.percentile(finite, (0.5, 99.5))
+                    if hi <= lo:
+                        hi = lo + 1e-12
+                    viewer.hist.setLevels(float(lo), float(hi))
+
     def _status_for(self, row, key):
         path = row.get(key)
         if not path:
@@ -388,8 +427,10 @@ class CompareWindow(QMainWindow):
             else:
                 lines.append("Confronto numerico non possibile: " +
                              comparison["reason"])
+        self._apply_common_scale()
         self.info.setText("  |  ".join(lines) +
-                          "\nI colori possono usare scale differenti.")
+                          "\nLa scala Z comune usa il minimo locale come zero. "
+                          "Valuta anche i profili numerici.")
         self.verdict.setCurrentIndex(4)
 
     def _validate(self):
