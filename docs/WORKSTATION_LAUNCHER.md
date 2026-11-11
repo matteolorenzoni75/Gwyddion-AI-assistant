@@ -225,3 +225,50 @@ git pull --ff-only origin dev/image-wizard
 Do not start the same batch twice simultaneously. It is limited to the
 manually associated pairs, not to an unbounded directory discovery. Any
 correction shown in the viewer requires visual expert validation.
+
+## Synoptic GUI v2: responsive navigation + operator-tuned Gwyddion masks
+
+The comparison window now sizes itself to the available desktop (instead of
+forcing 1740 px), uses a three-pane horizontal splitter, and keeps scan
+navigation on a dedicated compact row and 'Conferma e successiva' immediately
+beside a bounded-width verdict selector. Every pane remains adjustable.
+
+The default three-view comparison hides profile lines and offers a
+**Scala Z comune** control: the same physical colour-range after each image's
+local minimum is set to zero; data values remain untouched.
+
+**Maschera e correggi...** on a selected original:
+
+1. Calculate a provisional robust plane solely for finding feature candidates.
+2. Display excluded-from-fit pixels as a translucent red mask on the height
+   topography; tune threshold in nm and choose raised/sunken/both features.
+   Small isolated points are not blindly treated as sample features.
+3. Reject a mask if fewer than 1% or more than 40% of pixels are marked, or
+   any row has below 25% unmasked support. These are provisional safeguards,
+   not a universal scientific optimum.
+4. With explicit operator approval, persist the exact binary mask privately
+   with source identity and SHA-256; run ONLY on this one original through
+   Gwyddion 32-bit / PyGwy.
+5. Save a fresh local `.gwy` containing the height and operator mask; Gwyddion
+   executes `plane_around_objects` (`polylevel` mask EXCLUDE) **before**
+   `remove_mask`. The optional `Remove Scars` is disabled by default and
+   runs afterwards only if the operator enables it.
+6. Keep the previous automatic candidate and original/manual corrections;
+   save a new versioned result in `02_Automatic_Results` and associate it
+   with the third comparison panel pending manual approval.
+
+The GUI also displays a median-offset-corrected *shape* RMSE between manual
+and automatic height matrices when XY calibration and pixel grids match.
+This is a similarity diagnostic, not proof that manual processing is correct.
+
+Run these tests first (on Windows with the existing virtual environment):
+
+```powershell
+cd C:\AFM_image_wizard
+git pull --ff-only origin dev/image-wizard
+.\.venv\Scripts\python.exe -B -m pytest tests\test_mask_refinement.py tests\test_comparison_metrics.py tests\test_compare_gui_import.py tests\test_auto_compare.py -q
+Start-Process 'C:\AFM_image_wizard\AFM Copilot.bat'
+```
+
+Validation of the PyGwy mask processing on real AFM scans is still required.
+No full-archive run, auto-labeling or auto-approval is performed.
