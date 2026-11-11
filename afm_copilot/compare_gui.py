@@ -220,7 +220,11 @@ class CompareWindow(QMainWindow):
             return
         details = bytes(self.auto_process.readAllStandardOutput()).decode(
             "utf-8", "replace")
+        previous_index = self.select.currentIndex()
         self._load_private_manifest()
+        if 0 <= previous_index < len(self.rows):
+            self.select.setCurrentIndex(previous_index)
+            self._show(previous_index)
         QMessageBox.information(
             self, "Elaborazione completata",
             "I risultati prodotti sono collegati alla terza colonna e "
