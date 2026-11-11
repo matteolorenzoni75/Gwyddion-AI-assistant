@@ -1,0 +1,79 @@
+# Unified AFM Copilot workstation
+
+Entry point: `C:\AFM_image_wizard\AFM Copilot.bat`.
+The batch file starts the local PySide6 launcher with the project's Python 3
+virtual environment, never the system's legacy Gwyddion Python 2.7.
+
+## Integrated actions
+
+- Main AFM Copilot GUI with scan viewer and Gwyddion recipes.
+- Standalone Expert Labeler from launcher or main GUI Tools menu.
+- Synoptic comparison GUI: ORIGINAL | OPERATOR-CORRECTED | AUTOMATIC.
+  This view displays the three height maps, their RMS and range, and records
+  one of five operator verdicts in a private local JSONL audit.
+- Read-only discovery of older manually corrected originals: also handles
+  names of the form `sample.ibw corrected with ...` and `sample corrected.tiff`.
+  This is based on the existing `tools/collect_corrected_targets.py` logic;
+  it finds candidate matches, not proven map equivalences.
+- Recursive archive organizer preview (potentially slow): no move, delete or
+  conversion during preview; do not run two copies simultaneously.
+- Safe cache cleanup preview and opt-in cleanup of temporary Python/test caches.
+- Git status and explicit push of **already committed** branch
+  `dev/image-wizard` only. No automatic add/commit, no forced push, no
+  remote deletion and no merge to main.
+
+## Discover the user's older corrected images
+
+```powershell
+cd C:\AFM_image_wizard
+.\.venv\Scripts\python.exe -B -m afm_copilot.manual_pairs
+```
+
+By default it visits known smaller local folders, NOT the huge archive that
+may currently be undergoing a checksum inventory. To search a known folder:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m afm_copilot.manual_pairs --root C:\AFM_Automation\corrected
+```
+
+Private details go to
+`%USERPROFILE%\AFM_Copilot_Private_Audits\manual_comparisons\PRIVATE_manual_pair_candidates.json`.
+Operator verdicts go into `PRIVATE_correction_verdicts.jsonl` in the same
+private location. Neither path should be uploaded or committed.
+
+Matches currently require a unique original in the **same directory**.
+Matches across renamed files or different directories, and comparison of
+actual calibrated arrays, remain an explicit next step. A manually corrected
+version is never assumed better just because its name says corrected.
+
+## Windows verification
+
+```powershell
+cd C:\AFM_image_wizard
+git pull --ff-only origin dev/image-wizard
+.\.venv\Scripts\python.exe -B -m pytest tests\test_manual_pairs.py tests\test_maintenance.py tests\test_channel_safety.py tests\test_correction_gate.py -q
+.\.venv\Scripts\python.exe -B -m afm_copilot.manual_pairs
+```
+
+## Safety
+
+The new modules do not move AFM originals, delete duplicate files,
+rewrite corrected samples, train on operator validations or publish private
+data. The GitHub changes are committed remotely to dev/image-wizard; after
+git pull they are already on the user's computer, so a push will usually
+report everything up to date.
+
+Use the existing archive organizer ONLY in preview mode until an independently
+verified backup and proper image similarity detection exist.
+
+The comparison GUI is a human-review aid, not a substitute for verified
+image-level matching. Non-topography channels are retained and not leveled.
+
+## Remaining development
+
+- Cross-directory original/manual/auto matching with calibrated image evidence.
+- Read-only batch before/after QA with fixed color scale across columns.
+- Channel-aware processing of amp/phase/error/current/potential with suitable
+  numerical QA while keeping the primary cleaning work in topography.
+- Clustering genuinely repeated scan acquisitions independently of file names.
+- UI-led review and reversible relocation of archive files after backups.
