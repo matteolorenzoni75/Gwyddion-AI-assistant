@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from afm_copilot.ops.recipes import get_recipe
+from afm_copilot.channels import operation_policy
 
 # These operations must not run automatically without additional, verified
 # evidence. "Smooth-looking" output is not evidence of physical fidelity.
@@ -34,7 +35,8 @@ class Decision:
                 "reason": self.reason}
 
 
-def gate_recipe(plan: Any, quality: Any, *, calibration_verified: bool) -> dict:
+def gate_recipe(plan: Any, quality: Any, *, calibration_verified: bool,
+                channel_role: str = "height") -> dict:
     """Return operations with safety decisions; no conversion or processing."""
     proposed = getattr(plan, "recipe_key", "level-only")
     recipe = get_recipe(proposed)
@@ -47,7 +49,11 @@ def gate_recipe(plan: Any, quality: Any, *, calibration_verified: bool) -> dict:
     for op in recipe.operations:
         status = "safe_auto"
         reason = "Existing conservative operation; original preserved"
-        if not calibration_verified:
+        policy = operation_policy(channel_role, op.key)
+        if channel_role != "height":
+            status = policy["decision"]
+            reason = policy["reason"]
+        elif not calibration_verified:
             status, reason = "blocked", "Physical XYZ calibration not verified"
         elif op.key in MANUAL_ONLY:
             status, reason = "review", "Requires protected-feature or measurement-loss verification"
@@ -62,7 +68,7 @@ def gate_recipe(plan: Any, quality: Any, *, calibration_verified: bool) -> dict:
             status, reason = "blocked", "Facet levelling requires verified terraces"
         elif op.key == "remove_scars" and "glitches" not in checks:
             status, reason = "review", "Scars not confirmed independently of real steps"
-        if status in ("blocked", "review"):
+        if status not in ("safe_auto",):
             blocked.append(op.key)
         decisions.append(Decision(op.key, status, reason).to_dict())
 
@@ -81,10 +87,12 @@ def gate_recipe(plan: Any, quality: Any, *, calibration_verified: bool) -> dict:
         "schema_version": 1,
         "proposed_recipe": proposed,
         "calibration_verified": bool(calibration_verified),
+        "channel_role": channel_role,
         "operations": decisions,
         "review_or_blocked_operations": blocked,
         "artifact_warnings": warnings,
-        "safe_to_execute_full_recipe_without_review": not blocked and calibration_verified,
+        "safe_to_execute_full_recipe_without_review": (
+            not blocked and calibration_verified and channel_role == "height"),
         "image_modified": False,
         "warning": ("Safety assessment only. An operator-approved processor "
                     "must later verify before/after physical metrics."),
