@@ -257,7 +257,8 @@ class CompareWindow(QMainWindow):
             approved = save_approved_mask(
                 index, Path(self.rows[index]["original"]),
                 proposal.mask, threshold_nm=proposal.threshold_nm,
-                mode=dialog.mode.currentData())
+                mode=dialog.mode.currentData(),
+                remove_scars=dialog.remove_scars.isChecked())
         except (OSError, ValueError) as error:
             QMessageBox.warning(self, "Maschera non salvata", str(error))
             return
