@@ -48,7 +48,8 @@ def robust_plane(data: np.ndarray) -> np.ndarray:
 
 
 def propose_mask(data: np.ndarray, *, threshold_nm: float,
-                 mode: str = "both", dilation_pixels: int = 2) -> MaskProposal:
+                 mode: str = "both", dilation_pixels: int = 2,
+                 estimated_plane: np.ndarray | None = None) -> MaskProposal:
     """Exclude candidate features, while refusing masks with poor background.
 
     The threshold is in nm after a *provisional* robust plane subtraction.
@@ -61,7 +62,10 @@ def propose_mask(data: np.ndarray, *, threshold_nm: float,
     if dilation_pixels not in (0, 1, 2, 3, 4):
         raise ValueError("Mask dilation range is 0..4 pixels")
     z = np.asarray(data, dtype=float)
-    plane = robust_plane(z)
+    plane = robust_plane(z) if estimated_plane is None else np.asarray(
+        estimated_plane, dtype=float)
+    if plane.shape != z.shape or not np.isfinite(plane).all():
+        raise ValueError("Invalid provisional background")
     residual = z - plane
     # Local median suppresses isolated one-pixel spikes that must not
     # masquerade as morphology to be protected by a background fit.
