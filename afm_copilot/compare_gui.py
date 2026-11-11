@@ -116,20 +116,38 @@ class CompareWindow(QMainWindow):
                 f"Found {len(result['pairs'])} candidate pairs among "
                 f"{result['scanned']} files. No input has been modified.")
 
-    def _channel(self, path):
+    def _channel(self, path, *, operator_corrected=False):
+        """Route raw instrument files through the Gwyddion import bridge.
+
+        Corrected files may be Gwyddion containers without a .gwy suffix.
+        Never pass a normal .ibw/.tiff to the gwyfile parser by default:
+        gwyfile can raise AssertionError on their non-GWY header.
+        """
         if not path:
             return None, {}
         file = Path(path)
-        # Operator-corrected Gwyddion files sometimes have names like
-        # "sample.ibw corrected with facet level" (no .gwy extension).
-        # First try the native Gwyddion reader by file content.
-        try:
-            ch = load_height(file)
-            return ch, {}
-        except (OSError, ValueError, TypeError):
-            pass
-        ch, metrics = _load(file, self.work_dir)
-        return ch, metrics
+        if not file.is_file():
+            raise FileNotFoundError("Expected local image is no longer available")
+        if file.suffix.lower() == ".gwy":
+            return load_height(file), {}
+        if operator_corrected:
+            try:
+                return load_height(file), {}
+            except (OSError, ValueError, TypeError, AssertionError):
+                # An operator may instead have saved an instrument-format
+                # image with a 'corrected' suffix. Let Gwyddion attempt import.
+                pass
+        return _load(file, self.work_dir)
+
+    def _status_for(self, row, key):
+        path = row.get(key)
+        if not path:
+            return ("No automatic output has been paired yet"
+                    if key == "automated" else "Not associated")
+        if not Path(path).is_file():
+            return "File does not exist at the recorded path"
+        return "File present"
+
 
     def _show(self, index):
         if not 0 <= index < len(self.rows):
@@ -140,10 +158,11 @@ class CompareWindow(QMainWindow):
             path = row.get(key)
             if not path:
                 viewer.show_channel(None)
-                lines.append(f"{key}: not found")
+                lines.append(f"{key}: {self._status_for(row, key)}")
                 continue
             try:
-                channel, _ = self._channel(path)
+                channel, _ = self._channel(
+                    path, operator_corrected=(key == "manual"))
                 viewer.show_channel(channel)
                 lines.append(
                     f"{key}: {channel.xres}x{channel.yres}, "
@@ -151,7 +170,9 @@ class CompareWindow(QMainWindow):
                     f"Z range={channel.z_range * 1e9:.3g} nm")
             except Exception as error:
                 viewer.show_channel(None)
-                lines.append(f"{key}: unreadable ({type(error).__name__})")
+                lines.append(
+                    f"{key}: import failed ({type(error).__name__})"
+                    + (f" — {str(error)[:180]}" if str(error) else ""))
         self.info.setText("  |  ".join(lines) +
                           "\nDisplay ranges can differ: compare numerical values, "
                           "not only image colors.")
