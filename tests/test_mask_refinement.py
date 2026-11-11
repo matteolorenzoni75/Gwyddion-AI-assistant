@@ -106,3 +106,51 @@ def test_unapproved_or_changed_scan_is_rejected(tmp_path, monkeypatch):
     raw.write_bytes(b"updated raw")
     with pytest.raises(ValueError, match="Original/manual pair not available"):
         masked.run_masked(0, approval, manifest=manifest)
+
+
+def test_cached_plane_produces_same_mask():
+    z = synthetic()
+    estimated = robust_plane(z)
+    a = propose_mask(z, threshold_nm=2, mode="raised")
+    b = propose_mask(z, threshold_nm=2, mode="raised", estimated_plane=estimated)
+    assert np.array_equal(a.mask, b.mask)
+
+
+def test_scar_step_must_be_approved_explicitly(tmp_path, monkeypatch):
+    raw = tmp_path / "raw.ibw"
+    raw.write_bytes(b"raw instrument bytes")
+    manual = tmp_path / "manual.gwy"
+    manual.write_bytes(b"manual file")
+    manifest = tmp_path / "pairs.json"
+    manifest.write_text(json.dumps({"pairs": [
+        {"original": str(raw), "manual": str(manual)}
+    ]}))
+    monkeypatch.setattr(masked, "MASK_ROOT", tmp_path / "private" / "masks")
+    z = synthetic()
+    mask = propose_mask(z, threshold_nm=2, mode="raised").mask
+    approval = masked.save_approved_mask(
+        0, raw, mask, threshold_nm=2, mode="raised", remove_scars=True)
+    metadata = json.loads(approval.read_text(encoding="utf-8"))
+    assert metadata["remove_scars"] is True
+    seen = []
+
+    class FakeBridge:
+        def run_recipe(self, recipe, paths, out_dir):
+            seen.extend(recipe.steps)
+            dest = Path(out_dir) / Path(paths[0]).name
+            shutil.copyfile(paths[0], dest)
+            return {"results": [{
+                "ok": True, "output": str(dest),
+                "steps": [{"key": key, "applied": True}
+                          for key in recipe.steps],
+            }]}
+
+    report = masked.run_masked(
+        0, approval, manifest=manifest, output=tmp_path / "outputs",
+        importer=lambda path, work: (
+            Channel("Height", z, 20e-6, 20e-6), {}),
+        bridge_factory=FakeBridge)
+    assert report["status"] == "generated_for_review"
+    assert seen == ["plane_around_objects", "remove_mask", "remove_scars"]
+    assert raw.read_bytes() == b"raw instrument bytes"
+    assert manual.read_bytes() == b"manual file"
