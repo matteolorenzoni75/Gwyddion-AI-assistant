@@ -119,3 +119,48 @@ Accepted associations are saved to a private JSON manifest outside Git.
 The eight manual/original pairs are preserved; no processed image is
 created, inferred or silently fabricated by the association button.
 Run `tests/test_compare_gui_import.py` on Windows to verify the import fix.
+
+## Local directory organization and explicit paths
+
+`AFM Copilot.bat` now shows a **DOVE SONO LE IMMAGINI** area with real
+Windows locations, existence flags and buttons to open the containing folder:
+the full AFM raw archive, the older testing/original directory, the older
+GUI generated output location, the private manual-correction pair manifest,
+the private expert-label SQLite and the project source checkout. It also
+lists each distinct folder containing a discovered manual correction; this
+list comes from the local PRIVATE pair manifest, not from GitHub.
+
+To inspect the map without rescanning the full archive:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m afm_copilot.directory_map
+```
+
+To create an EMPTY and separate workspace for future validated work:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m afm_copilot.directory_map --prepare-workspace
+```
+
+The workspace lives at `C:\AFM_Automation\AFM_Copilot_Workspace` and has
+four directories: `01_Manual_To_Review`, `02_Automatic_Results`,
+`03_Approved`, `04_Reports`. This command only creates empty directories.
+It does not relocate manual corrections, create new automatic scans,
+delete duplicate files, rename or flatten the 97,082-file raw archive,
+or alter the existing private label database. It is safe to rerun.
+
+The detailed JSON directory map is private at
+`%USERPROFILE%\AFM_Copilot_Private_Audits\directory_map\PRIVATE_locations.json`.
+
+The comparison viewer also fixes a small test/status mismatch by reporting
+`Automatic output not yet associated` when no automated image was linked.
+This distinguishes a missing association from a missing raw file.
+
+Windows verification:
+
+```powershell
+cd C:\AFM_image_wizard
+git pull --ff-only origin dev/image-wizard
+.\.venv\Scripts\python.exe -B -m pytest tests\test_compare_gui_import.py tests\test_directory_map.py tests\test_workstation_launcher.py -q
+.\.venv\Scripts\python.exe -B -m afm_copilot.directory_map --prepare-workspace
+```
