@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -138,14 +139,52 @@ def safe_report(rows: list[dict]) -> dict:
             if not k.startswith("_private_")}
 
 
+def prepare_private_selection(rows: list[dict], destination: Path) -> dict:
+    """Save a reversible, locally private candidate list. No source deletion."""
+    from afm_copilot.feedback import PROJECT_ROOT
+
+    out = destination.expanduser().resolve()
+    root = PROJECT_ROOT.resolve()
+    if out == root or root in out.parents:
+        raise ValueError("Private selection must be outside Git checkout")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    report = plan_rows(rows)
+    # These IDs are local database primary keys, not labels or public IDs.
+    contents = {
+        "schema_version": 1,
+        "source": "AFM_Expert_Labeler_private_database",
+        "selection_type": "reversible_exact_sha256",
+        "candidate_scan_ids": report["_private_selection"]["candidate_ids"],
+        "suppressed_exact_copy_scan_ids": report["_private_selection"]["exact_duplicate_ids"],
+        "quarantined_conflicting_scan_ids": report["_private_selection"]["conflict_ids"],
+        "possible_trace_retrace_pairs": report["_private_selection"]["possible_trace_retrace_pairs"],
+        "no_original_files_changed": True,
+        "not_a_validated_training_split": True,
+    }
+    temporary = out.with_name(out.name + ".tmp")
+    temporary.write_text(json.dumps(contents, indent=2), encoding="utf-8")
+    os.replace(temporary, out)
+    return safe_report(rows)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=DEFAULT_DB)
+    parser.add_argument("--prepare", action="store_true",
+                        help="write private reversible candidate selection outside Git")
     args = parser.parse_args(argv)
     if not args.db.is_file():
         print(json.dumps({"error": "private_label_database_not_found"}))
         return 2
-    print(json.dumps(safe_report(get_scans(args.db)), indent=2, sort_keys=True))
+    rows = get_scans(args.db)
+    if args.prepare:
+        output = args.db.parent / "PRIVATE_dedup_selection.json"
+        report = prepare_private_selection(rows, output)
+        report["private_selection_prepared"] = True
+    else:
+        report = safe_report(rows)
+        report["private_selection_prepared"] = False
+    print(json.dumps(report, indent=2, sort_keys=True))
     return 0
 
 
