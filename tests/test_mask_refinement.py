@@ -1,4 +1,8 @@
-"""Mask thresholding and approved Gwyddion handoff regression checks."""
+"""Mask proposal and mocked Gwyddion handoff regression checks.
+
+These tests validate mask handoff and orchestration, NOT numerical Gwyddion
+processing. Raw inputs, private state and output are separate sibling folders.
+"""
 import json
 import shutil
 from pathlib import Path
@@ -6,9 +10,33 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from afm_copilot.gwy_io import Channel, load_height, load_mask
+from afm_copilot.gwy_io import Channel, load_mask
 from afm_copilot.mask_refinement import propose_mask, robust_plane
 import afm_copilot.masked_compare as masked
+
+
+@pytest.fixture(autouse=True)
+def isolated_private_state(tmp_path, monkeypatch):
+    """Never write a test audit into the operator's actual private archive."""
+    private = tmp_path / "private"
+    private.mkdir()
+    monkeypatch.setattr(masked, "PRIVATE_ROOT", private)
+    monkeypatch.setattr(masked, "MASK_ROOT", private / "masks")
+
+
+def inputs(tmp_path, raw_bytes=b"raw remains unchanged",
+           manual_bytes=b"manual remains unchanged"):
+    source_dir = tmp_path / "inputs"
+    source_dir.mkdir()
+    raw = source_dir / "raw.ibw"
+    manual = source_dir / "manual.gwy"
+    raw.write_bytes(raw_bytes)
+    manual.write_bytes(manual_bytes)
+    manifest = tmp_path / "private" / "PRIVATE_pairs.json"
+    manifest.write_text(json.dumps({"pairs": [{
+        "original": str(raw), "manual": str(manual), "automated": None
+    }]}), encoding="utf-8")
+    return raw, manual, manifest
 
 
 def synthetic():
@@ -47,17 +75,8 @@ def test_mask_guard_refuses_covering_half_of_surface():
     assert not proposal.safe_for_fit
 
 
-def test_gwyddion_receives_exact_approved_mask_and_keeps_raw(tmp_path, monkeypatch):
-    raw = tmp_path / "raw.ibw"
-    manual = tmp_path / "manual.gwy"
-    raw.write_bytes(b"raw remains unchanged")
-    manual.write_bytes(b"manual remains unchanged")
-    rows = [{"original": str(raw), "manual": str(manual), "automated": None}]
-    manifest = tmp_path / "PRIVATE_pairs.json"
-    manifest.write_text(json.dumps({"pairs": rows}), encoding="utf-8")
-    mask_root = tmp_path / "private" / "masks"
-    monkeypatch.setattr(masked, "MASK_ROOT", mask_root)
-    import afm_copilot.masked_compare as mc
+def test_gwyddion_receives_exact_approved_mask_and_keeps_raw(tmp_path):
+    raw, manual, manifest = inputs(tmp_path)
     z = synthetic()
     channel = Channel("Height", z, 20e-6, 20e-6)
     mask = propose_mask(z, threshold_nm=2.0, mode="raised").mask
@@ -86,26 +105,22 @@ def test_gwyddion_receives_exact_approved_mask_and_keeps_raw(tmp_path, monkeypat
     )
     assert result["status"] == "generated_for_review"
     assert recorded
-    output = json.loads(manifest.read_text())["pairs"][0]["automated"]
+    output = json.loads(manifest.read_text(encoding="utf-8"))["pairs"][0]["automated"]
     assert Path(output).is_file()
     assert raw.read_bytes() == b"raw remains unchanged"
     assert manual.read_bytes() == b"manual remains unchanged"
+    assert (tmp_path / "private" / "PRIVATE_masked_corrections.jsonl").is_file()
 
 
-def test_unapproved_or_changed_scan_is_rejected(tmp_path, monkeypatch):
-    raw = tmp_path / "source.ibw"
-    raw.write_bytes(b"first")
-    manifest = tmp_path / "pairs.json"
-    manifest.write_text(json.dumps({"pairs": [
-        {"original": str(raw), "manual": str(tmp_path/"manual.gwy")}
-    ]}))
-    monkeypatch.setattr(masked, "MASK_ROOT", tmp_path/"private"/"masks")
+def test_unapproved_or_changed_scan_is_rejected(tmp_path):
+    raw, _manual, manifest = inputs(tmp_path, raw_bytes=b"first")
+    mask = propose_mask(synthetic(), threshold_nm=2, mode="raised").mask
     approval = masked.save_approved_mask(
-        0, raw, np.ones((16,16), dtype=bool),
-        threshold_nm=2, mode="raised")
-    raw.write_bytes(b"updated raw")
-    with pytest.raises(ValueError, match="Original/manual pair not available"):
-        masked.run_masked(0, approval, manifest=manifest)
+        0, raw, mask, threshold_nm=2, mode="raised")
+    raw.write_bytes(b"updated raw with different bytes")
+    with pytest.raises(ValueError, match="Original has changed since mask approval"):
+        masked.run_masked(0, approval, manifest=manifest,
+                          output=tmp_path / "outputs")
 
 
 def test_cached_plane_produces_same_mask():
@@ -116,16 +131,9 @@ def test_cached_plane_produces_same_mask():
     assert np.array_equal(a.mask, b.mask)
 
 
-def test_scar_step_must_be_approved_explicitly(tmp_path, monkeypatch):
-    raw = tmp_path / "raw.ibw"
-    raw.write_bytes(b"raw instrument bytes")
-    manual = tmp_path / "manual.gwy"
-    manual.write_bytes(b"manual file")
-    manifest = tmp_path / "pairs.json"
-    manifest.write_text(json.dumps({"pairs": [
-        {"original": str(raw), "manual": str(manual)}
-    ]}))
-    monkeypatch.setattr(masked, "MASK_ROOT", tmp_path / "private" / "masks")
+def test_scar_step_must_be_approved_explicitly(tmp_path):
+    raw, manual, manifest = inputs(
+        tmp_path, raw_bytes=b"raw instrument bytes", manual_bytes=b"manual file")
     z = synthetic()
     mask = propose_mask(z, threshold_nm=2, mode="raised").mask
     approval = masked.save_approved_mask(
@@ -154,3 +162,23 @@ def test_scar_step_must_be_approved_explicitly(tmp_path, monkeypatch):
     assert seen == ["plane_around_objects", "remove_mask", "remove_scars"]
     assert raw.read_bytes() == b"raw instrument bytes"
     assert manual.read_bytes() == b"manual file"
+
+
+@pytest.mark.parametrize("destination", ["same", "nested", "ancestor"])
+def test_output_overlapping_source_remains_blocked(tmp_path, destination):
+    raw, _manual, manifest = inputs(tmp_path)
+    mask = propose_mask(synthetic(), threshold_nm=2, mode="raised").mask
+    approval = masked.save_approved_mask(
+        0, raw, mask, threshold_nm=2, mode="raised")
+    output = {"same": raw.parent,
+              "nested": raw.parent / "outputs",
+              "ancestor": tmp_path}[destination]
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("The importer must not run with an unsafe output")
+
+    with pytest.raises(ValueError, match="Output folder overlaps source"):
+        masked.run_masked(0, approval, manifest=manifest, output=output,
+                          importer=forbidden, bridge_factory=forbidden)
+    assert not (raw.parent / "outputs").exists()
+    assert raw.read_bytes() == b"raw remains unchanged"
