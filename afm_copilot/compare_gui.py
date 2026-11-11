@@ -15,6 +15,7 @@ from PySide6.QtCore import Qt, QProcess
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QFileDialog, QHBoxLayout, QLabel,
     QMainWindow, QMessageBox, QPushButton, QVBoxLayout, QWidget,
+    QSplitter, QSizePolicy,
 )
 
 from afm_copilot.gui.viewer import ScanViewer
@@ -35,23 +36,30 @@ class CompareWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("AFM Copilot — Synoptic correction review")
-        self.resize(1740, 850)
+        desktop = QApplication.primaryScreen()
+        bounds = desktop.availableGeometry() if desktop else None
+        if bounds:
+            self.resize(min(1500, int(bounds.width() * 0.94)),
+                        min(840, int(bounds.height() * 0.90)))
+        else:
+            self.resize(1280, 760)
+        self.setMinimumSize(850, 580)
         self.rows = []
         self.work_dir = Path(tempfile.gettempdir()) / "afm_copilot_compare"
         self.work_dir.mkdir(parents=True, exist_ok=True)
         body = QWidget()
         layout = QVBoxLayout(body)
         top = QHBoxLayout()
-        choose = QPushButton("Open comparison folder")
+        choose = QPushButton("Apri cartella...")
         choose.clicked.connect(self._choose)
         top.addWidget(choose)
-        attach = QPushButton("Associa risultato automatico...")
+        attach = QPushButton("Associa automatico...")
         attach.setToolTip(
             "Seleziona una copia già elaborata in locale per questa scansione. "
             "Nessun dato viene modificato.")
         attach.clicked.connect(self._attach_automated)
         top.addWidget(attach)
-        self.generate_button = QPushButton("Genera correzioni AFM Copilot")
+        self.generate_button = QPushButton("Genera automatiche")
         self.generate_button.setToolTip(
             "Elabora fino a 16 originali della lista privata con le sole "
             "operazioni Gwyddion ammesse dalla diagnosi. Le immagini restano "
@@ -59,11 +67,23 @@ class CompareWindow(QMainWindow):
         self.generate_button.clicked.connect(self._generate_auto)
         top.addWidget(self.generate_button)
         self.auto_process = None
-        self.select = QComboBox()
-        self.select.currentIndexChanged.connect(self._show)
-        top.addWidget(self.select, 1)
         layout.addLayout(top)
-        viewer_row = QHBoxLayout()
+        selection = QHBoxLayout()
+        selection.addWidget(QLabel("Scansione"))
+        self.select = QComboBox()
+        self.select.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.select.currentIndexChanged.connect(self._show)
+        selection.addWidget(self.select, 1)
+        self.previous_button = QPushButton("◀ Precedente")
+        self.previous_button.clicked.connect(self._previous)
+        selection.addWidget(self.previous_button)
+        self.next_button = QPushButton("Successiva ▶")
+        self.next_button.clicked.connect(self._next)
+        selection.addWidget(self.next_button)
+        layout.addLayout(selection)
+
+        self.viewer_splitter = QSplitter(Qt.Horizontal)
+        self.viewer_splitter.setChildrenCollapsible(False)
         self.viewers = []
         for title in ("ORIGINAL / RAW", "CORRETTA MANUALMENTE", "CORREZIONE AUTOMATICA"):
             column = QVBoxLayout()
@@ -75,21 +95,28 @@ class CompareWindow(QMainWindow):
             self.viewers.append(viewer)
             holder = QWidget()
             holder.setLayout(column)
-            viewer_row.addWidget(holder, 1)
-        layout.addLayout(viewer_row, 1)
+            holder.setMinimumWidth(200)
+            self.viewer_splitter.addWidget(holder)
+        for index in range(3):
+            self.viewer_splitter.setStretchFactor(index, 1)
+        self.viewer_splitter.setSizes([1, 1, 1])
+        layout.addWidget(self.viewer_splitter, 1)
         self.info = QLabel("Choose a folder containing original and corrected versions. "
                            "Matches are candidates until visually verified.")
         self.info.setWordWrap(True)
         layout.addWidget(self.info)
         decision = QHBoxLayout()
+        decision.addWidget(QLabel("Valutazione"))
         self.verdict = QComboBox()
+        self.verdict.setMaximumWidth(420)
         for label, key in VERDICTS:
             self.verdict.addItem(label, key)
-        decision.addWidget(QLabel("Operator verdict:"))
         decision.addWidget(self.verdict, 1)
-        save = QPushButton("Validate + next")
+        save = QPushButton("Conferma e successiva")
+        save.setMinimumWidth(150)
         save.clicked.connect(self._validate)
         decision.addWidget(save)
+        decision.addStretch(1)
         layout.addLayout(decision)
         self.setCentralWidget(body)
         self._load_private_manifest()
@@ -119,6 +146,16 @@ class CompareWindow(QMainWindow):
                               "that contains both the original and the operator-corrected file.")
             for viewer in self.viewers:
                 viewer.show_channel(None)
+
+    def _previous(self):
+        index = self.select.currentIndex()
+        if index > 0:
+            self.select.setCurrentIndex(index - 1)
+
+    def _next(self):
+        index = self.select.currentIndex()
+        if 0 <= index < len(self.rows) - 1:
+            self.select.setCurrentIndex(index + 1)
 
     def _choose(self):
         folder = QFileDialog.getExistingDirectory(
