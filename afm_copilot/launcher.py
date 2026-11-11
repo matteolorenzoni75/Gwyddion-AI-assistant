@@ -10,7 +10,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, Qt
+from PySide6.QtCore import QProcess, Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel, QMainWindow,
     QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QStyle,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from afm_copilot.feedback import PROJECT_ROOT
+from afm_copilot.directory_map import build_map, save_private
 
 
 WORKFLOW_ACTIONS = (
@@ -100,6 +102,17 @@ class Launcher(QMainWindow):
         main.setSpacing(16)
 
         main.addWidget(self._section_title(
+            "DOVE SONO LE IMMAGINI",
+            "Percorsi reali sul PC · solo consultazione, nessuno spostamento"))
+        self.directory_box = QWidget()
+        self.directory_grid = QGridLayout(self.directory_box)
+        self.directory_grid.setContentsMargins(0, 0, 0, 0)
+        self.directory_grid.setHorizontalSpacing(10)
+        self.directory_grid.setVerticalSpacing(5)
+        main.addWidget(self.directory_box)
+        self._refresh_locations()
+
+        main.addWidget(self._section_title(
             "ANALISI E VALIDAZIONE",
             "Apri le funzioni scientifiche o recupera correzioni già effettuate"))
         actions = QGridLayout()
@@ -150,6 +163,67 @@ class Launcher(QMainWindow):
 
         self.setCentralWidget(root)
         self._style()
+
+    def _refresh_locations(self):
+        """Show actual configured folders and discovered manual correction roots."""
+        from PySide6.QtWidgets import QLayoutItem
+        while self.directory_grid.count():
+            item = self.directory_grid.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+            elif item.layout():
+                item.layout().deleteLater()
+        report = build_map()
+        self._location_report = report
+        row = 0
+        for entry in report["locations"]:
+            self._location_row(row, entry["title"], entry["path"],
+                               entry["exists"], entry["description"])
+            row += 1
+        for entry in report["manual_correction_folders"]:
+            self._location_row(
+                row, "Correzioni manuali (" + str(entry["candidate_pairs"]) + ")",
+                entry["path"], entry["exists"],
+                "Cartella effettiva della correzione manuale recuperata.")
+            row += 1
+        refresh = QPushButton("Aggiorna percorsi")
+        refresh.setObjectName("smallButton")
+        refresh.clicked.connect(self._refresh_locations)
+        self.directory_grid.addWidget(refresh, row, 1)
+        self.directory_grid.setColumnStretch(1, 1)
+
+    def _location_row(self, row, title, location, exists, description):
+        name = QLabel(title)
+        name.setObjectName("locationTitle")
+        self.directory_grid.addWidget(name, row, 0)
+        path_label = QLabel(location)
+        path_label.setObjectName("locationPath")
+        path_label.setWordWrap(True)
+        path_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        path_label.setToolTip(description)
+        self.directory_grid.addWidget(path_label, row, 1)
+        status = QLabel("OK" if exists else "ASSENTE")
+        status.setObjectName("locationStatus" if exists else "locationMissing")
+        self.directory_grid.addWidget(status, row, 2)
+        button = QPushButton("Apri")
+        button.setObjectName("smallButton")
+        button.setEnabled(exists)
+        button.setToolTip("Apri la cartella in Esplora file; nessuna modifica")
+        button.clicked.connect(
+            lambda _checked=False, p=location: self._open_location(p))
+        self.directory_grid.addWidget(button, row, 3)
+
+    def _open_location(self, location):
+        path = Path(location)
+        if not path.exists():
+            QMessageBox.warning(self, "Percorso non disponibile",
+                                "Il file o la cartella non esiste più.")
+            self._refresh_locations()
+            return
+        target = path if path.is_dir() else path.parent
+        if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(target))):
+            QMessageBox.warning(self, "Impossibile aprire",
+                                "Esplora file non ha aperto il percorso.")
 
     def _section_title(self, title, subtitle):
         holder = QWidget()
@@ -242,6 +316,18 @@ class Launcher(QMainWindow):
             }
             QLabel#sectionSubtitle {
                 color: #6a7a87; font-size: 11px;
+            }
+            QLabel#locationTitle {
+                color: #264759; font-weight: 600; font-size: 11px;
+            }
+            QLabel#locationPath {
+                color: #3c6077; font-family: Consolas; font-size: 10px;
+            }
+            QLabel#locationStatus {
+                color: #287353; font-weight: 700; font-size: 10px;
+            }
+            QLabel#locationMissing {
+                color: #ac6a3f; font-weight: 700; font-size: 10px;
             }
             QFrame#actionCard {
                 background: #ffffff; border: 1px solid #dce5ea;
