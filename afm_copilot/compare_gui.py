@@ -189,7 +189,7 @@ class CompareWindow(QMainWindow):
     def _status_for(self, row, key):
         path = row.get(key)
         if not path:
-            return ("No automatic output has been paired yet"
+            return ("Automatic output not yet associated"
                     if key == "automated" else "Not associated")
         if not Path(path).is_file():
             return "File does not exist at the recorded path"
