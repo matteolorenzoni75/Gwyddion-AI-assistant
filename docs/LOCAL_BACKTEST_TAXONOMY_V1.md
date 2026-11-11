@@ -147,3 +147,24 @@ file paths, per-scan metadata and image previews remain private.
   derivative files.
 
 This document **does not** change current automatic recipe selection.
+
+## Addendum: multichannel AFM is mandatory (operator feedback)
+
+An AFM acquisition may contain several physically distinct channels acquired
+together, even if the principal task is topography cleaning. Preserve the
+channel bundle, metadata, scan direction and pairing across the archive.
+Relevant signals include height/topography, amplitude, phase, feedback/error,
+deflection, electrical current (c-AFM), contact potential (KPFM), frequency
+and vendor-specific channels. Secondary channels may confirm scanner
+artifacts or provide evidence that a feature is physically real.
+
+Only apply topography levelling to a confidently identified height channel.
+Never assume that a voltage-valued signal with a similar visual texture is
+a height image. Height, phase, current and potential have different scaling,
+noise distributions and permissible corrections. Unknown channel roles are
+held for review. See afm_copilot.channels and afm_copilot.correction_gate.
+
+Archive flattening must not split channels or delete duplicate bytes. For
+the new local-only organizer see docs/ARCHIVE_ORGANIZER.md. Its repetition
+recognition is currently exact bytes plus filename candidates, not robust
+same-field-of-view image recognition.
