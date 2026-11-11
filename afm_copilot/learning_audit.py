@@ -68,8 +68,12 @@ def audit_rows(rows: list[dict]) -> dict:
     blockers = []
     if not labeled:
         blockers.append("no_labels")
+    # A specimen/session ID is useful but not mandatory for exploratory
+    # labeling. Keep absence visible; independent evaluation must still be
+    # verified later before any generalization claim.
+    warnings = []
     if missing_group:
-        blockers.append("eligible_scans_without_specimen_group")
+        warnings.append("specimen_independence_not_verified")
     if any(len(parts) > 1 for parts in groups.values()):
         blockers.append("specimen_group_crosses_splits")
     if any(len(parts) > 1 for parts in hashes.values()):
@@ -102,6 +106,7 @@ def audit_rows(rows: list[dict]) -> dict:
         "cross_partition_identical_bytes": sum(len(x) > 1 for x in hashes.values()),
         "eligible_scans_missing_specimen_group": missing_group,
         "blockers": blockers,
+        "warnings": warnings,
         "training_ready": not blockers,
         "model_trained": False,
         "contains_raw_data": False,
