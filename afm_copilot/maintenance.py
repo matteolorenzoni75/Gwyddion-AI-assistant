@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -19,16 +20,16 @@ BRANCH = "dev/image-wizard"
 def candidates(root: Path = PROJECT_ROOT) -> list[Path]:
     root = root.resolve()
     found = []
-    for p in root.rglob("*"):
-        if not p.is_dir() or p.name not in SAFE_CACHES:
-            continue
-        parts = p.relative_to(root).parts
-        if any(x in (".git", ".venv", "out", "data", "export") for x in parts):
-            continue
-        if p.is_symlink():
-            continue
-        found.append(p)
-    return sorted(found, key=lambda p: (len(p.parts), str(p)), reverse=True)
+    excluded = {".git", ".venv", "out", "data", "export"}
+    for current, dirs, _ in os.walk(root, followlinks=False):
+        here = Path(current)
+        for directory in dirs:
+            path = here / directory
+            if directory in SAFE_CACHES and not path.is_symlink():
+                found.append(path)
+        dirs[:] = [name for name in dirs if name not in SAFE_CACHES
+                   and name not in excluded and not (here / name).is_symlink()]
+    return sorted(found, key=lambda path: (len(path.parts), str(path)), reverse=True)
 
 
 def tidy(*, apply=False, root: Path = PROJECT_ROOT) -> dict:
