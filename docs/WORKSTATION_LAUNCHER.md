@@ -164,3 +164,22 @@ git pull --ff-only origin dev/image-wizard
 .\.venv\Scripts\python.exe -B -m pytest tests\test_compare_gui_import.py tests\test_directory_map.py tests\test_workstation_launcher.py -q
 .\.venv\Scripts\python.exe -B -m afm_copilot.directory_map --prepare-workspace
 ```
+
+## Launcher layout adjustment
+
+The launcher header now identifies the processing engine as
+**Gwyddion 32-bit | PyGwy (Python 2.7)**, alongside the native icon
+extracted from the locally installed Gwyddion executable. If the
+executable cannot be located, the program uses the standard application
+icon rather than inventing an official logo.
+
+The image directory list is moved below all action cards, just above
+the activity log. It displays only the user-facing directories for
+the full AFM archive, historic raw scans, older processed GUI images,
+new automatically processed and approved workspace results, plus
+the actual discovered folders of manual corrections. The code checkout,
+private SQLite database, private manifest file and generic workspace
+container are intentionally omitted from the launcher display.
+
+The previous descriptive tagline has been removed. Buttons and
+workflows otherwise remain the same. No original scan is moved.
