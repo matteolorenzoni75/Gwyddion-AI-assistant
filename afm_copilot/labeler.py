@@ -101,6 +101,7 @@ class LabelerWindow(QMainWindow):
         self.position = -1
         self.pending = False
         self.current_metrics = {}
+        self._form_baseline = None
         self._build()
         self._refresh()
         if not self.rows and DEFAULT_FOLDER.is_dir():
@@ -191,7 +192,8 @@ class LabelerWindow(QMainWindow):
         next_btn.clicked.connect(self._next)
         actions.addWidget(next_btn)
         form_box.addLayout(actions)
-
+        form_box.addWidget(QLabel(
+            "IMPORTANT: Skip does NOT save. Use Save + next to retain labels."))
         form_box.addStretch(1)
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -236,8 +238,30 @@ class LabelerWindow(QMainWindow):
             f"(train {stats['roles']['train']}, validation "
             f"{stats['roles']['validation']}, holdout {stats['roles']['holdout']})")
 
+    def _form_values(self):
+        return (
+            self.family.currentData(), self.quality.currentData(),
+            self.confidence.currentData(), self.group.text(),
+            self.role.currentData(), tuple(sorted(
+                key for key, box in self.flags.items() if box.isChecked())),
+            self.notes.toPlainText(),
+        )
+
+    def _confirm_discard(self):
+        if self._form_baseline is None or self._form_values() == self._form_baseline:
+            return True
+        answer = QMessageBox.question(
+            self, "Unsaved AFM classification",
+            "The current image has unsaved labeling changes. "
+            "Discard them and move on?\n\n"
+            "Choose No, then Save + next to keep the classification.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        return answer == QMessageBox.Yes
+
     def _show(self, index):
         if self.pending or not 0 <= index < len(self.rows):
+            return
+        if self.position != index and not self._confirm_discard():
             return
         self.position = index
         entry = self.rows[index]
@@ -257,6 +281,7 @@ class LabelerWindow(QMainWindow):
         for key, box in self.flags.items():
             box.setChecked(key in entry["artifacts"])
         self.notes.setPlainText(entry.get("notes") or "")
+        self._form_baseline = self._form_values()
         self.pending = True
         self.current_metrics = {}
         self.status.setText("Loading raw scan and measuring descriptors (read-only)...")
@@ -307,7 +332,8 @@ class LabelerWindow(QMainWindow):
             QMessageBox.warning(self, "Label not saved", str(exc))
             return
         self._refresh()
-        self.status.setText("Saved privately. Original raw image unchanged.")
+        self._form_baseline = self._form_values()
+        self.status.setText("Label SAVED in the private database. Original raw image unchanged.")
         if advance:
             self._next()
 
@@ -333,6 +359,9 @@ class LabelerWindow(QMainWindow):
             QMessageBox.information(
                 self, "Import in progress",
                 "Finish loading the current image before closing.")
+            event.ignore()
+            return
+        if not self._confirm_discard():
             event.ignore()
             return
         event.accept()
