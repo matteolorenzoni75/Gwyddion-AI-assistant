@@ -20,3 +20,28 @@ def test_single_batch_entrypoint_launches_workstation():
     assert "pythonw.exe" in text
     assert "git clean" not in text
     assert "git push" not in text
+
+
+def test_symmetric_cards_have_explanations_and_tooltips():
+    pytest.importorskip("PySide6")
+    from afm_copilot.launcher import WORKFLOW_ACTIONS, MAINTENANCE_ACTIONS
+    from PySide6.QtWidgets import QApplication, QToolButton
+    from afm_copilot.launcher import Launcher
+    assert len(WORKFLOW_ACTIONS) == 4
+    assert len(MAINTENANCE_ACTIONS) == 5
+    for name, brief, detail, target, icon_name in (*WORKFLOW_ACTIONS,
+                                                    *MAINTENANCE_ACTIONS):
+        assert name and brief and len(detail) > 40
+        assert icon_name.startswith("SP_")
+    app = QApplication.instance() or QApplication([])
+    win = Launcher()
+    try:
+        assert len(win.action_buttons) == 9
+        helps = win.findChildren(QToolButton, "helpButton")
+        assert len(helps) == 9
+        help_widget = helps[0]
+        help_widget.setChecked(True)
+        assert help_widget.isChecked()
+        assert win.output.isReadOnly()
+    finally:
+        win.close()
