@@ -279,3 +279,19 @@ and testable before they ever touch a real one.
 software to save **both** scan directions for the height channel. See
 [FINDINGS.md §1](docs/data_survey/FINDINGS.md) — it costs nothing at
 acquisition and unlocks detectors that post-processing cannot substitute for.
+
+## Windows: unified AFM Copilot workstation
+
+Start **`AFM Copilot.bat`** from the working copy at
+`C:\AFM_image_wizard`. The unified local launcher provides the main image
+processing GUI, the Expert Labeler, a side-by-side comparison of originals,
+manual corrections and automated outputs, local discovery of previously
+corrected targets, archive preview and safe repository maintenance.
+
+All input scans, expert labels, operator verdicts and private manifests stay
+on the user's Windows PC. Repository maintenance never stages private data
+or merges into `main`.
+
+See [workstation and review guide](docs/WORKSTATION_LAUNCHER.md),
+[archive organizer](docs/ARCHIVE_ORGANIZER.md) and
+[local AFM processing policy](docs/LOCAL_BACKTEST_TAXONOMY_V1.md).
