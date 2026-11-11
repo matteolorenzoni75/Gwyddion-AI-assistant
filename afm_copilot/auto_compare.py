@@ -111,7 +111,13 @@ def process_one(
         return {"state": "held_requires_review", "recipe": plan.recipe_key}
 
     original_recipe = get_recipe(plan.recipe_key)
-    selected = tuple(key for key in original_recipe.steps if key in safe)
+    # This path never creates an operator mask: mask removal is not a
+    # valid stand-alone step. Mask-dependent fitting belongs to the
+    # explicitly approved masked_compare path.
+    selected = tuple(
+        key for key in original_recipe.steps
+        if key in safe and key != "remove_mask"
+    )
     if not selected:
         return {"state": "held_requires_review", "recipe": plan.recipe_key}
 
