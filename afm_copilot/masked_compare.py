@@ -43,6 +43,7 @@ def save_approved_mask(index: int, raw: Path, mask: np.ndarray,
         "source": str(raw), "shape": list(binary.shape),
         "threshold_nm": float(threshold_nm), "polarity": mode,
         "operator_approved": True,
+        "mask_sha256": hashlib.sha256(binary.tobytes()).hexdigest(),
         "remove_scars": bool(remove_scars),
         "masked_fraction": float(binary.mean()),
     }
@@ -77,6 +78,8 @@ def run_masked(index: int, approval: Path, *, manifest: Path = MANIFEST,
         raise ValueError("Insufficient unmasked background")
     if abs(fraction - record["masked_fraction"]) > 1e-7:
         raise ValueError("Mask coverage no longer matches approval")
+    if hashlib.sha256(mask.tobytes()).hexdigest() != record.get("mask_sha256"):
+        raise ValueError("Approved mask content has changed")
     output = output.resolve()
     for p in (raw, manual):
         if output == p.parent or p.parent in output.parents or output in p.parents:
