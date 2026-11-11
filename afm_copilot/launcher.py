@@ -6,20 +6,23 @@ publishes data, deletes originals or changes Git branches.
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, Qt, QUrl
+from PySide6.QtCore import QProcess, Qt, QUrl, QFileInfo
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel, QMainWindow,
     QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QStyle,
+    QFileIconProvider,
     QToolButton, QVBoxLayout, QWidget,
 )
 
 from afm_copilot.feedback import PROJECT_ROOT
-from afm_copilot.directory_map import build_map, save_private
+from afm_copilot.directory_map import build_map
+from afm_copilot.bridge import DEFAULT_GWYDDION_ROOT
 
 
 WORKFLOW_ACTIONS = (
@@ -92,14 +95,22 @@ class Launcher(QMainWindow):
         layout.setContentsMargins(22, 18, 22, 15)
         layout.setSpacing(12)
 
+        header = QHBoxLayout()
+        header.setSpacing(14)
         heading = QLabel("AFM Copilot")
         heading.setObjectName("workstationTitle")
-        layout.addWidget(heading)
-        subtitle = QLabel(
-            "Scientific workstation   •   Topografia prima   •   "
-            "Multicanale   •   100% locale")
-        subtitle.setObjectName("workstationSubtitle")
-        layout.addWidget(subtitle)
+        header.addWidget(heading)
+        header.addStretch(1)
+        gwyddion_icon = QLabel()
+        gwyddion_icon.setObjectName("engineIcon")
+        gwyddion_icon.setFixedSize(32, 32)
+        engine_icon = self._gwyddion_icon()
+        gwyddion_icon.setPixmap(engine_icon.pixmap(30, 30))
+        header.addWidget(gwyddion_icon)
+        engine = QLabel("Motore: Gwyddion 32-bit  |  PyGwy (Python 2.7)")
+        engine.setObjectName("engineLabel")
+        header.addWidget(engine)
+        layout.addLayout(header)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -108,17 +119,6 @@ class Launcher(QMainWindow):
         main = QVBoxLayout(body)
         main.setContentsMargins(0, 4, 0, 2)
         main.setSpacing(16)
-
-        main.addWidget(self._section_title(
-            "DOVE SONO LE IMMAGINI",
-            "Percorsi reali sul PC · solo consultazione, nessuno spostamento"))
-        self.directory_box = QWidget()
-        self.directory_grid = QGridLayout(self.directory_box)
-        self.directory_grid.setContentsMargins(0, 0, 0, 0)
-        self.directory_grid.setHorizontalSpacing(10)
-        self.directory_grid.setVerticalSpacing(5)
-        main.addWidget(self.directory_box)
-        self._refresh_locations()
 
         main.addWidget(self._section_title(
             "ANALISI E VALIDAZIONE",
@@ -147,6 +147,17 @@ class Launcher(QMainWindow):
         maintenance.setColumnStretch(0, 1)
         maintenance.setColumnStretch(1, 1)
         main.addLayout(maintenance)
+
+        main.addWidget(self._section_title(
+            "CARTELLE IMMAGINI",
+            "Originali, correzioni manuali e risultati"))
+        self.directory_box = QWidget()
+        self.directory_grid = QGridLayout(self.directory_box)
+        self.directory_grid.setContentsMargins(0, 0, 0, 0)
+        self.directory_grid.setHorizontalSpacing(10)
+        self.directory_grid.setVerticalSpacing(5)
+        main.addWidget(self.directory_box)
+        self._refresh_locations()
         main.addStretch(1)
         scroll.setWidget(body)
         layout.addWidget(scroll, 1)
@@ -173,18 +184,21 @@ class Launcher(QMainWindow):
         self._style()
 
     def _refresh_locations(self):
-        """Show actual configured folders and discovered manual correction roots."""
-        from PySide6.QtWidgets import QLayoutItem
+        """Only user-facing AFM image directories; never show code or private DB."""
         while self.directory_grid.count():
             item = self.directory_grid.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
-            elif item.layout():
-                item.layout().deleteLater()
         report = build_map()
         self._location_report = report
+        wanted = {
+            "raw_archive", "historical_raw", "gui_processed",
+            "workspace_auto", "workspace_approved"
+        }
+        shown = [entry for entry in report["locations"]
+                 if entry["key"] in wanted]
         row = 0
-        for entry in report["locations"]:
+        for entry in shown:
             self._location_row(row, entry["title"], entry["path"],
                                entry["exists"], entry["description"])
             row += 1
@@ -192,9 +206,9 @@ class Launcher(QMainWindow):
             self._location_row(
                 row, "Correzioni manuali (" + str(entry["candidate_pairs"]) + ")",
                 entry["path"], entry["exists"],
-                "Cartella effettiva della correzione manuale recuperata.")
+                "Cartella che contiene immagini corrette manualmente.")
             row += 1
-        refresh = QPushButton("Aggiorna percorsi")
+        refresh = QPushButton("Aggiorna")
         refresh.setObjectName("smallButton")
         refresh.clicked.connect(self._refresh_locations)
         self.directory_grid.addWidget(refresh, row, 1)
@@ -232,6 +246,17 @@ class Launcher(QMainWindow):
         if not QDesktopServices.openUrl(QUrl.fromLocalFile(str(target))):
             QMessageBox.warning(self, "Impossibile aprire",
                                 "Esplora file non ha aperto il percorso.")
+
+    def _gwyddion_icon(self):
+        """Use the installed Gwyddion 32-bit executable's native Windows icon."""
+        base = Path(os.environ.get("GWYDDION_ROOT", str(DEFAULT_GWYDDION_ROOT)))
+        for executable in (base / "bin" / "gwyddion.exe",
+                           base / "gwyddion.exe"):
+            if executable.is_file():
+                return QFileIconProvider().icon(QFileInfo(str(executable)))
+        # The executable may not be at its default location.
+        # Fallback is a standard application icon, not an invented Gwyddion logo.
+        return self.style().standardIcon(QStyle.SP_ComputerIcon)
 
     def _section_title(self, title, subtitle):
         holder = QWidget()
@@ -317,8 +342,8 @@ class Launcher(QMainWindow):
             QLabel#workstationTitle {
                 color: #143b54; font-size: 27px; font-weight: 700;
             }
-            QLabel#workstationSubtitle {
-                color: #54677a; font-size: 12px;
+            QLabel#engineLabel {
+                color: #345d70; font-size: 12px; font-weight: 600;
             }
             QLabel#sectionLabel {
                 color: #226d84; font-size: 11px;
