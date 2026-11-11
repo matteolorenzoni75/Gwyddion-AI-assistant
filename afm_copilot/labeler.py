@@ -104,7 +104,14 @@ class LabelerWindow(QMainWindow):
         self._form_baseline = None
         self._build()
         self._refresh()
-        if not self.rows and DEFAULT_FOLDER.is_dir():
+        if self.rows:
+            # Opening an existing label database must display a scan immediately,
+            # preferably the first not yet labeled; don't leave the viewer blank.
+            first_unlabeled = next(
+                (i for i, row in enumerate(self.rows)
+                 if row.get("family") is None), 0)
+            self._show(first_unlabeled)
+        elif DEFAULT_FOLDER.is_dir():
             self._add_folder(DEFAULT_FOLDER)
 
     def _build(self):
