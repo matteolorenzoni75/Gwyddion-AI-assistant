@@ -11,7 +11,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QProcess
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QFileDialog, QHBoxLayout, QLabel,
     QMainWindow, QMessageBox, QPushButton, QVBoxLayout, QWidget,
@@ -51,6 +51,14 @@ class CompareWindow(QMainWindow):
             "Nessun dato viene modificato.")
         attach.clicked.connect(self._attach_automated)
         top.addWidget(attach)
+        self.generate_button = QPushButton("Genera correzioni AFM Copilot")
+        self.generate_button.setToolTip(
+            "Elabora fino a 16 originali della lista privata con le sole "
+            "operazioni Gwyddion ammesse dalla diagnosi. Le immagini restano "
+            "da approvare nel confronto sinottico.")
+        self.generate_button.clicked.connect(self._generate_auto)
+        top.addWidget(self.generate_button)
+        self.auto_process = None
         self.select = QComboBox()
         self.select.currentIndexChanged.connect(self._show)
         top.addWidget(self.select, 1)
@@ -121,6 +129,58 @@ class CompareWindow(QMainWindow):
             self.info.setText(
                 f"Found {len(result['pairs'])} candidate pairs among "
                 f"{result['scanned']} files. No input has been modified.")
+
+    def _generate_auto(self):
+        """Run the limited local comparison job without blocking the GUI."""
+        from afm_copilot.manual_pairs import PRIVATE_ROOT
+        manifest = PRIVATE_ROOT / "PRIVATE_manual_pair_candidates.json"
+        if not manifest.is_file():
+            QMessageBox.warning(
+                self, "Nessuna coppia",
+                "Esegui prima 'Cerca correzioni manuali' dal launcher.")
+            return
+        if self.auto_process is not None and self.auto_process.state() != QProcess.NotRunning:
+            QMessageBox.information(
+                self, "Elaborazione in corso", "Il batch locale è già attivo.")
+            return
+        answer = QMessageBox.question(
+            self, "Genera correzioni automatiche",
+            "Elaborare gli originali delle coppie manuali note con le sole "
+            "operazioni ammesse dalla diagnosi?\\n"
+            "I risultati saranno salvati separatamente, mai approvati "
+            "automaticamente. I casi dubbi resteranno sospesi.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if answer != QMessageBox.Yes:
+            return
+        self.auto_process = QProcess(self)
+        self.auto_process.setWorkingDirectory(str(Path(__file__).resolve().parents[1]))
+        python = Path(sys.executable).with_name("python.exe")
+        self.auto_process.setProgram(str(python if python.is_file()
+                                         else Path(sys.executable)))
+        self.auto_process.setArguments([
+            "-B", "-m", "afm_copilot.auto_compare",
+            "--confirm", "RUN_8_CANDIDATES"])
+        self.generate_button.setEnabled(False)
+        self.info.setText("Elaborazione Gwyddion avviata sulle coppie note...")
+        self.auto_process.finished.connect(self._auto_finished)
+        self.auto_process.start()
+
+    def _auto_finished(self, code, _status):
+        self.generate_button.setEnabled(True)
+        if code != 0:
+            details = bytes(self.auto_process.readAllStandardError()).decode(
+                "utf-8", "replace")[-600:]
+            QMessageBox.warning(
+                self, "Elaborazione non completata",
+                f"Exit code {code}. {details or 'Controlla il modulo auto_compare.'}")
+            return
+        details = bytes(self.auto_process.readAllStandardOutput()).decode(
+            "utf-8", "replace")
+        self._load_private_manifest()
+        QMessageBox.information(
+            self, "Elaborazione completata",
+            "I risultati prodotti sono collegati alla terza colonna e "
+            "richiedono la tua validazione.\\n" + details[-900:])
 
     def _attach_automated(self):
         """Manually associate an existing processed file after operator review."""
