@@ -45,6 +45,12 @@ class CompareWindow(QMainWindow):
         choose = QPushButton("Open comparison folder")
         choose.clicked.connect(self._choose)
         top.addWidget(choose)
+        attach = QPushButton("Associa risultato automatico...")
+        attach.setToolTip(
+            "Seleziona una copia già elaborata in locale per questa scansione. "
+            "Nessun dato viene modificato.")
+        attach.clicked.connect(self._attach_automated)
+        top.addWidget(attach)
         self.select = QComboBox()
         self.select.currentIndexChanged.connect(self._show)
         top.addWidget(self.select, 1)
@@ -115,6 +121,47 @@ class CompareWindow(QMainWindow):
             self.info.setText(
                 f"Found {len(result['pairs'])} candidate pairs among "
                 f"{result['scanned']} files. No input has been modified.")
+
+    def _attach_automated(self):
+        """Manually associate an existing processed file after operator review."""
+        index = self.select.currentIndex()
+        if not 0 <= index < len(self.rows):
+            return
+        selected, _ = QFileDialog.getOpenFileName(
+            self, "Scegli risultato elaborato da AFM Copilot",
+            str(Path(self.rows[index]["original"]).parent),
+            "Gwyddion (*.gwy);;AFM images (*.ibw *.tif *.tiff *.spm);;All files (*)")
+        if not selected:
+            return
+        path = Path(selected)
+        if path.resolve() in {
+            Path(self.rows[index][name]).resolve()
+            for name in ("original", "manual")
+            if self.rows[index].get(name)
+        }:
+            QMessageBox.warning(
+                self, "File non valido",
+                "Seleziona un file elaborato distinto da originale e manuale.")
+            return
+        try:
+            self._channel(path)
+        except Exception as error:
+            QMessageBox.warning(
+                self, "Risultato non leggibile",
+                f"Il file scelto non è leggibile: {type(error).__name__}: {str(error)[:150]}")
+            return
+        self.rows[index]["automated"] = str(path)
+        self._save_private_pairs()
+        self._show(index)
+
+    def _save_private_pairs(self):
+        from afm_copilot.manual_pairs import save_private
+        save_private({
+            "schema_version": 1,
+            "pairs": self.rows,
+            "source": "operator_confirmed_local_comparison_associations",
+            "image_contents_modified": False,
+        })
 
     def _channel(self, path, *, operator_corrected=False):
         """Route raw instrument files through the Gwyddion import bridge.
