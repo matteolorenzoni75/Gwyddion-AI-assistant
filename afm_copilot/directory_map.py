@@ -22,6 +22,14 @@ EARLIER_RAW = Path(r"C:\AFM_Automation\OLD input IMAGES")
 MANUAL_PAIR_MANIFEST = MANUAL_PRIVATE / "PRIVATE_manual_pair_candidates.json"
 GUI_RESULTS = Path(tempfile.gettempdir()) / "afm_copilot_gui" / "processed" / "processed"
 PRIVATE_OUT = Path.home() / "AFM_Copilot_Private_Audits" / "directory_map" / "PRIVATE_locations.json"
+WORKSPACE = Path(r"C:\AFM_Automation\AFM_Copilot_Workspace")
+WORKSPACE_FOLDERS = (
+    ("pending_review", "01_Manual_To_Review", "Correzioni manuali da validare"),
+    ("automatic", "02_Automatic_Results", "Nuove correzioni generate da AFM Copilot"),
+    ("approved", "03_Approved", "Versioni approvate dall'operatore"),
+    ("reports", "04_Reports", "Comparazioni e report di qualita"),
+)
+
 
 # Categories, not a promise that all data resides in these directories.
 LOCATIONS = (
@@ -35,6 +43,12 @@ LOCATIONS = (
      "Elenco privato degli abbinamenti trovati; non contiene immagini."),
     ("expert_database", "Database labeling esperto", DEFAULT_DB,
      "SQLite privato: non cancellare o spostare."),
+    ("workspace", "Area di lavoro AFM Copilot", WORKSPACE,
+     "Cartelle separate per correzioni automatiche, revisioni e approvazioni."),
+    ("workspace_auto", "Output automatici organizzati", WORKSPACE / "02_Automatic_Results",
+     "Destinazione per nuovi risultati: non copia quelli storici."),
+    ("workspace_approved", "Correzioni approvate", WORKSPACE / "03_Approved",
+     "Cartella dedicata ai risultati approvati dall'utente."),
     ("repo", "Codice AFM Copilot", PROJECT_ROOT,
      "Codice, test e strumenti; non è l'archivio delle immagini."),
 )
@@ -110,14 +124,43 @@ def save_private(report: dict, destination: Path = PRIVATE_OUT) -> None:
     os.replace(temp, path)
 
 
+def prepare_workspace(root: Path = WORKSPACE) -> dict:
+    """Create empty workflow folders only; never move/copy image contents."""
+    destination = root.expanduser().resolve()
+    git = PROJECT_ROOT.resolve()
+    archive = RAW_ARCHIVE.resolve()
+    source = EARLIER_RAW.resolve()
+    private = PRIVATE_OUT.parent.parent.resolve()
+    for protected in (git, archive, source, private):
+        if destination == protected or protected in destination.parents or destination in protected.parents:
+            raise ValueError("Workspace must be separate from AFM raw and private source roots")
+    created = 0
+    for _key, folder, _description in WORKSPACE_FOLDERS:
+        path = destination / folder
+        if not path.exists():
+            path.mkdir(parents=True, exist_ok=False)
+            created += 1
+        elif not path.is_dir() or path.is_symlink():
+            raise ValueError("Workspace destination exists but is not a normal folder")
+    return {
+        "workspace_prepared": True, "folders_created": created,
+        "folders_total": len(WORKSPACE_FOLDERS),
+        "source_files_moved": 0, "source_files_deleted": 0,
+        "raw_archive_scanned": False,
+    }
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--prepare-workspace", action="store_true",
+                        help="create separate EMPTY review/auto/approved/report folders; no scans moved")
     parser.add_argument("--private-report", action="store_true",
                         help="Print private report location, NOT file paths within it")
     args = parser.parse_args(argv)
+    extra = prepare_workspace() if args.prepare_workspace else {}
     report = build_map()
     save_private(report)
-    print(json.dumps(report["summary"], indent=2))
+    print(json.dumps({**report["summary"], **extra}, indent=2))
     if args.private_report:
         print("Detailed private map saved outside Git checkout.")
     return 0
