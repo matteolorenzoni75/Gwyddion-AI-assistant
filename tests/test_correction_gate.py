@@ -5,10 +5,11 @@ from afm_copilot.correction_gate import gate_recipe
 
 
 def _plan(recipe="quick-clean", **kwargs):
-    return SimpleNamespace(recipe_key=recipe, has_terraces=False,
-                           morphology_restricted=False,
-                           rows_are_structure=False, needs_despike=False,
-                           **kwargs)
+    values = dict(recipe_key=recipe, has_terraces=False,
+                  morphology_restricted=False, rows_are_structure=False,
+                  needs_despike=False)
+    values.update(kwargs)
+    return SimpleNamespace(**values)
 
 
 def test_row_structure_vetoes_row_alignment():
