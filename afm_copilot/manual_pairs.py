@@ -45,7 +45,8 @@ def _key(path: Path) -> str:
 def scan_folder(root: Path, *, max_files=100000) -> dict:
     root = root.expanduser().resolve()
     if not root.is_dir():
-        return {"root": str(root), "pairs": [], "candidates": 0, "scanned": 0}
+        return {"root": str(root), "pairs": [], "candidates": 0,
+                "scanned": 0, "truncated": False}
     by_key = {}
     candidates = []
     scanned = 0
