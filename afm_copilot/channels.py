@@ -11,14 +11,14 @@ from dataclasses import dataclass
 
 # Specific electrical and dynamic channels precede generic "height" keywords.
 ROLE_HINTS = (
+    ("error", ("deflection error", "height error", "error signal", "amplitude error",
+               "feedback error", "z error"), ("v", "mv", "nm", "pm", "m", "a")),
     ("current", ("current", "c-afm", "cafm", "tuna", "conductive"), ("a", "pa", "na", "ua")),
     ("potential", ("potential", "kpfm", "cpd", "surface potential", "voltage"), ("v", "mv")),
     ("phase", ("phase", "phase shift", "lock-in phase"), ("deg", "degree", "rad")),
     ("amplitude", ("amplitude", "ampl", "oscillation amplitude"), ("v", "mv", "nm", "pm", "m")),
     ("frequency", ("frequency", "frequency shift", "delta f", "df"), ("hz", "khz")),
     ("dissipation", ("dissipation", "energy loss"), ("ev", "j")),
-    ("error", ("deflection error", "height error", "error signal", "amplitude error",
-               "feedback error", "z error"), ("v", "mv", "nm", "pm", "m", "a")),
     ("deflection", ("deflection", "force"), ("v", "mv", "n", "nn")),
     ("height", ("height", "topography", "topo", "z sensor", "z-sensor"), ("m", "nm", "um", "pm")),
 )
