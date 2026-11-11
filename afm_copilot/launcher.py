@@ -41,6 +41,14 @@ WORKFLOW_ACTIONS = (
      ("-m", "afm_copilot.manual_pairs"), "SP_FileDialogInfoView"),
 )
 MAINTENANCE_ACTIONS = (
+    ("Mappa delle cartelle", "Controlla dove sono originali, revisioni e output.",
+     "Consulta le directory note e le 8 associazioni manuali trovate. "
+     "Il rapporto viene salvato soltanto nel tuo archivio privato.",
+     ("-m", "afm_copilot.directory_map"), "SP_DirOpenIcon"),
+    ("Prepara area di lavoro", "Crea cartelle ordinate, senza muovere immagini.",
+     "Prepara una struttura separata per correzioni da validare, output "
+     "automatici, risultati approvati e report. Non tocca gli originali.",
+     "workspace", "SP_DirIcon"),
     ("Audit etichette", "Controlla le classificazioni esperte salvate.",
      "Mostra conteggi delle etichette e copertura dei descrittori numerici. "
      "Non carica scansioni, non modifica il database e non avvia training.",
@@ -294,6 +302,8 @@ class Launcher(QMainWindow):
     def _dispatch(self, target):
         if target == "clean":
             self._clean()
+        elif target == "workspace":
+            self._prepare_workspace()
         elif target == "push":
             self._push()
         elif isinstance(target, tuple):
@@ -414,6 +424,16 @@ class Launcher(QMainWindow):
                 f"Operazione terminata (codice {exit_code})."))
         self.output.appendPlainText("\n> python -B " + " ".join(args))
         self.process.start()
+
+    def _prepare_workspace(self):
+        answer = QMessageBox.question(
+            self, "Prepara area di lavoro",
+            "Creare le sottocartelle vuote in C:\\AFM_Automation\\AFM_Copilot_Workspace?\\n"
+            "Nessuna scansione verrà spostata, copiata o cancellata.",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if answer == QMessageBox.Yes:
+            self._task(("-m", "afm_copilot.directory_map", "--prepare-workspace"))
+            # Refresh is available once the background job completes.
 
     def _clean(self):
         answer = QMessageBox.question(
