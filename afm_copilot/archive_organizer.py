@@ -16,7 +16,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 from afm_copilot.feedback import PROJECT_ROOT
-from afm_copilot.labeling import FORMATS
+from afm_copilot.labeling import DEFAULT_DB, FORMATS
 
 DEFAULT_ROOT = Path(r"C:\AFM_Automation\All AFM Data")
 PRIVATE = Path.home() / "AFM_Copilot_Private_Audits" / "archive_organizer"
@@ -93,7 +93,8 @@ def build_plan(root: Path) -> dict:
         relative = source.relative_to(root)
         destination = _destination(root, source, reserved)
         stat = source.stat()
-        sha = _hash_file(source) if source.suffix.lower() in SCAN_EXTENSIONS else None
+        # Hash every item, including instrument sidecars; never silently corrupt metadata.
+        sha = _hash_file(source)
         row = {
             "source": str(source), "destination": str(destination),
             "size": stat.st_size, "mtime_ns": stat.st_mtime_ns,
@@ -101,7 +102,7 @@ def build_plan(root: Path) -> dict:
             "move": source != destination,
         }
         entries.append(row)
-        if sha:
+        if row["is_scan"]:
             by_hash[sha].append(row)
             hint = _REPEAT.sub("", source.stem.casefold()).strip(" ._-")
             if len(hint) >= 3:
@@ -146,6 +147,27 @@ def save_plan(plan: dict, destination: Path) -> None:
 def execute_plan(plan: dict, *, expected_root: Path, journal: Path) -> dict:
     """Moves verified files. Idempotent after interruption; never overwrites."""
     root = Path(plan["root"]).resolve()
+    # Do not silently break the absolute paths used by existing expert labels.
+    if DEFAULT_DB.is_file():
+        import sqlite3
+        try:
+            with sqlite3.connect(
+                "file:" + DEFAULT_DB.as_posix() + "?mode=ro", uri=True
+            ) as conn:
+                known = conn.execute(
+                    "SELECT s.path FROM scans s INNER JOIN labels l USING(scan_id)"
+                ).fetchall()
+            if any(
+                (Path(name).resolve() == root or
+                 root in Path(name).resolve().parents)
+                for (name,) in known
+            ):
+                raise ValueError(
+                    "Archive contains existing expert-labeled paths; "
+                    "migrate the labeling index before moving files"
+                )
+        except sqlite3.Error as error:
+            raise ValueError("Cannot verify private labeling index") from error
     if root != expected_root.expanduser().resolve():
         raise ValueError("The plan was generated for another archive")
     _outside_root(root, journal)
