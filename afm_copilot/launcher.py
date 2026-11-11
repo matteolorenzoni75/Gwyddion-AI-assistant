@@ -39,6 +39,10 @@ WORKFLOW_ACTIONS = (
      ("-m", "afm_copilot.manual_pairs"), "SP_FileDialogInfoView"),
 )
 MAINTENANCE_ACTIONS = (
+    ("Audit etichette", "Controlla le classificazioni esperte salvate.",
+     "Mostra conteggi delle etichette e copertura dei descrittori numerici. "
+     "Non carica scansioni, non modifica il database e non avvia training.",
+     ("-m", "afm_copilot.learning_audit"), "SP_DialogHelpButton"),
     ("Anteprima archivio", "Inventario AFM ricorsivo, nessuno spostamento.",
      "Calcola i checksum dei file nell'archivio All AFM Data. "
      "Su archivi molto grandi può richiedere tempo: non avviarlo due volte.",
