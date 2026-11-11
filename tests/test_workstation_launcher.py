@@ -28,7 +28,7 @@ def test_symmetric_cards_have_explanations_and_tooltips():
     from PySide6.QtWidgets import QApplication, QToolButton
     from afm_copilot.launcher import Launcher
     assert len(WORKFLOW_ACTIONS) == 4
-    assert len(MAINTENANCE_ACTIONS) == 6
+    assert len(MAINTENANCE_ACTIONS) == 8
     for name, brief, detail, target, icon_name in (*WORKFLOW_ACTIONS,
                                                     *MAINTENANCE_ACTIONS):
         assert name and brief and len(detail) > 40
@@ -36,12 +36,14 @@ def test_symmetric_cards_have_explanations_and_tooltips():
     app = QApplication.instance() or QApplication([])
     win = Launcher()
     try:
-        assert len(win.action_buttons) == 10
+        assert len(win.action_buttons) == 12
         helps = win.findChildren(QToolButton, "helpButton")
-        assert len(helps) == 10
+        assert len(helps) == 12
         help_widget = helps[0]
         help_widget.setChecked(True)
         assert help_widget.isChecked()
         assert win.output.isReadOnly()
+        assert hasattr(win, "_location_report")
+        assert win._location_report["summary"]["full_archive_rescanned"] is False
     finally:
         win.close()
