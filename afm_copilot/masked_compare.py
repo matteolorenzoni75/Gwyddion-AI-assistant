@@ -29,7 +29,8 @@ MASK_ROOT = PRIVATE_ROOT / "masks"
 
 
 def save_approved_mask(index: int, raw: Path, mask: np.ndarray,
-                       *, threshold_nm: float, mode: str) -> Path:
+                       *, threshold_nm: float, mode: str,
+                       remove_scars: bool = False) -> Path:
     """Store exactly the binary mask the operator saw, never a raw image."""
     raw = raw.resolve()
     identity = _id(raw)
@@ -42,6 +43,7 @@ def save_approved_mask(index: int, raw: Path, mask: np.ndarray,
         "source": str(raw), "shape": list(binary.shape),
         "threshold_nm": float(threshold_nm), "polarity": mode,
         "operator_approved": True,
+        "remove_scars": bool(remove_scars),
         "masked_fraction": float(binary.mean()),
     }
     (folder / "approved.json").write_text(
@@ -91,10 +93,15 @@ def run_masked(index: int, approval: Path, *, manifest: Path = MANIFEST,
     dest.mkdir(parents=True, exist_ok=False)
     input_gwy = work / "masked_input.gwy"
     save_height(channel, input_gwy, mask=mask)
+    selected_steps = ("plane_around_objects", "remove_mask")
+    if record.get("remove_scars", False):
+        # Explicitly opted-in by the operator; unmasked scar detection runs
+        # AFTER the background fit so the mask cannot bias line correction.
+        selected_steps += ("remove_scars",)
     recipe = replace(
         get_recipe("isolate-objects-flat"),
         key="operator-masked-plane",
-        steps=("plane_around_objects", "remove_mask"),
+        steps=selected_steps,
     )
     report = bridge_factory().run_recipe(
         recipe, [input_gwy], dest)
@@ -102,7 +109,9 @@ def run_masked(index: int, approval: Path, *, manifest: Path = MANIFEST,
     if len(results) != 1 or not results[0].get("ok"):
         raise RuntimeError("Gwyddion masked correction failed")
     steps = results[0].get("steps", [])
-    if len(steps) != 2 or any(not s.get("applied") for s in steps):
+    if len(steps) != len(selected_steps) or any(
+        not step.get("applied") for step in steps
+    ):
         raise RuntimeError("Gwyddion did not execute the complete masked fit")
     product = Path(results[0]["output"]).resolve()
     if product != (dest / "masked_input.gwy").resolve() or not product.is_file():
@@ -126,12 +135,14 @@ def run_masked(index: int, approval: Path, *, manifest: Path = MANIFEST,
             "index": index, "raw": str(raw), "manual": str(manual),
             "approved_mask": str(approval), "output": str(product),
             "threshold_nm": record["threshold_nm"], "mode": record["polarity"],
-            "masked_fraction": fraction, "steps": [s["key"] for s in steps],
+            "masked_fraction": fraction, "remove_scars": bool(record.get("remove_scars")),
+            "steps": [s["key"] for s in steps],
             "operator_approved_final_correction": False,
         }) + "\n")
     return {
         "status": "generated_for_review", "index": index,
-        "masked_fraction": round(fraction, 4), "step_count": 2,
+        "masked_fraction": round(fraction, 4),
+        "step_count": len(selected_steps),
         "original_modified": False, "manual_modified": False,
         "requires_operator_approval": True,
     }
