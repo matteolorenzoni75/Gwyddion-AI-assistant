@@ -5,8 +5,8 @@ import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox, QFormLayout,
-    QLabel, QVBoxLayout,
+    QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
+    QFormLayout, QLabel, QVBoxLayout,
 )
 
 from afm_copilot.gui.viewer import ScanViewer
@@ -37,7 +37,8 @@ class MaskReviewDialog(QDialog):
         self.threshold.setDecimals(2)
         self.threshold.setSuffix(" nm")
         self.threshold.setSingleStep(0.5)
-        residual = np.asarray(channel.data, dtype=float) - robust_plane(channel.data)
+        self.estimated_plane = robust_plane(channel.data)
+        residual = np.asarray(channel.data, dtype=float) - self.estimated_plane
         span = np.percentile(residual, 90) - np.percentile(residual, 10)
         initial = float(np.clip(0.15 * span * 1e9, 0.1, 10000))
         self.threshold.setValue(initial)
@@ -47,6 +48,12 @@ class MaskReviewDialog(QDialog):
         self.mode.addItem("Solo rilievi", "raised")
         self.mode.addItem("Solo depressioni", "sunken")
         form.addRow("Feature da escludere", self.mode)
+        self.remove_scars = QCheckBox("Rimuovi line scars con Gwyddion (opzionale)")
+        self.remove_scars.setChecked(False)
+        self.remove_scars.setToolTip(
+            "Dopo il fit mascherato, applica Remove Scars. Può intaccare "
+            "strutture orizzontali reali: controlla il risultato.")
+        form.addRow("Riparazione linee", self.remove_scars)
         layout.addLayout(form)
         self.summary = QLabel()
         self.summary.setWordWrap(True)
@@ -65,7 +72,8 @@ class MaskReviewDialog(QDialog):
         try:
             proposal = propose_mask(
                 self.channel.data, threshold_nm=self.threshold.value(),
-                mode=self.mode.currentData())
+                mode=self.mode.currentData(),
+                estimated_plane=self.estimated_plane)
         except ValueError as error:
             self.proposal = None
             self.summary.setText(str(error))
