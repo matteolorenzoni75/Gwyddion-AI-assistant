@@ -44,6 +44,8 @@ def test_different_directory_same_basename_not_merged(tmp_path):
 def test_empty_folder_and_report_are_safe(tmp_path):
     result = inventory([tmp_path / "missing"])
     assert result["summary"]["directories_searched"] == 0
+    assert result["summary"]["search_truncated"] is False
+    assert result["summary"]["files_inspected"] == 0
     path = save_private(result, tmp_path / "private" / "PRIVATE_pairs.json")
     assert path.exists()
     assert not (tmp_path / "missing").exists()
