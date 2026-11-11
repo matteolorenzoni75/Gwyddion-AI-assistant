@@ -183,3 +183,45 @@ container are intentionally omitted from the launcher display.
 
 The previous descriptive tagline has been removed. Buttons and
 workflows otherwise remain the same. No original scan is moved.
+
+## Generate provisional automatic corrections for known manual comparison scans
+
+The synoptic GUI now has **Genera correzioni AFM Copilot**. After explicit
+confirmation, it launches `afm_copilot.auto_compare` on the private
+original/manual candidate manifest (up to **16** pairs; typically 8).
+It does NOT touch the entire 97,082-file AFM archive.
+
+Each original is imported through Gwyddion 32-bit / PyGwy and the height
+channel is extracted into a separate local working document. Any source
+phase, amplitude, error, current, potential and trace/retrace channels remain
+unchanged in the original file. `decide.plan_for`, `quality.assess` and
+`correction_gate.gate_recipe` select **only** operations marked `safe_auto`.
+Potentially destructive scar, nonlinear background, mask/interpolation or
+poor-calibration operations are held; the output is a PROVISIONAL review
+candidate, not necessarily a fully repaired scan.
+
+Each output is placed under
+`C:\AFM_Automation\AFM_Copilot_Workspace\02_Automatic_Results\<private-id>\corrected\height.gwy`.
+Separate directories prevent collisions and existing outputs are never
+overwritten. The per-pair association is saved only in the private
+`PRIVATE_manual_pair_candidates.json`; the private audit is
+`PRIVATE_automatic_correction_audit.jsonl`. Original and manual images
+are never rewritten, and no model is trained or automatically approved.
+
+When the batch finishes the synoptic viewer reloads the saved third-column
+associations. A strong change in RMS, failed Gwyddion step, invalid physical
+unit, geometry mismatch or questionable quality suspends the candidate
+rather than silently presenting it as correct.
+
+Direct Windows command (only on the operator PC):
+
+```powershell
+cd C:\AFM_image_wizard
+git pull --ff-only origin dev/image-wizard
+.\.venv\Scripts\python.exe -B -m pytest tests\test_auto_compare.py tests\test_compare_gui_import.py -q
+.\.venv\Scripts\python.exe -B -m afm_copilot.auto_compare --confirm RUN_8_CANDIDATES
+```
+
+Do not start the same batch twice simultaneously. It is limited to the
+manually associated pairs, not to an unbounded directory discovery. Any
+correction shown in the viewer requires visual expert validation.
