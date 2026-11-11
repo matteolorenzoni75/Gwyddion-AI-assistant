@@ -82,7 +82,10 @@ def process_one(
     if row.get("automated") and Path(row["automated"]).is_file():
         return {"state": "existing", "automated": row["automated"]}
     output = output.expanduser().resolve()
-    if _is_source_dir(output, [raw, manual]):
+    # Output must be separated from each input's containing directory.
+    # In particular, do not write derivatives anywhere under an AFM raw folder.
+    if any(output == p.parent or p.parent in output.parents
+           or output == p or output in p.parents for p in (raw, manual)):
         return {"state": "held_output_inside_source"}
 
     identity = _id(raw)
@@ -159,6 +162,8 @@ def run_batch(
     scratch: Path | None = None, processor=process_one,
 ) -> dict:
     rows = _manifest_rows(manifest)
+    if len(rows) > 16:
+        raise ValueError("Comparison run limited to 16 operator-reviewed candidate pairs")
     if output.expanduser().resolve() == manifest.parent.resolve():
         raise ValueError("Output cannot be the private manifest folder")
     counts = {}
