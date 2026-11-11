@@ -75,3 +75,22 @@ git pull --ff-only origin dev/image-wizard
 **Non eseguire `git add .`** in presenza di dataset locali o report
 privati. La PR verso `main` resta in bozza finche' la validazione Windows
 e quella scientifica non sono completate.
+
+
+## Recupero e protezione dalle etichette non salvate
+
+Se il Learning Audit indica `labeled: 0`, il database conosce le scansioni
+ma **non contiene etichette**. Non interpretare la presenza della scansione nel
+viewer come prova del salvataggio. La maschera ora apre automaticamente la
+prima immagine non etichettata e segnala qualsiasi modifica non salvata
+quando si usa **Previous**, **Skip**, **Next unlabelled** o si chiude.
+
+Prima di etichettare un nuovo batch, scegliere una sola scansione, assegnare
+una morfologia e premere **Save + next**. Verificare immediatamente:
+
+```powershell
+.\.venv\Scripts\python.exe -B -m afm_copilot.learning_audit
+```
+
+`labeled` deve aumentare almeno a 1. Se resta 0, interrompere il labeling:
+non ripetere l'intero batch senza aver individuato la causa.
