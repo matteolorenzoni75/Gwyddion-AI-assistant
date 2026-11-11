@@ -66,6 +66,12 @@ class CompareWindow(QMainWindow):
             "da approvare nel confronto sinottico.")
         self.generate_button.clicked.connect(self._generate_auto)
         top.addWidget(self.generate_button)
+        self.mask_button = QPushButton("Maschera e correggi...")
+        self.mask_button.setToolTip(
+            "Regola la soglia in nm, controlla in rosso le zone protette e "
+            "applica il fit Gwyddion soltanto dopo conferma.")
+        self.mask_button.clicked.connect(self._mask_and_correct)
+        top.addWidget(self.mask_button)
         self.auto_process = None
         layout.addLayout(top)
         selection = QHBoxLayout()
@@ -204,6 +210,7 @@ class CompareWindow(QMainWindow):
 
     def _auto_finished(self, code, _status):
         self.generate_button.setEnabled(True)
+        self.mask_button.setEnabled(True)
         if code != 0:
             details = bytes(self.auto_process.readAllStandardError()).decode(
                 "utf-8", "replace")[-600:]
@@ -218,6 +225,51 @@ class CompareWindow(QMainWindow):
             self, "Elaborazione completata",
             "I risultati prodotti sono collegati alla terza colonna e "
             "richiedono la tua validazione.\\n" + details[-900:])
+
+    def _mask_and_correct(self):
+        """One scan; approval covers the exact mask shown in the preview."""
+        index = self.select.currentIndex()
+        if not 0 <= index < len(self.rows):
+            return
+        if self.auto_process is not None and self.auto_process.state() != QProcess.NotRunning:
+            QMessageBox.warning(self, "Operazione attiva",
+                                "Termina l'elaborazione precedente.")
+            return
+        from afm_copilot.mask_review_gui import MaskReviewDialog
+        from afm_copilot.masked_compare import save_approved_mask
+        channel = self.viewers[0].channel
+        if channel is None:
+            QMessageBox.warning(self, "Originale non disponibile",
+                                "Apri prima la scansione originale.")
+            return
+        dialog = MaskReviewDialog(channel, self)
+        if dialog.exec() != dialog.Accepted or dialog.proposal is None:
+            return
+        proposal = dialog.proposal
+        if not proposal.safe_for_fit:
+            return
+        try:
+            approved = save_approved_mask(
+                index, Path(self.rows[index]["original"]),
+                proposal.mask, threshold_nm=proposal.threshold_nm,
+                mode=dialog.mode.currentData())
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, "Maschera non salvata", str(error))
+            return
+        self.auto_process = QProcess(self)
+        self.auto_process.setWorkingDirectory(
+            str(Path(__file__).resolve().parents[1]))
+        python = Path(sys.executable).with_name("python.exe")
+        self.auto_process.setProgram(str(python if python.is_file()
+                                         else Path(sys.executable)))
+        self.auto_process.setArguments([
+            "-B", "-m", "afm_copilot.masked_compare",
+            "--index", str(index), "--approval", str(approved)])
+        self.generate_button.setEnabled(False)
+        self.mask_button.setEnabled(False)
+        self.info.setText("Fit Gwyddion mascherato in esecuzione...")
+        self.auto_process.finished.connect(self._auto_finished)
+        self.auto_process.start()
 
     def _attach_automated(self):
         """Manually associate an existing processed file after operator review."""
