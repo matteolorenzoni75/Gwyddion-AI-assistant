@@ -45,5 +45,13 @@ def test_symmetric_cards_have_explanations_and_tooltips():
         assert win.output.isReadOnly()
         assert hasattr(win, "_location_report")
         assert win._location_report["summary"]["full_archive_rescanned"] is False
+        from PySide6.QtWidgets import QLabel
+        labels = [item.text() for item in win.findChildren(QLabel)]
+        assert any("Gwyddion 32-bit" in item and "PyGwy" in item for item in labels)
+        assert "CARTELLE IMMAGINI" in labels
+        assert labels.index("CARTELLE IMMAGINI") > labels.index("ARCHIVIO E MANUTENZIONE")
+        assert "Codice AFM Copilot" not in labels
+        assert "Database labeling esperto" not in labels
+        assert "Indice correzioni manuali" not in labels
     finally:
         win.close()
