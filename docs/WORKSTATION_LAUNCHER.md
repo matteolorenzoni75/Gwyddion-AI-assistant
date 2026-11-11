@@ -77,3 +77,22 @@ image-level matching. Non-topography channels are retained and not leveled.
   numerical QA while keeping the primary cleaning work in topography.
 - Clustering genuinely repeated scan acquisitions independently of file names.
 - UI-led review and reversible relocation of archive files after backups.
+## Launcher visual design (2026-11)
+
+The primary window now presents two balanced, two-column sections of
+compact icon cards: four **Analysis & validation** actions and six
+**Archive & maintenance** actions. All cards show a one-line description
+and an expandable `?` panel with the action's purpose and safety limits.
+Actions include the existing main GUI, standalone Expert Labeler, synoptic
+comparison, search for manual corrections, label audit, archive preview,
+Git status, cache preview, safe cache cleanup and reviewed Git push.
+
+An activity log remains visible at the bottom. The redesigned launcher
+performs no automatic archive scan, cleanup, upload or background operation.
+All buttons use the same actions and safety checks as before.
+
+The latest manual-correction search on the operator's Windows machine
+reported **8 candidate original/manual pairs among 328 scanned files**;
+zero matching automated counterparts and no ambiguous pairs. These are
+filename/adjacency matches and must still be validated by opening the
+calibrated AFM images. No source material is modified by the search.
