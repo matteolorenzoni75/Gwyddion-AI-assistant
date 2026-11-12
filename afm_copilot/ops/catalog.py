@@ -66,6 +66,57 @@ class Operation:
     provenance_effect: str = "measured_transform"
     selection_kind: str = ""
     planner_tags: tuple[str, ...] = ()
+    # Planner-facing parameter contract. Each entry maps a semantic parameter
+    # name to a Gwyddion settings key plus type/bounds/choices/default.
+    parameters: dict = field(default_factory=dict)
+
+    def resolve_parameters(self, supplied: dict | None = None) -> dict:
+        """Validate planner parameters and return concrete Gwyddion settings."""
+        supplied = {} if supplied is None else supplied
+        if not isinstance(supplied, dict):
+            raise ValueError(f"{self.key} parameters must be an object")
+        unknown = sorted(set(supplied) - set(self.parameters))
+        if unknown:
+            raise ValueError(
+                f"{self.key} unknown parameters: " + ", ".join(unknown))
+
+        resolved = dict(self.settings)
+        for name, spec in self.parameters.items():
+            value = supplied.get(name, spec.get("default"))
+            if value is None:
+                continue
+            choices = spec.get("choices")
+            if choices:
+                if value in choices:
+                    value = choices[value]
+                elif value not in choices.values():
+                    raise ValueError(
+                        f"{self.key}.{name} must be one of "
+                        + ", ".join(map(str, choices)))
+            kind = spec.get("type", "float")
+            try:
+                if kind == "int":
+                    value = int(value)
+                elif kind == "float":
+                    value = float(value)
+                elif kind == "bool":
+                    if not isinstance(value, bool):
+                        raise ValueError
+                else:
+                    raise ValueError(f"Unsupported parameter type {kind}")
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"{self.key}.{name} has invalid {kind} value") from None
+            if "min" in spec and value < spec["min"]:
+                raise ValueError(
+                    f"{self.key}.{name} below minimum {spec['min']}")
+            if "max" in spec and value > spec["max"]:
+                raise ValueError(
+                    f"{self.key}.{name} above maximum {spec['max']}")
+            setting = spec.get("setting")
+            if setting:
+                resolved[setting] = value
+        return resolved
 
     @property
     def headless(self) -> bool:
@@ -88,6 +139,7 @@ class Operation:
             "provenance_effect": self.provenance_effect,
             "selection_kind": self.selection_kind or None,
             "tags": list(self.planner_tags),
+            "parameters": self.parameters,
             "what": self.what,
             "why": self.why,
             "caution": self.caution,
@@ -459,10 +511,38 @@ _ALL: list[Operation] = [
                 "Treat the result as a repair_defect candidate, not truth.",
         creates_mask=True,
         creates_mask_role="repair_defect",
-        executor_ready=False,
+        executor_ready=True,
         planner_policy="review",
         provenance_effect="mask_only",
         planner_tags=("line_artifact", "mask_candidate", "reinspect"),
+        parameters={
+            "polarity": {
+                "type": "int",
+                "default": "both",
+                "choices": {"positive": 1, "negative": 4, "both": 5},
+                "setting": "/module/scars/type",
+            },
+            "hard_threshold_rms": {
+                "type": "float", "default": 0.666, "min": 0.0, "max": 2.0,
+                "setting": "/module/scars/threshold_high",
+            },
+            "soft_threshold_rms": {
+                "type": "float", "default": 0.25, "min": 0.0, "max": 2.0,
+                "setting": "/module/scars/threshold_low",
+            },
+            "min_length_px": {
+                "type": "int", "default": 16, "min": 1, "max": 1024,
+                "setting": "/module/scars/min_len",
+            },
+            "max_width_px": {
+                "type": "int", "default": 4, "min": 1, "max": 16,
+                "setting": "/module/scars/max_width",
+            },
+            "update": {
+                "type": "bool", "default": True,
+                "setting": "/module/scars/update",
+            },
+        },
     ),
     Operation(
         key="step_line_correction",
@@ -477,7 +557,7 @@ _ALL: list[Operation] = [
                 "it also aligns rows similarly to a mean correction. It can "
                 "therefore remove real row structure and must be trialled with "
                 "rollback and structural checks.",
-        executor_ready=False,
+        executor_ready=True,
         planner_policy="review",
         provenance_effect="measured_transform",
         planner_tags=("line_artifact", "segment_jump", "reinspect"),
@@ -494,7 +574,7 @@ _ALL: list[Operation] = [
         caution="Jump detection parameters still need deterministic verification. "
                 "Trial only after confirming the defect is instrumental rather "
                 "than a real step boundary.",
-        executor_ready=False,
+        executor_ready=True,
         planner_policy="review",
         provenance_effect="measured_transform",
         planner_tags=("line_artifact", "segment_jump", "structure_preserving", "reinspect"),
