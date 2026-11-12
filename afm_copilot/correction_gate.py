@@ -205,6 +205,12 @@ def validate_iterative_plan(
 
         status = "execute"
         reasons = []
+        try:
+            concrete_settings = op.resolve_parameters(action.get("parameters"))
+        except ValueError as error:
+            concrete_settings = dict(op.settings)
+            status = "blocked"
+            reasons.append(str(error))
 
         if channel_role != "height":
             status = "blocked"
@@ -243,6 +249,11 @@ def validate_iterative_plan(
 
         # A structure-protection mask can guide a fit, but can never become
         # interpolation/repair evidence just because a later step needs a mask.
+        if key == "remove_scars":
+            status = "blocked"
+            reasons.append(
+                "Iterative planner must use mark_scars + reviewed repair mask "
+                "+ interpolate_under_mask so reconstructed pixels are traceable")
         if key == "interpolate_under_mask" and role != "repair_defect":
             status = "blocked"
             reasons.append("Interpolation is permitted only for repair_defect masks")
@@ -377,6 +388,8 @@ def validate_iterative_plan(
             "output_state": out_state,
             "mask_ref": mask_ref,
             "mask_role": role,
+            "parameters": action.get("parameters") or {},
+            "resolved_settings": concrete_settings,
             "created_mask_ref": created_mask_ref,
             "created_mask_role": created_mask_role,
             "expected_checks": checks,
@@ -426,7 +439,8 @@ def recipe_from_iterative_plan(plan: dict, *, key: str = "planner-trial") -> Rec
         ]
         raise ValueError(
             "Planner trial is not headless-runnable: " + " | ".join(reasons))
-    step = validation["actions"][0]["operation"]
+    action = validation["actions"][0]
+    step = action["operation"]
     return Recipe(
         key=key,
         title="Validated planner trial step",
@@ -434,4 +448,5 @@ def recipe_from_iterative_plan(plan: dict, *, key: str = "planner-trial") -> Rec
         when_to_use="Only after validation of operation, mask semantics and post-checks.",
         when_not_to_use="Never chain planner actions without inspecting the new state.",
         steps=(step,),
+        overrides={step: dict(action["resolved_settings"])},
     )
