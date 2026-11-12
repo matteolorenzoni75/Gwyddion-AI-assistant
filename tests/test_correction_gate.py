@@ -101,7 +101,23 @@ def test_path_level_is_a_plannable_review_step_not_headless_execution():
     assert result["actions"][0]["execution_mode"] == "interactive_tool"
 
 
-def test_simple_validated_trial_reuses_existing_recipe_executor():
+def test_simple_validated_trial_reuses_existing_recipe_executor_one_step_at_a_time():
+    first = {
+        "actions": [{
+            "operation": "plane_level",
+            "expected_checks": ["residual global tilt decreases"],
+        }],
+        "stop_conditions": ["no further defensible artifact reduction"],
+    }
+    validation = validate_iterative_plan(first)
+    assert validation["can_execute_headless"] is True
+    assert validation["states"][-1]["parent"] == "state-000"
+    recipe = recipe_from_iterative_plan(first)
+    assert recipe.steps == ("plane_level",)
+    assert [item["gwy_func"] for item in recipe.to_job()] == ["level"]
+
+
+def test_multi_action_plan_must_be_reinspected_between_steps():
     plan = {
         "actions": [
             {
@@ -113,12 +129,27 @@ def test_simple_validated_trial_reuses_existing_recipe_executor():
                 "expected_checks": ["mean is zero without geometry change"],
             },
         ],
-        "stop_conditions": ["no further defensible artifact reduction"],
     }
     validation = validate_iterative_plan(plan)
     assert validation["can_execute_headless"] is True
-    assert [s["parent"] for s in validation["states"][1:]] == [
-        "state-000", "state-001"]
-    recipe = recipe_from_iterative_plan(plan)
-    assert recipe.steps == ("plane_level", "zero_mean")
-    assert [item["gwy_func"] for item in recipe.to_job()] == ["level", "zero_mean"]
+    try:
+        recipe_from_iterative_plan(plan)
+    except ValueError as error:
+        assert "exactly one action" in str(error)
+    else:
+        raise AssertionError("multi-step iterative trial was executed without reinspection")
+
+
+def test_review_operation_can_run_only_as_reversible_trial():
+    result = validate_iterative_plan({
+        "actions": [{
+            "operation": "interpolate_under_mask",
+            "mask_role": "repair_defect",
+            "accept_reconstruction": True,
+            "reconstruction_mask_ref": "mask-r1",
+            "expected_checks": ["outside-mask structure unchanged"],
+        }],
+    })
+    assert result["actions"][0]["status"] == "trial_only"
+    assert result["can_execute_headless"] is True
+    assert result["requires_review"] is True
