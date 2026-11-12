@@ -15,14 +15,15 @@ from collections import Counter
 from pathlib import Path
 
 from afm_copilot.labeling import FORMATS
+from afm_copilot.paths import DATA_ROOT, HISTORICAL_RAW, MANUAL_DATA, PROCESSED_DATA, PROJECT_ROOT, PRIVATE_ROOT as PRIVATE_BASE
 
 DEFAULT_SEARCH = (
-    Path(r"C:\AFM_Automation\OLD input IMAGES"),
-    Path(r"C:\AFM_Automation\corrected"),
-    Path(r"C:\AFM_Automation\processed"),
-    Path(r"C:\AFM_image_wizard\out"),
+    HISTORICAL_RAW,
+    MANUAL_DATA,
+    PROCESSED_DATA,
+    PROJECT_ROOT / "out",
 )
-PRIVATE_ROOT = Path.home() / "AFM_Copilot_Private_Audits" / "manual_comparisons"
+PRIVATE_ROOT = PRIVATE_BASE / "manual_comparisons"
 TAG = re.compile(r"(?i)(?:[\s_.-]+(?:corrected|manual|hand[-_ ]?fixed|flattened|levelled|leveled|processed|cleaned|afm[-_ ]?copilot))")
 MANUAL = re.compile(r"(?i)(corrected|manual|hand[-_ ]?fixed|flattened|levelled|leveled)")
 AUTO = re.compile(r"(?i)(processed|cleaned|afm[-_ ]?copilot|automatic|auto[-_ ]?corrected)")
