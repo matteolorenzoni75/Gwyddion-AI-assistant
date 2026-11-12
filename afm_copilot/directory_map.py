@@ -14,11 +14,10 @@ from collections import Counter
 from pathlib import Path
 
 from afm_copilot.feedback import PROJECT_ROOT
+from afm_copilot.paths import RAW_ARCHIVE, HISTORICAL_RAW as EARLIER_RAW, WORKSPACE
 from afm_copilot.labeling import DEFAULT_DB
 from afm_copilot.manual_pairs import PRIVATE_ROOT as MANUAL_PRIVATE
 
-RAW_ARCHIVE = Path(r"C:\AFM_Automation\All AFM Data")
-EARLIER_RAW = Path(r"C:\AFM_Automation\OLD input IMAGES")
 MANUAL_PAIR_MANIFEST = MANUAL_PRIVATE / "PRIVATE_manual_pair_candidates.json"
 GUI_RESULTS = Path(tempfile.gettempdir()) / "afm_copilot_gui" / "processed" / "processed"
 PRIVATE_OUT = Path.home() / "AFM_Copilot_Private_Audits" / "directory_map" / "PRIVATE_locations.json"
