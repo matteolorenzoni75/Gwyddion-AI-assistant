@@ -24,11 +24,12 @@ from afm_copilot.gui.viewer import ScanViewer
 from afm_copilot.gui.workers import TaskRunner
 from afm_copilot.gwy_io import load_height
 from afm_copilot.features import measure as measure_features
+from afm_copilot.paths import HISTORICAL_RAW
 from afm_copilot.labeling import (ARTIFACTS, DEFAULT_DB, FAMILIES, QUALITIES,
                                  ROLES, counts, get_scans, register_folder,
                                  save_label)
 
-DEFAULT_FOLDER = Path(r"C:\AFM_Automation\OLD input IMAGES")
+DEFAULT_FOLDER = HISTORICAL_RAW
 
 FAMILY_LABELS = {
     "unclassified": "Not classified",
