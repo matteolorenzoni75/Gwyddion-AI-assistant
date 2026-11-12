@@ -63,7 +63,7 @@ class CompareWindow(QMainWindow):
         top.addWidget(attach)
         self.generate_button = QPushButton("Genera automatiche")
         self.generate_button.setToolTip(
-            "Elabora fino a 16 originali della lista privata con le sole "
+            "Elabora il corpus privato di confronto; i risultati già presenti vengono saltati con le sole "
             "operazioni Gwyddion ammesse dalla diagnosi. Le immagini restano "
             "da approvare nel confronto sinottico.")
         self.generate_button.clicked.connect(self._generate_auto)
@@ -212,7 +212,7 @@ class CompareWindow(QMainWindow):
                                          else Path(sys.executable)))
         self.auto_process.setArguments([
             "-B", "-m", "afm_copilot.auto_compare",
-            "--confirm", "RUN_8_CANDIDATES"])
+            "--confirm", "RUN_COMPARISON_CANDIDATES"])
         self.generate_button.setEnabled(False)
         self.info.setText("Elaborazione Gwyddion avviata sulle coppie note...")
         self.auto_process.finished.connect(self._auto_finished)
