@@ -19,15 +19,19 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 from pathlib import Path
 
 from afm_copilot.directory_map import WORKSPACE
-from afm_copilot.manual_pairs import PRIVATE_ROOT
+from afm_copilot.manual_pairs import (
+    DEFAULT_SEARCH, PRIVATE_ROOT, SKIP, SUPPORTED, _key,
+)
 
 PAIR_MANIFEST = PRIVATE_ROOT / "PRIVATE_manual_pair_candidates.json"
 DESTINATION = WORKSPACE / "05_Benchmark_Corpus"
 PRIVATE_MAPPING = PRIVATE_ROOT / "PRIVATE_benchmark_mapping.json"
+DISCOVERY = PRIVATE_ROOT / "PRIVATE_corrected_discovery.json"
 
 
 def _sha256(path: Path, chunk: int = 1024 * 1024) -> str:
@@ -54,26 +58,114 @@ def _copy_exact(source: Path, destination: Path) -> None:
         raise IOError("Copied benchmark file failed SHA-256 verification")
 
 
+
+def discover_corrected_pairs(roots=DEFAULT_SEARCH) -> dict:
+    """Find every sibling file explicitly tagged 'corrected' and its twin.
+
+    This is broader than the historical pair manifest. Pairing is conservative:
+    the original must be in the same directory and reduce to the same neutral
+    key. Missing or ambiguous twins are reported and never guessed.
+    """
+    pairs = []
+    unresolved = []
+    corrected_seen = 0
+    inspected = 0
+
+    for root in roots:
+        root = Path(root).expanduser().resolve()
+        if not root.is_dir():
+            continue
+        for current, dirs, files in os.walk(root, followlinks=False):
+            here = Path(current)
+            dirs[:] = sorted(
+                d for d in dirs
+                if d not in SKIP and not (here / d).is_symlink()
+            )
+            siblings = [here / name for name in sorted(files)]
+            for path in siblings:
+                if not path.is_file() or path.is_symlink():
+                    continue
+                inspected += 1
+                if "corrected" not in path.name.casefold():
+                    continue
+                corrected_seen += 1
+                key = _key(path)
+                candidates = []
+                for other in siblings:
+                    if other == path or not other.is_file() or other.is_symlink():
+                        continue
+                    if "corrected" in other.name.casefold():
+                        continue
+                    if other.suffix.lower() not in SUPPORTED:
+                        continue
+                    if _key(other) == key:
+                        candidates.append(other.resolve())
+                unique = sorted(set(candidates))
+                if len(unique) == 1:
+                    pairs.append({
+                        "original": str(unique[0]),
+                        "manual": str(path.resolve()),
+                        "automated": None,
+                        "status": "discovered_from_corrected_tag",
+                    })
+                else:
+                    unresolved.append({
+                        "corrected": str(path.resolve()),
+                        "candidate_originals": [str(x) for x in unique],
+                        "reason": "missing_twin" if not unique else "ambiguous_twin",
+                    })
+
+    # Exact path-pair deduplication only; never deduplicate by specimen name.
+    dedup = {}
+    for row in pairs:
+        dedup[(row["original"], row["manual"])] = row
+    pairs = list(dedup.values())
+    return {
+        "pairs": pairs,
+        "summary": {
+            "files_inspected": inspected,
+            "corrected_tagged": corrected_seen,
+            "paired": len(pairs),
+            "unresolved": len(unresolved),
+            "source_files_modified": False,
+        },
+        "unresolved": unresolved,
+    }
+
+
+def _write_private_discovery(report: dict, path: Path = DISCOVERY) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
+    tmp.replace(path)
+
+
 def build(
     manifest: Path = PAIR_MANIFEST,
     destination: Path = DESTINATION,
     private_mapping: Path = PRIVATE_MAPPING,
+    *,
+    discover_all_corrected: bool = False,
 ) -> dict:
     manifest = manifest.expanduser().resolve()
     destination = destination.expanduser().resolve()
     private_mapping = private_mapping.expanduser().resolve()
 
-    if not manifest.is_file():
-        raise FileNotFoundError("Private original/manual pair manifest not found")
-    if destination == manifest.parent or destination in manifest.parent.parents:
-        raise ValueError("Benchmark destination overlaps private manifest folder")
-
-    payload = json.loads(manifest.read_text(encoding="utf-8"))
-    rows = payload.get("pairs")
-    if not isinstance(rows, list) or not rows:
-        raise ValueError("Private pair manifest contains no comparison pairs")
-    if len(rows) > 64:
-        raise ValueError("Blind benchmark is limited to 64 curated pairs")
+    if discover_all_corrected:
+        discovered = discover_corrected_pairs()
+        _write_private_discovery(discovered)
+        rows = discovered["pairs"]
+        if not rows:
+            raise ValueError("No unambiguous corrected/original pairs discovered")
+    else:
+        if not manifest.is_file():
+            raise FileNotFoundError("Private original/manual pair manifest not found")
+        if destination == manifest.parent or destination in manifest.parent.parents:
+            raise ValueError("Benchmark destination overlaps private manifest folder")
+        payload = json.loads(manifest.read_text(encoding="utf-8"))
+        rows = payload.get("pairs")
+        if not isinstance(rows, list) or not rows:
+            raise ValueError("Private pair manifest contains no comparison pairs")
 
     originals_dir = destination / "originals"
     manual_dir = destination / "manual"
@@ -162,6 +254,7 @@ def build(
         "source_files_moved": False,
         "sha256_verified": True,
         "safe_for_external_upload": False,
+        "discovery_mode": "all_corrected" if discover_all_corrected else "manifest",
     }
 
 
@@ -170,11 +263,16 @@ def main(argv=None) -> int:
     parser.add_argument("--manifest", type=Path, default=PAIR_MANIFEST)
     parser.add_argument("--destination", type=Path, default=DESTINATION)
     parser.add_argument(
+        "--all-corrected", action="store_true",
+        help="discover every sibling '*corrected*' file in known AFM folders")
+    parser.add_argument(
         "--confirm", choices=("BUILD_BLIND_BENCHMARK",), required=True,
         help="Explicitly confirm copying curated pairs into the benchmark workspace.")
     args = parser.parse_args(argv)
     try:
-        report = build(args.manifest, args.destination)
+        report = build(
+            args.manifest, args.destination,
+            discover_all_corrected=args.all_corrected)
     except Exception as error:
         print(json.dumps({
             "error": type(error).__name__,
