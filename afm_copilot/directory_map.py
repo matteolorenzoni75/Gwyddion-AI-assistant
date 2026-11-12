@@ -21,12 +21,11 @@ from afm_copilot.manual_pairs import PRIVATE_ROOT as MANUAL_PRIVATE
 MANUAL_PAIR_MANIFEST = MANUAL_PRIVATE / "PRIVATE_manual_pair_candidates.json"
 GUI_RESULTS = Path(tempfile.gettempdir()) / "afm_copilot_gui" / "processed" / "processed"
 PRIVATE_OUT = Path.home() / "AFM_Copilot_Private_Audits" / "directory_map" / "PRIVATE_locations.json"
-WORKSPACE = Path(r"C:\AFM_Automation\AFM_Copilot_Workspace")
 WORKSPACE_FOLDERS = (
-    ("pending_review", "01_Manual_To_Review", "Correzioni manuali da validare"),
-    ("automatic", "02_Automatic_Results", "Nuove correzioni generate da AFM Copilot"),
-    ("approved", "03_Approved", "Versioni approvate dall'operatore"),
-    ("reports", "04_Reports", "Comparazioni e report di qualita"),
+    ("runs", "runs", "Derivati e run automatiche"),
+    ("approved", "approved", "Risultati approvati dall'operatore"),
+    ("reports", "reports", "Report e confronti"),
+    ("benchmark", "benchmark", "Corpus benchmark locale"),
 )
 
 
@@ -44,9 +43,9 @@ LOCATIONS = (
      "SQLite privato: non cancellare o spostare."),
     ("workspace", "Area di lavoro AFM Copilot", WORKSPACE,
      "Cartelle separate per correzioni automatiche, revisioni e approvazioni."),
-    ("workspace_auto", "Output automatici organizzati", WORKSPACE / "02_Automatic_Results",
+    ("workspace_auto", "Output automatici organizzati", WORKSPACE / "runs",
      "Destinazione per nuovi risultati: non copia quelli storici."),
-    ("workspace_approved", "Correzioni approvate", WORKSPACE / "03_Approved",
+    ("workspace_approved", "Correzioni approvate", WORKSPACE / "approved",
      "Cartella dedicata ai risultati approvati dall'utente."),
     ("repo", "Codice AFM Copilot", PROJECT_ROOT,
      "Codice, test e strumenti; non è l'archivio delle immagini."),
