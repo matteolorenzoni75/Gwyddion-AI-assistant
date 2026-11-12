@@ -144,10 +144,10 @@ def validate_iterative_plan(
     calibration_verified: bool = True,
     channel_role: str = "height",
 ) -> dict:
-    """Validate a structured multi-step trial without touching image data.
+    """Validate a structured trial and build a state/mask provenance ledger.
 
-    The returned state graph is a provenance ledger. It distinguishes measured
-    values transformed by levelling from states containing reconstructed pixels.
+    Masks belong to a specific image state. After a data-changing operation
+    they become stale unless they are regenerated or explicitly revalidated.
     """
     if not isinstance(plan, dict):
         raise ValueError("Planner plan must be an object")
@@ -159,12 +159,37 @@ def validate_iterative_plan(
             f"Planner trial exceeds {MAX_TRIAL_ACTIONS} actions")
 
     source_state = str(plan.get("source_state") or "state-000")
+    initial_masks = plan.get("masks") or []
+    if not isinstance(initial_masks, list):
+        raise ValueError("masks must be a list")
+
+    active_masks = {}
+    mask_records = []
+    for item in initial_masks:
+        if not isinstance(item, dict):
+            raise ValueError("Each mask descriptor must be an object")
+        ref = str(item.get("ref") or "")
+        role = item.get("role")
+        state = str(item.get("state") or source_state)
+        if not ref or role not in MASK_ROLES:
+            raise ValueError("Each mask needs ref and a valid semantic role")
+        if state != source_state:
+            raise ValueError(
+                f"Mask {ref} belongs to {state}, not current source {source_state}")
+        active_masks[ref] = role
+        mask_records.append({
+            "ref": ref, "role": role, "state": state,
+            "status": "active",
+        })
+
     states = [{
         "state": source_state,
         "parent": None,
         "operation": None,
         "height_provenance": "measured",
         "reconstructed": False,
+        "active_masks": sorted(active_masks),
+        "stale_masks": [],
     }]
     decisions = []
     all_headless = True
@@ -188,20 +213,36 @@ def validate_iterative_plan(
             status = "blocked"
             reasons.append("Physical calibration is not verified")
 
-        role = action.get("mask_role")
-        if role is not None and role not in MASK_ROLES:
+        requested_role = action.get("mask_role")
+        if requested_role is not None and requested_role not in MASK_ROLES:
             status = "blocked"
-            reasons.append(f"Unknown mask role: {role}")
+            reasons.append(f"Unknown mask role: {requested_role}")
+
+        mask_ref = action.get("mask_ref") or action.get("reconstruction_mask_ref")
+        actual_role = None
+        if mask_ref is not None:
+            mask_ref = str(mask_ref)
+            actual_role = active_masks.get(mask_ref)
+            if actual_role is None:
+                status = "blocked"
+                reasons.append(
+                    f"Mask {mask_ref} is missing or stale for state {current}")
+            elif requested_role is not None and requested_role != actual_role:
+                status = "blocked"
+                reasons.append(
+                    f"Mask {mask_ref} is {actual_role}, not {requested_role}")
+
+        role = actual_role or requested_role
+        if op.needs_mask and not mask_ref:
+            status = "blocked"
+            reasons.append(f"{key} requires an explicit mask_ref")
         if op.required_mask_role and role != op.required_mask_role:
             status = "blocked"
             reasons.append(
                 f"{key} requires mask_role={op.required_mask_role}")
-        elif op.needs_mask and role is None:
-            status = "blocked"
-            reasons.append(f"{key} requires an explicit semantic mask role")
 
-        # Structural-protection masks may guide fitting but must never become a
-        # repair mask by implication.
+        # A structure-protection mask can guide a fit, but can never become
+        # interpolation/repair evidence just because a later step needs a mask.
         if key == "interpolate_under_mask" and role != "repair_defect":
             status = "blocked"
             reasons.append("Interpolation is permitted only for repair_defect masks")
@@ -249,7 +290,7 @@ def validate_iterative_plan(
                     status = "review"
                 reasons.append(
                     "Reconstructed pixels require explicit accept_reconstruction")
-            if not action.get("reconstruction_mask_ref"):
+            if not mask_ref:
                 if status in ("execute", "trial_only"):
                     status = "review"
                 reasons.append(
@@ -260,18 +301,70 @@ def validate_iterative_plan(
             states[-1]["reconstructed"]
             or op.provenance_effect == "reconstructed_mixed"
         )
+
+        stale = []
+        next_masks = dict(active_masks)
+        if key == "remove_mask":
+            stale = sorted(next_masks)
+            next_masks = {}
+        elif op.provenance_effect != "mask_only":
+            # Geometry may be unchanged, but semantic validity is not assumed
+            # after the data state changes. Recreate/revalidate before reuse.
+            stale = sorted(next_masks)
+            next_masks = {}
+
+        created_mask_ref = None
+        created_mask_role = None
+        if op.creates_mask:
+            created_mask_ref = str(
+                action.get("output_mask_ref") or f"{out_state}:mask")
+            created_mask_role = (
+                op.creates_mask_role
+                or action.get("output_mask_role")
+                or requested_role
+            )
+            if created_mask_role not in MASK_ROLES:
+                status = "blocked"
+                reasons.append(
+                    f"{key} must assign a valid role to the created mask")
+            else:
+                next_masks[created_mask_ref] = created_mask_role
+                mask_records.append({
+                    "ref": created_mask_ref,
+                    "role": created_mask_role,
+                    "state": out_state,
+                    "status": "active",
+                    "created_by": key,
+                })
+
+        for ref in stale:
+            mask_records.append({
+                "ref": ref,
+                "role": active_masks.get(ref),
+                "state": current,
+                "status": "stale_after_state_change",
+                "stale_at": out_state,
+            })
+
         states.append({
             "state": out_state,
             "parent": current,
             "operation": key,
+            "mask_ref": mask_ref,
             "mask_role": role,
             "height_provenance": (
                 "measured_plus_reconstructed" if reconstructed else "measured"
             ),
             "reconstructed": reconstructed,
-            "reconstruction_mask_ref": action.get("reconstruction_mask_ref"),
+            "reconstruction_mask_ref": (
+                mask_ref if op.provenance_effect == "reconstructed_mixed"
+                else None
+            ),
+            "active_masks": sorted(next_masks),
+            "stale_masks": stale,
         })
         current = out_state
+        active_masks = next_masks
 
         if status not in ("execute", "trial_only"):
             all_headless = False
@@ -282,7 +375,10 @@ def validate_iterative_plan(
             "reason": "; ".join(reasons) if reasons else "validated",
             "input_state": states[-2]["state"],
             "output_state": out_state,
+            "mask_ref": mask_ref,
             "mask_role": role,
+            "created_mask_ref": created_mask_ref,
+            "created_mask_role": created_mask_role,
             "expected_checks": checks,
             "on_failure": failure,
             "execution_mode": op.execution_mode,
@@ -299,6 +395,7 @@ def validate_iterative_plan(
         "final_state": current,
         "actions": decisions,
         "states": states,
+        "masks": mask_records,
         "stop_conditions": stop_conditions,
         "can_execute_headless": bool(all_headless),
         "requires_review": any(
