@@ -1,7 +1,7 @@
 """Build a blind local benchmark corpus from operator-corrected AFM pairs.
 
 Copies, never moves, the known original/manual pairs into a neutral workspace:
-    05_Benchmark_Corpus/
+    benchmark/
         originals/case-001.<ext>
         manual/case-001.<ext>
         copilot/
@@ -29,7 +29,7 @@ from afm_copilot.manual_pairs import (
 )
 
 PAIR_MANIFEST = PRIVATE_ROOT / "PRIVATE_manual_pair_candidates.json"
-DESTINATION = WORKSPACE / "05_Benchmark_Corpus"
+DESTINATION = WORKSPACE / "benchmark"
 PRIVATE_MAPPING = PRIVATE_ROOT / "PRIVATE_benchmark_mapping.json"
 DISCOVERY = PRIVATE_ROOT / "PRIVATE_corrected_discovery.json"
 
