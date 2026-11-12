@@ -70,7 +70,8 @@ def run_copilot(root: Path = ROOT) -> dict:
             "output_rms_nm": result.get("output_rms_nm"),
         })
 
-    RUN_MANIFEST.write_text(json.dumps(
+    run_manifest = root / "benchmark_auto_manifest.json"
+    run_manifest.write_text(json.dumps(
         {"schema_version": 1, "pairs": rows}, indent=2, ensure_ascii=False),
         encoding="utf-8")
     return {
@@ -84,17 +85,20 @@ def run_copilot(root: Path = ROOT) -> dict:
 def prepare_share(root: Path = ROOT) -> dict:
     root = root.expanduser().resolve()
     cases = _read_cases(root)
+    run_manifest = root / "benchmark_auto_manifest.json"
+    blind = root / "share" / "blind_inputs"
+    reference = root / "share" / "reference"
     run_data = {}
-    if RUN_MANIFEST.is_file():
-        run_payload = json.loads(RUN_MANIFEST.read_text(encoding="utf-8"))
+    if run_manifest.is_file():
+        run_payload = json.loads(run_manifest.read_text(encoding="utf-8"))
         run_data = {r["case"]: r for r in run_payload.get("pairs", [])}
 
-    if BLIND.exists():
-        shutil.rmtree(BLIND)
-    if REFERENCE.exists():
-        shutil.rmtree(REFERENCE)
-    BLIND.mkdir(parents=True)
-    REFERENCE.mkdir(parents=True)
+    if blind.exists():
+        shutil.rmtree(blind)
+    if reference.exists():
+        shutil.rmtree(reference)
+    blind.mkdir(parents=True)
+    reference.mkdir(parents=True)
     scratch = root / "_share_scratch"
 
     blind_manifest = {"schema_version": 1, "cases": []}
@@ -113,7 +117,7 @@ def prepare_share(root: Path = ROOT) -> dict:
             raw_channel.name = "Height"
             raw_channel.meta = {}
             raw_channel.source = None
-            raw_out = BLIND / f"{case_id}.gwy"
+            raw_out = blind / f"{case_id}.gwy"
             save_height(raw_channel, raw_out)
             blind_manifest["cases"].append({
                 "case": case_id,
@@ -136,7 +140,7 @@ def prepare_share(root: Path = ROOT) -> dict:
             manual_channel.name = "Height"
             manual_channel.meta = {}
             manual_channel.source = None
-            manual_out = REFERENCE / f"{case_id}-manual.gwy"
+            manual_out = reference / f"{case_id}-manual.gwy"
             save_height(manual_channel, manual_out)
             ref["manual"] = manual_out.name
             manual_ok += 1
@@ -151,7 +155,7 @@ def prepare_share(root: Path = ROOT) -> dict:
                 auto_channel.name = "Height"
                 auto_channel.meta = {}
                 auto_channel.source = None
-                auto_out = REFERENCE / f"{case_id}-copilot.gwy"
+                auto_out = reference / f"{case_id}-copilot.gwy"
                 save_height(auto_channel, auto_out)
                 ref["copilot"] = auto_out.name
                 copilot_ok += 1
@@ -162,9 +166,9 @@ def prepare_share(root: Path = ROOT) -> dict:
 
         reference_manifest["cases"].append(ref)
 
-    (BLIND / "manifest.json").write_text(
+    (blind / "manifest.json").write_text(
         json.dumps(blind_manifest, indent=2, ensure_ascii=False), encoding="utf-8")
-    (REFERENCE / "manifest.json").write_text(
+    (reference / "manifest.json").write_text(
         json.dumps(reference_manifest, indent=2, ensure_ascii=False), encoding="utf-8")
 
     return {
@@ -172,8 +176,8 @@ def prepare_share(root: Path = ROOT) -> dict:
         "blind_inputs_sanitized": blind_ok,
         "manual_references_sanitized": manual_ok,
         "copilot_references_sanitized": copilot_ok,
-        "blind_folder": str(BLIND),
-        "reference_folder": str(REFERENCE),
+        "blind_folder": str(blind),
+        "reference_folder": str(reference),
         "raw_metadata_in_blind_inputs": False,
         "original_filenames_in_blind_inputs": False,
         "upload_blind_first": True,
