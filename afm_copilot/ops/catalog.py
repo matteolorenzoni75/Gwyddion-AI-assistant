@@ -1,9 +1,11 @@
 """
 The operation catalog: Gwyddion functions with their meaning attached.
 
-Each entry pairs a real, verified Gwyddion process function (every `gwy_func`
-below was confirmed present by tools/introspect_pygwy.py) with the three things
-a non-expert actually needs:
+Each entry describes a Gwyddion capability. Headless process functions are
+verified against tools/introspect_pygwy.py; interactive tools and explicit
+human actions are represented too, but are marked non-headless so the planner
+cannot silently execute them. Every capability carries the things a non-expert
+actually needs:
 
     what     what the operation does to the data
     why      the reason you would reach for it
