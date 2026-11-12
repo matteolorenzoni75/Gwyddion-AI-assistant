@@ -183,6 +183,57 @@ class GwyBridge:
         result["recipe"] = recipe.key
         return result
 
+    def run_trial_action(
+        self,
+        plan: dict,
+        input_path: str | Path,
+        out_dir: str | Path,
+        timeout: float = 900.0,
+    ) -> dict:
+        """Execute exactly one validated planner action into a new state.
+
+        The planner must inspect the resulting state before proposing another
+        action. Existing source/state files are never overwritten.
+        """
+        from afm_copilot.correction_gate import (
+            recipe_from_iterative_plan, validate_iterative_plan)
+
+        validation = validate_iterative_plan(plan)
+        recipe = recipe_from_iterative_plan(plan)
+        action = validation["actions"][0]
+        destination = Path(out_dir).expanduser().resolve() / action["output_state"]
+        if destination.exists():
+            raise BridgeError(
+                f"Planner state already exists; refusing overwrite: {destination}")
+        destination.mkdir(parents=True, exist_ok=False)
+
+        source = Path(input_path).expanduser().resolve()
+        if not source.is_file():
+            raise BridgeError(f"Planner input state does not exist: {source}")
+
+        try:
+            result = self.run_recipe(
+                recipe, [source], destination, timeout=timeout)
+        except Exception:
+            # Keep the empty state directory out of future state discovery,
+            # but never delete a directory once Gwyddion may have written data.
+            if destination.is_dir() and not any(destination.iterdir()):
+                destination.rmdir()
+            raise
+
+        audit = {
+            "schema_version": 1,
+            "source": str(source),
+            "destination": str(destination),
+            "validation": validation,
+            "result": result,
+            "requires_review": validation["requires_review"],
+            "source_modified": False,
+        }
+        (destination / "_trial.json").write_text(
+            json.dumps(audit, indent=2), encoding="utf-8")
+        return audit
+
     def self_test(self) -> dict:
         """Confirm the Python 2.7 side can import gwy and see its modules."""
         return self.run_script("selftest.py", timeout=120.0)
