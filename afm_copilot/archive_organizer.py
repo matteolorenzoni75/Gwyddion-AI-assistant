@@ -17,8 +17,9 @@ from pathlib import Path
 
 from afm_copilot.feedback import PROJECT_ROOT
 from afm_copilot.labeling import DEFAULT_DB, FORMATS
+from afm_copilot.paths import RAW_ARCHIVE
 
-DEFAULT_ROOT = Path(r"C:\AFM_Automation\All AFM Data")
+DEFAULT_ROOT = RAW_ARCHIVE
 PRIVATE = Path.home() / "AFM_Copilot_Private_Audits" / "archive_organizer"
 # Add common sidecars too. Never discard metadata by flattening only scans.
 SCAN_EXTENSIONS = FORMATS
