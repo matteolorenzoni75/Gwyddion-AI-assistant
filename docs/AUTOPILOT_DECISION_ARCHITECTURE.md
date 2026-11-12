@@ -42,6 +42,34 @@ Generate several candidates from numerical segmentation, robust backgrounds, hei
 
 Mask thresholds need search and sensitivity analysis, not one universal percentage or an LLM's unverified numerical guess. A global background fit needs spatially distributed support and a well-conditioned fit. A row-wise correction needs support in the affected rows. Do not treat a per-row support criterion as a universal rule for all background fits. The current coverage cutoffs are provisional safeguards, not physical laws.
 
+## 2.1 Capability registry and operator actions
+
+The existing operation catalog is also the planner capability registry. Do not
+create a second catalogue. Each capability declares whether it is a headless
+Gwyddion process, an interactive Gwyddion tool, or an explicit human action;
+whether its deterministic parameter contract is verified; whether it may run
+as an automatic candidate, a reversible review-only trial, or only manually;
+which semantic mask role it consumes or creates; and whether it preserves
+measured values or introduces reconstructed pixels.
+
+This distinction matters for advanced Gwyddion functionality. For example,
+Path Level is an interactive tool based on selected line intersections, not a
+normal process function. It is therefore a legitimate planner proposal but
+cannot be silently sent to the headless executor. Step Line Correction,
+Block Line Correction, Mark Scars and Revolve Arc are process functions, but
+their parameter contracts must be verified before automatic execution. The
+planner may know they exist before the executor is allowed to run them.
+
+Manual mask editing is also a first-class planner action. The planner can ask
+the operator to add/remove a specific region or refine a mask boundary when
+sample knowledge is required. This is preferable to guessing pixel geometry
+and keeps human intervention targeted rather than making manual recipe
+selection the normal workflow.
+
+A tracked PyGwy inventory currently exposes 197 process functions. Do not wrap
+all of them blindly. Search the inventory when a case needs a capability not
+yet represented, then add semantic requirements/cautions before enabling it.
+
 ## 3. Closed-loop controller
 
 Proposed cycle:
@@ -53,6 +81,30 @@ Use a state graph rather than blindly concatenating recipe lists. Each operation
 For example, a surface with isolated objects and a line defect may require: provisional tilt estimate; protect-object and defect masks with different purposes; a supported masked fit; reevaluation of line residuals; localized repair only when warranted; structural preservation checks; then reference-zero and display settings. A stepped or continuous granular surface may require a different plan, or no correction. There is no universal cleaning order.
 
 Every trial runs on a separate derivative. Maintain bounded trial count, time and memory; a no-change candidate is always allowed. If evidence remains ambiguous, return the best-supported provisional state and request review rather than repeatedly removing more structure.
+
+## 3.1 One action per state
+
+An iterative plan is not converted into one long Gwyddion recipe. Each
+data-changing action produces a new immutable state, followed by mandatory
+reinspection. Only then may the planner propose the next action. This preserves
+the user's real workflow of mask -> level -> inspect -> remask -> realign ->
+inspect, and makes rollback meaningful.
+
+Masks are bound to the exact state on which they were created or approved.
+After any data-changing operation they become stale by default, even if pixel
+geometry is unchanged. Reuse requires explicit regeneration or validation.
+Mask-only operations can carry masks forward.
+
+Reconstruction is tracked separately from ordinary levelling. Laplace/fractal
+interpolation and scar repair create a state containing measured plus
+reconstructed values; the repair mask remains part of provenance and
+measurements must be able to exclude reconstructed pixels. A structure mask
+can never be implicitly reused as a repair mask.
+
+Risky but headless operations may run only as reversible derivative trials.
+They cannot be promoted merely because the image looks smoother or global RMS
+falls. Interactive tools and manual actions remain review steps in the state
+graph rather than being simulated by the executor.
 
 ## 4. Local executor and verifier
 
