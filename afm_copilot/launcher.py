@@ -45,12 +45,12 @@ WORKFLOW_ACTIONS = (
 )
 MAINTENANCE_ACTIONS = (
     ("Mappa delle cartelle", "Controlla dove sono originali, revisioni e output.",
-     "Consulta le directory note e le 8 associazioni manuali trovate. "
+     "Consulta le directory note e le associazioni manuali disponibili. "
      "Il rapporto viene salvato soltanto nel tuo archivio privato.",
      ("-m", "afm_copilot.directory_map"), "SP_DirOpenIcon"),
     ("Prepara area di lavoro", "Crea cartelle ordinate, senza muovere immagini.",
-     "Prepara una struttura separata per correzioni da validare, output "
-     "automatici, risultati approvati e report. Non tocca gli originali.",
+     "Prepara una struttura compatta per run, risultati approvati, report e "
+     "benchmark. Non tocca gli originali.",
      "workspace", "SP_DirIcon"),
     ("Audit etichette", "Controlla le classificazioni esperte salvate.",
      "Mostra conteggi delle etichette e copertura dei descrittori numerici. "
