@@ -26,11 +26,11 @@ function Move-CheckedDirectory([string]$Source, [string]$Destination) {
     Move-Item -LiteralPath $Source -Destination $Destination
 }
 
-function Rewrite-TextPaths([string]$Base, [hashtable]$Map) {
+function Rewrite-TextPaths([string]$Base, $Map) {
     if (-not (Test-Path -LiteralPath $Base -PathType Container)) {
         return 0
     }
-    $changed = 0
+    $changedCount = 0
     $utf8 = New-Object System.Text.UTF8Encoding($false)
     Get-ChildItem -LiteralPath $Base -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Extension -in ".json", ".jsonl" } |
@@ -44,10 +44,10 @@ function Rewrite-TextPaths([string]$Base, [hashtable]$Map) {
             }
             if ($new -ne $text) {
                 [System.IO.File]::WriteAllText($path, $new, $utf8)
-                $script:changed++
+                $changedCount++
             }
         }
-    return $changed
+    return $changedCount
 }
 
 if (Test-Path -LiteralPath $Marker) {
