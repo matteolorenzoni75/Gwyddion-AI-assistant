@@ -70,13 +70,27 @@ def test_generated_manifest_is_private_and_resumable(tmp_path):
     assert manual.read_bytes() == b"human"
 
 
-def test_batch_refuses_oversized_manifest(tmp_path):
+def test_batch_allows_current_17_pair_corpus(tmp_path):
     manifest = tmp_path / "PRIVATE_pairs.json"
     manifest.write_text(json.dumps({
-        "pairs": [{"original": "raw.ibw", "manual": "corrected.gwy"} for _ in range(17)]
+        "pairs": [{"original": f"raw-{i}.ibw", "manual": f"corrected-{i}.gwy"}
+                  for i in range(17)]
+    }))
+    report = run_batch(
+        manifest, output=tmp_path.parent / "output",
+        processor=lambda row, **kwargs: {"state": "held_missing_input"})
+    assert report["pairs_examined"] == 17
+    assert report["states"] == {"held_missing_input": 17}
+
+
+def test_batch_refuses_unbounded_manifest(tmp_path):
+    manifest = tmp_path / "PRIVATE_pairs.json"
+    manifest.write_text(json.dumps({
+        "pairs": [{"original": f"raw-{i}.ibw", "manual": f"corrected-{i}.gwy"}
+                  for i in range(65)]
     }))
     import pytest
-    with pytest.raises(ValueError, match="16"):
+    with pytest.raises(ValueError, match="64"):
         run_batch(manifest, output=tmp_path.parent / "output")
 
 
@@ -86,3 +100,19 @@ def test_image_identity_includes_source_content_metadata(tmp_path):
     first = _id(raw)
     raw.write_bytes(b"different-size-content")
     assert _id(raw) != first
+
+
+def test_existing_automatic_association_is_not_reprocessed(tmp_path):
+    existing = tmp_path / "already.gwy"
+    existing.write_bytes(b"existing automatic")
+    raw = tmp_path / "raw.ibw"
+    manual = tmp_path / "manual.gwy"
+    raw.write_bytes(b"raw")
+    manual.write_bytes(b"manual")
+    result = process_one({
+        "original": str(raw), "manual": str(manual), "automated": str(existing)
+    }, output=tmp_path.parent / "output",
+       importer=lambda *args: (_ for _ in ()).throw(
+           AssertionError("existing automatic must be skipped")))
+    assert result["state"] == "existing"
+    assert existing.read_bytes() == b"existing automatic"
