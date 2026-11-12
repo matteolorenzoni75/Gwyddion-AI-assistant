@@ -1,6 +1,7 @@
 """Safety decisions explain proposed AFM clean-up without altering data."""
 from types import SimpleNamespace
 
+from afm_copilot.bridge import GwyBridge
 from afm_copilot.correction_gate import (
     gate_recipe, planner_contract, recipe_from_iterative_plan,
     validate_iterative_plan,
@@ -216,3 +217,38 @@ def test_mask_becomes_stale_after_data_changing_level_step():
     assert "objects-v0" in result["states"][1]["stale_masks"]
     assert result["actions"][1]["status"] == "blocked"
     assert "stale" in result["actions"][1]["reason"]
+
+
+
+def test_bridge_trial_action_creates_new_state_and_audit_without_overwrite(tmp_path):
+    class DummyBridge:
+        run_trial_action = GwyBridge.run_trial_action
+
+        def run_recipe(self, recipe, paths, out_dir, timeout=900.0):
+            assert recipe.steps == ("plane_level",)
+            assert len(paths) == 1
+            return {"n_ok": 1, "n_total": 1, "results": [{"ok": True}]}
+
+    source = tmp_path / "input.gwy"
+    source.write_bytes(b"gwy-placeholder")
+    plan = {
+        "actions": [{
+            "operation": "plane_level",
+            "output_state": "state-001",
+            "expected_checks": ["global tilt decreases"],
+        }],
+    }
+    bridge = DummyBridge()
+    audit = bridge.run_trial_action(plan, source, tmp_path / "states")
+    state_dir = tmp_path / "states" / "state-001"
+    assert state_dir.is_dir()
+    assert (state_dir / "_trial.json").is_file()
+    assert audit["source_modified"] is False
+    assert audit["validation"]["final_state"] == "state-001"
+
+    try:
+        bridge.run_trial_action(plan, source, tmp_path / "states")
+    except Exception as error:
+        assert "refusing overwrite" in str(error)
+    else:
+        raise AssertionError("existing planner state was overwritten")
