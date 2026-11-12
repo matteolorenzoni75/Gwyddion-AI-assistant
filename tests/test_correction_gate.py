@@ -72,8 +72,14 @@ def test_interpolation_cannot_reuse_structure_protection_mask():
 
 def test_reconstruction_is_recorded_in_state_provenance():
     result = validate_iterative_plan({
+        "masks": [{
+            "ref": "mask-repair-7",
+            "role": "repair_defect",
+            "state": "state-000",
+        }],
         "actions": [{
             "operation": "interpolate_under_mask",
+            "mask_ref": "mask-repair-7",
             "mask_role": "repair_defect",
             "accept_reconstruction": True,
             "reconstruction_mask_ref": "mask-repair-7",
@@ -142,8 +148,14 @@ def test_multi_action_plan_must_be_reinspected_between_steps():
 
 def test_review_operation_can_run_only_as_reversible_trial():
     result = validate_iterative_plan({
+        "masks": [{
+            "ref": "mask-r1",
+            "role": "repair_defect",
+            "state": "state-000",
+        }],
         "actions": [{
             "operation": "interpolate_under_mask",
+            "mask_ref": "mask-r1",
             "mask_role": "repair_defect",
             "accept_reconstruction": True,
             "reconstruction_mask_ref": "mask-r1",
@@ -153,3 +165,54 @@ def test_review_operation_can_run_only_as_reversible_trial():
     assert result["actions"][0]["status"] == "trial_only"
     assert result["can_execute_headless"] is True
     assert result["requires_review"] is True
+
+
+
+def test_mask_generated_in_one_state_can_feed_next_repair_proposal():
+    plan = {
+        "actions": [
+            {
+                "operation": "mark_outliers",
+                "output_mask_ref": "repair-candidate",
+            },
+            {
+                "operation": "interpolate_under_mask",
+                "mask_ref": "repair-candidate",
+                "mask_role": "repair_defect",
+                "accept_reconstruction": True,
+                "reconstruction_mask_ref": "repair-candidate",
+                "expected_checks": ["outside-mask structure unchanged"],
+            },
+        ],
+    }
+    result = validate_iterative_plan(plan)
+    assert result["blocked"] is False
+    assert result["actions"][0]["created_mask_role"] == "repair_defect"
+    assert result["actions"][1]["mask_ref"] == "repair-candidate"
+    assert result["states"][1]["active_masks"] == ["repair-candidate"]
+
+
+def test_mask_becomes_stale_after_data_changing_level_step():
+    plan = {
+        "masks": [{
+            "ref": "objects-v0",
+            "role": "protect_structure",
+            "state": "state-000",
+        }],
+        "actions": [
+            {
+                "operation": "plane_level",
+                "expected_checks": ["global tilt decreases"],
+            },
+            {
+                "operation": "plane_around_objects",
+                "mask_ref": "objects-v0",
+                "mask_role": "protect_structure",
+                "expected_checks": ["background residual decreases"],
+            },
+        ],
+    }
+    result = validate_iterative_plan(plan)
+    assert "objects-v0" in result["states"][1]["stale_masks"]
+    assert result["actions"][1]["status"] == "blocked"
+    assert "stale" in result["actions"][1]["reason"]
