@@ -29,7 +29,7 @@ from afm_copilot.ops.recipes import get_recipe
 from afm_copilot.quality import assess
 
 MANIFEST = PRIVATE_ROOT / "PRIVATE_manual_pair_candidates.json"
-OUTPUT = WORKSPACE / "02_Automatic_Results"
+OUTPUT = WORKSPACE / "runs"
 AUDIT = PRIVATE_ROOT / "PRIVATE_automatic_correction_audit.jsonl"
 # This conservative pilot excludes advanced curved fits, unverified scars,
 # despiking and interpolation whenever the gate requests review.
