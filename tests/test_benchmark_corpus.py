@@ -3,6 +3,7 @@ import json
 
 import pytest
 
+import afm_copilot.benchmark_corpus as bench
 from afm_copilot.benchmark_corpus import build
 
 
@@ -68,7 +69,26 @@ def test_refuses_existing_different_content(tmp_path):
         build(manifest, destination, tmp_path / "private" / "mapping.json")
 
 
-def test_refuses_more_than_64_curated_pairs(tmp_path):
+def test_manifest_builder_allows_more_than_64_curated_pairs(tmp_path):
     manifest, _ = _manifest(tmp_path, 65)
-    with pytest.raises(ValueError, match="64"):
-        build(manifest, tmp_path / "workspace", tmp_path / "private" / "mapping.json")
+    report = build(manifest, tmp_path / "workspace", tmp_path / "private" / "mapping.json")
+    assert report["pairs"] == 65
+
+
+def test_discover_all_corrected_pairs_only_unambiguous_siblings(tmp_path, monkeypatch):
+    root = tmp_path / "known"
+    root.mkdir()
+    (root / "alpha.ibw").write_bytes(b"raw-a")
+    (root / "alpha corrected.gwy").write_bytes(b"manual-a")
+    (root / "beta corrected.gwy").write_bytes(b"manual-b")
+    # Ambiguous: two possible twins reduce to same key.
+    (root / "gamma.ibw").write_bytes(b"raw-g1")
+    (root / "gamma.gwy").write_bytes(b"raw-g2")
+    (root / "gamma corrected.gwy").write_bytes(b"manual-g")
+
+    report = bench.discover_corrected_pairs((root,))
+    assert report["summary"]["corrected_tagged"] == 3
+    assert report["summary"]["paired"] == 1
+    assert report["summary"]["unresolved"] == 2
+    assert report["pairs"][0]["original"].endswith("alpha.ibw")
+    assert report["pairs"][0]["manual"].endswith("alpha corrected.gwy")
