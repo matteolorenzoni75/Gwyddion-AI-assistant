@@ -60,7 +60,17 @@ class Recipe:
         return "\n".join(lines)
 
     def to_job(self) -> list[dict]:
-        """The machine-readable form handed to the Python 2.7 side."""
+        """The machine-readable form handed to the Python 2.7 side.
+
+        Interactive tools and human actions are planner capabilities too, but
+        they are never smuggled into the headless Gwyddion executor.
+        """
+        operations = self.operations
+        blocked = [op.key for op in operations if not op.headless]
+        if blocked:
+            raise ValueError(
+                "Recipe contains non-headless or unverified operations: "
+                + ", ".join(blocked))
         return [
             {
                 "key": op.key,
@@ -70,7 +80,7 @@ class Recipe:
                 "needs_mask": op.needs_mask,
                 "creates_mask": op.creates_mask,
             }
-            for op in self.operations
+            for op in operations
         ]
 
 
