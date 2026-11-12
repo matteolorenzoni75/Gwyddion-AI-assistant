@@ -38,6 +38,8 @@ function New-FileHardLink([string]$Link, [string]$Target) {
     New-Item -ItemType HardLink -Path $Link -Target $Target | Out-Null
 }
 
+$script:OpaqueConflicts = @()
+
 function Merge-TreeByLinks([string]$Source, [string]$Destination) {
     # Recovery-safe union of a partially moved tree.
     # Existing destination content wins. Missing directories become junctions
@@ -48,7 +50,28 @@ function Merge-TreeByLinks([string]$Source, [string]$Destination) {
     }
     Ensure-Directory $Destination
 
-    Get-ChildItem -LiteralPath $Source -Force | ForEach-Object {
+    try {
+        $children = @(Get-ChildItem -LiteralPath $Source -Force -ErrorAction Stop)
+    } catch [System.UnauthorizedAccessException] {
+        $script:OpaqueConflicts += [pscustomobject]@{
+            source = $Source
+            destination = $Destination
+            reason = "access_denied_source_tree"
+        }
+        return
+    } catch {
+        if ($_.Exception.Message -match "access|denied|permission") {
+            $script:OpaqueConflicts += [pscustomobject]@{
+                source = $Source
+                destination = $Destination
+                reason = "source_tree_not_enumerable"
+            }
+            return
+        }
+        throw
+    }
+
+    $children | ForEach-Object {
         $src = $_.FullName
         $dst = Join-Path $Destination $_.Name
 
@@ -296,6 +319,13 @@ Write-Host "Legacy:     $Legacy"
 Write-Host "Private JSON/JSONL files rewritten: $privateChanged"
 Write-Host "Workspace JSON/JSONL files rewritten: $workspaceChanged"
 Write-Host "SQLite scan paths rewritten: $dbChanged"
+Write-Host "Opaque ACL conflicts preserved: $($script:OpaqueConflicts.Count)"
+if ($script:OpaqueConflicts.Count -gt 0) {
+    $conflictReport = Join-Path $Legacy "opaque-acl-conflicts.json"
+    $script:OpaqueConflicts | ConvertTo-Json -Depth 4 |
+        Set-Content -LiteralPath $conflictReport -Encoding UTF8
+    Write-Host "ACL conflict report: $conflictReport"
+}
 Write-Host ""
 Write-Host "IMPORTANT: C:\AFM_Automation may remain as backing storage for junctions."
 Write-Host "Do not delete it yet. No archive permissions were changed and no raw data were copied."
