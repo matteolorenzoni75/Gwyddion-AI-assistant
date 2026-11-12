@@ -38,8 +38,7 @@ def test_prepare_workspace_creates_only_empty_directories(tmp_path):
     assert result["source_files_moved"] == 0
     assert result["source_files_deleted"] == 0
     assert sorted(p.name for p in root.iterdir()) == [
-        "01_Manual_To_Review", "02_Automatic_Results",
-        "03_Approved", "04_Reports"
+        "approved", "benchmark", "reports", "runs"
     ]
     again = prepare_workspace(root)
     assert again["folders_created"] == 0
