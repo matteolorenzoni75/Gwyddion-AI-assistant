@@ -483,6 +483,78 @@ _ALL: list[Operation] = [
         planner_tags=("line_artifact", "segment_jump", "reinspect"),
     ),
     Operation(
+        key="block_line_correction",
+        gwy_func="block_correct_step",
+        title="Block line correction",
+        menu="/Correct Data/Step Block Correction",
+        what="Detects sudden height jumps and shifts entire row blocks between "
+             "them while preserving the mutual height relations inside each block.",
+        why="A less aggressive alternative to Step Line Correction when the goal "
+            "is to remove jumps without flattening every row.",
+        caution="Jump detection parameters still need deterministic verification. "
+                "Trial only after confirming the defect is instrumental rather "
+                "than a real step boundary.",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="measured_transform",
+        planner_tags=("line_artifact", "segment_jump", "structure_preserving", "reinspect"),
+    ),
+    Operation(
+        key="mark_disconnected",
+        gwy_func="mark_disconn",
+        title="Mark locally disconnected values",
+        menu="/Correct Data/Mask of Disconnected",
+        what="Builds a mask of values that deviate from their local neighbourhood "
+             "after estimating a local background.",
+        why="Can find local dropouts or defects that a global 3-sigma outlier "
+            "mask misses.",
+        caution="Its radius and threshold define what counts as a defect; real "
+                "small objects can also be marked. Use as a repair_defect "
+                "candidate, never as automatic permission to interpolate.",
+        creates_mask=True,
+        creates_mask_role="repair_defect",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="mask_only",
+        planner_tags=("mask_candidate", "local_defect", "reinspect"),
+    ),
+    Operation(
+        key="fractal_interpolate",
+        gwy_func="fraccor",
+        title="Fractal correction under mask",
+        menu="/Correct Data/Fractal Correction",
+        what="Replaces masked data with a synthetic rough surface estimated "
+             "from the image's fractal statistics.",
+        why="Offers an alternative to smooth Laplace interpolation when the "
+            "surrounding surface is genuinely rough and fractal-like.",
+        caution="Gwyddion explicitly warns this can produce unrealistic data "
+                "when the surface is not fractal. Reconstructed pixels are not "
+                "measurements and must remain provenance-masked.",
+        needs_mask=True,
+        required_mask_role="repair_defect",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="reconstructed_mixed",
+        planner_tags=("repair", "interpolation", "high_risk", "reinspect"),
+    ),
+    Operation(
+        key="trimmed_mean_level",
+        gwy_func="trimmed_mean",
+        title="Trimmed Mean levelling",
+        menu="/Level/Trimmed Mean",
+        what="Levels or filters using a trimmed mean that suppresses a chosen "
+             "fraction of extreme values.",
+        why="Provides a continuum between mean-like and median-like robustness "
+            "when ordinary plane or row statistics are dominated by outliers.",
+        caution="The trim fraction changes the physical meaning of the fit and "
+                "must be explicit. Do not use default persistent GUI settings "
+                "as hidden planner parameters.",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="measured_transform",
+        planner_tags=("background", "robust_fit", "reinspect"),
+    ),
+    Operation(
         key="revolve_arc",
         gwy_func="arc_revolve",
         title="Revolve Arc background subtraction",
