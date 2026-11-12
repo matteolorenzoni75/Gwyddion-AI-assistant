@@ -43,12 +43,60 @@ class Operation:
     settings: dict = field(default_factory=dict)
     needs_mask: bool = False
     creates_mask: bool = False
+    # Planner/executor contract. "process" means a gwy_process_func callable
+    # headlessly; "interactive_tool" needs a Gwyddion selection/tool; "human"
+    # is an explicit operator action such as manual mask editing.
+    execution_mode: str = "process"
+    # False means the capability is known and can be proposed, but its full
+    # deterministic parameter contract has not yet been verified locally.
+    executor_ready: bool = True
+    # candidate = may enter bounded automatic trials; review = needs stronger
+    # evidence/operator validation; manual = cannot be autonomously executed.
+    planner_policy: str = "candidate"
+    # Semantic mask role required by the operation. Empty means no semantic
+    # role is required beyond any legacy Gwyddion mask presence.
+    required_mask_role: str = ""
+    # Describes how the operation changes provenance of the height values.
+    # measured_transform preserves measured pixels under a deterministic
+    # transform; reconstructed_mixed means some output pixels are no longer
+    # measured values; mask_only changes only selection state.
+    provenance_effect: str = "measured_transform"
+    selection_kind: str = ""
+    planner_tags: tuple[str, ...] = ()
+
+    @property
+    def headless(self) -> bool:
+        return self.execution_mode == "process" and self.executor_ready
+
+    def capability(self) -> dict:
+        """Machine-readable planner description; never executes anything."""
+        return {
+            "key": self.key,
+            "title": self.title,
+            "gwyddion": self.gwy_func,
+            "menu": self.menu,
+            "execution_mode": self.execution_mode,
+            "executor_ready": self.executor_ready,
+            "planner_policy": self.planner_policy,
+            "needs_mask": self.needs_mask,
+            "creates_mask": self.creates_mask,
+            "required_mask_role": self.required_mask_role or None,
+            "provenance_effect": self.provenance_effect,
+            "selection_kind": self.selection_kind or None,
+            "tags": list(self.planner_tags),
+            "what": self.what,
+            "why": self.why,
+            "caution": self.caution,
+        }
 
     def explain(self) -> str:
         """A short human-readable account, for logs, reports and the UI."""
-        lines = [f"{self.title}  (Gwyddion: {self.gwy_func})",
+        target = self.gwy_func or self.execution_mode
+        lines = [f"{self.title}  (Gwyddion: {target})",
                  f"  What: {self.what}",
-                 f"  Why:  {self.why}"]
+                 f"  Why:  {self.why}",
+                 f"  Mode: {self.execution_mode}; policy={self.planner_policy}; "
+                 f"executor_ready={self.executor_ready}"]
         if self.caution:
             lines.append(f"  Note: {self.caution}")
         return "\n".join(lines)
@@ -235,6 +283,9 @@ _ALL: list[Operation] = [
                 "rows. Genuinely thin, horizontal, real features can match that "
                 "description -- check the result if your sample has fine "
                 "horizontal structure.",
+        planner_policy="review",
+        provenance_effect="reconstructed_mixed",
+        planner_tags=("line_artifact", "repair", "reinspect"),
     ),
     Operation(
         key="mark_outliers",
@@ -264,6 +315,10 @@ _ALL: list[Operation] = [
         caution="The repaired pixels are interpolated, not measured. Do not "
                 "quote measurements taken from them.",
         needs_mask=True,
+        planner_policy="review",
+        required_mask_role="repair_defect",
+        provenance_effect="reconstructed_mixed",
+        planner_tags=("repair", "interpolation", "reinspect"),
     ),
     Operation(
         key="mark_raised_objects",
@@ -373,6 +428,97 @@ _ALL: list[Operation] = [
         },
     ),
     Operation(
+        key="mark_scars",
+        gwy_func="scars_mark",
+        title="Mark horizontal scars for review",
+        menu="/Correct Data/Mark Scars",
+        what="Creates a mask of thin horizontal line defects using Gwyddion's "
+             "scar detector, leaving the height data unchanged.",
+        why="Separates detection from repair: the proposed defect mask can be "
+            "inspected or edited before any pixels are reconstructed.",
+        caution="Real thin horizontal structures can also satisfy the detector. "
+                "Treat the result as a repair_defect candidate, not truth.",
+        creates_mask=True,
+        executor_ready=False,
+        planner_policy="review",
+        required_mask_role="repair_defect",
+        provenance_effect="mask_only",
+        planner_tags=("line_artifact", "mask_candidate", "reinspect"),
+    ),
+    Operation(
+        key="step_line_correction",
+        gwy_func="line_correct_step",
+        title="Step line correction",
+        menu="/Correct Data/Step Line Correction",
+        what="Detects height jumps inside scan rows and shifts the affected "
+             "segments to repair discontinuities within a line.",
+        why="Useful when the defect is not a whole-row offset but a jump partway "
+            "through a row, where ordinary Align Rows cannot describe the error.",
+        caution="Gwyddion documents this method as experimental and notes that "
+                "it also aligns rows similarly to a mean correction. It can "
+                "therefore remove real row structure and must be trialled with "
+                "rollback and structural checks.",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="measured_transform",
+        planner_tags=("line_artifact", "segment_jump", "reinspect"),
+    ),
+    Operation(
+        key="revolve_arc",
+        gwy_func="arc_revolve",
+        title="Revolve Arc background subtraction",
+        menu="/Level/Revolve Arc",
+        what="Builds a background by rolling a virtual arc horizontally or "
+             "vertically over or under the surface and subtracts that envelope.",
+        why="Provides a non-polynomial background model when broad scanner shape "
+            "or morphology makes a global polynomial a poor description.",
+        caution="Features broader than the chosen arc radius are treated as "
+                "background and can be removed. Radius, direction and polarity "
+                "must be explicit and verified before headless execution.",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="measured_transform",
+        planner_tags=("background", "non_polynomial", "reinspect"),
+    ),
+    Operation(
+        key="path_level",
+        gwy_func="GwyToolPathLevel",
+        title="Path Level using selected line intersections",
+        menu="/Tools/Path Level",
+        what="Levels an arbitrary subset of rows from the intersections of "
+             "operator- or planner-selected straight paths with those rows.",
+        why="On complicated stepped or object-rich images it can use trusted "
+            "background trajectories where automatic row statistics fail.",
+        caution="This is an interactive Gwyddion tool, not a process function. "
+                "Bad paths impose bad row offsets. The selected paths are part "
+                "of the scientific provenance and must be stored.",
+        execution_mode="interactive_tool",
+        executor_ready=False,
+        planner_policy="manual",
+        provenance_effect="measured_transform",
+        selection_kind="line_paths",
+        planner_tags=("line_artifact", "trusted_background", "human_selection"),
+    ),
+    Operation(
+        key="manual_mask_edit",
+        gwy_func="",
+        title="Manual mask edit",
+        menu="/Mask/Mask Editor",
+        what="Lets the operator add, remove, intersect or otherwise refine a "
+             "candidate mask before another operation uses it.",
+        why="Some boundaries require sample knowledge that cannot be inferred "
+            "safely from height statistics alone. The planner can request a "
+            "targeted edit instead of guessing.",
+        caution="The edited mask is an operator decision. Record the exact mask, "
+                "its semantic role and the image state on which it was drawn.",
+        execution_mode="human",
+        executor_ready=False,
+        planner_policy="manual",
+        provenance_effect="mask_only",
+        selection_kind="mask_pixels",
+        planner_tags=("mask_edit", "human_selection", "reinspect"),
+    ),
+    Operation(
         key="remove_mask",
         gwy_func="mask_remove",
         title="Clear the mask",
@@ -405,6 +551,11 @@ _ALL: list[Operation] = [
 ]
 
 OPERATIONS: dict[str, Operation] = {op.key: op for op in _ALL}
+
+
+def capability_registry() -> list[dict]:
+    """All planner-visible primitives, including manual/interactive tools."""
+    return [OPERATIONS[key].capability() for key in sorted(OPERATIONS)]
 
 
 def get_operation(key: str) -> Operation:
