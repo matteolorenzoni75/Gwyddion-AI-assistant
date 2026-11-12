@@ -461,7 +461,6 @@ _ALL: list[Operation] = [
         creates_mask_role="repair_defect",
         executor_ready=False,
         planner_policy="review",
-        required_mask_role="repair_defect",
         provenance_effect="mask_only",
         planner_tags=("line_artifact", "mask_candidate", "reinspect"),
     ),
