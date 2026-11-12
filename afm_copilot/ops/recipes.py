@@ -33,6 +33,7 @@ class Recipe:
     when_to_use: str
     when_not_to_use: str
     steps: tuple[str, ...]
+    overrides: dict[str, dict] = field(default_factory=dict)
 
     @property
     def operations(self) -> list[Operation]:
@@ -76,7 +77,7 @@ class Recipe:
                 "key": op.key,
                 "gwy_func": op.gwy_func,
                 "title": op.title,
-                "settings": dict(op.settings),
+                "settings": dict(self.overrides.get(op.key, op.settings)),
                 "needs_mask": op.needs_mask,
                 "creates_mask": op.creates_mask,
             }
