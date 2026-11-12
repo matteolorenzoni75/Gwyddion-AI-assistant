@@ -18,7 +18,7 @@ app can explain its choice rather than just making one.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from afm_copilot.ops.catalog import Operation, get_operation
 
