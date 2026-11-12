@@ -223,15 +223,16 @@ if (Test-Path -LiteralPath $OldCodexVenv -PathType Container) {
     }
 }
 
-# Move the Git checkout only if it has not already moved. Then leave a
-# compatibility junction at C:\AFM_image_wizard so moved venv/editable paths
-# continue to resolve during verification.
-if (-not (Test-Path -LiteralPath $App -PathType Container)) {
-    Set-Location C:\
-    Move-Item -LiteralPath $OldRepo -Destination $App
-}
-if (-not (Test-Path -LiteralPath $OldRepo)) {
-    New-DirectoryJunction $OldRepo $App
+# Do NOT move the active Git checkout. On Windows the parent PowerShell,
+# editor, antivirus, or Python can hold a handle inside the repository and
+# Move-Item then fails. Expose the existing checkout through the consolidated
+# root instead. This gives one stable user-facing path without duplicating or
+# relocating the working tree.
+if (-not (Test-Path -LiteralPath $App)) {
+    if (-not (Test-Path -LiteralPath $OldRepo -PathType Container)) {
+        throw "AFM Copilot Git checkout not found: $OldRepo"
+    }
+    New-DirectoryJunction $App $OldRepo
 }
 
 # Back up path-bearing private state before rewriting absolute locations.
@@ -258,7 +259,7 @@ $map = [ordered]@{
     "C:\AFM_Automation\AFM_Copilot_Workspace\05_Benchmark_Corpus" = (Join-Path $Workspace "benchmark")
     "C:\AFM_Automation\AFM_Copilot_Workspace" = $Workspace
     "C:\AFM_Automation" = $Data
-    "C:\AFM_image_wizard" = $App
+    # Keep repository paths unchanged internally while app is a junction.
 }
 
 $privateChanged = Rewrite-TextPaths $private $map
@@ -329,5 +330,5 @@ if ($script:OpaqueConflicts.Count -gt 0) {
 Write-Host ""
 Write-Host "IMPORTANT: C:\AFM_Automation may remain as backing storage for junctions."
 Write-Host "Do not delete it yet. No archive permissions were changed and no raw data were copied."
-Write-Host "Compatibility junction retained at C:\AFM_image_wizard during verification."
+Write-Host "App path is a junction to the existing Git checkout; the repository was not moved."
 Write-Host "Launcher: $launcher"
