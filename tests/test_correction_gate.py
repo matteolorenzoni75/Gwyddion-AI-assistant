@@ -252,3 +252,91 @@ def test_bridge_trial_action_creates_new_state_and_audit_without_overwrite(tmp_p
         assert "refusing overwrite" in str(error)
     else:
         raise AssertionError("existing planner state was overwritten")
+
+
+
+def test_mark_scars_parameters_are_explicit_and_bounded():
+    plan = {
+        "actions": [{
+            "operation": "mark_scars",
+            "parameters": {
+                "polarity": "both",
+                "hard_threshold_rms": 0.7,
+                "soft_threshold_rms": 0.3,
+                "min_length_px": 20,
+                "max_width_px": 5,
+                "update": True,
+            },
+            "output_mask_ref": "scar-mask",
+        }],
+    }
+    result = validate_iterative_plan(plan)
+    action = result["actions"][0]
+    assert action["status"] == "trial_only"
+    assert action["resolved_settings"]["/module/scars/type"] == 5
+    assert action["resolved_settings"]["/module/scars/min_len"] == 20
+    assert action["created_mask_role"] == "repair_defect"
+
+    bad = validate_iterative_plan({
+        "actions": [{
+            "operation": "mark_scars",
+            "parameters": {"max_width_px": 99},
+        }],
+    })
+    assert bad["blocked"] is True
+    assert "maximum 16" in bad["actions"][0]["reason"]
+
+
+def test_step_and_block_line_corrections_are_reversible_headless_trials():
+    for operation in ("step_line_correction", "block_line_correction"):
+        result = validate_iterative_plan({
+            "actions": [{
+                "operation": operation,
+                "expected_checks": [
+                    "row jumps decrease",
+                    "feature geometry outside jumps is preserved",
+                ],
+            }],
+        })
+        assert result["blocked"] is False
+        assert result["can_execute_headless"] is True
+        assert result["requires_review"] is True
+        assert result["actions"][0]["status"] == "trial_only"
+
+
+def test_iterative_planner_blocks_untraceable_remove_scars():
+    result = validate_iterative_plan({
+        "actions": [{
+            "operation": "remove_scars",
+            "accept_reconstruction": True,
+            "expected_checks": ["thin horizontal defect removed"],
+        }],
+    })
+    assert result["blocked"] is True
+    assert "mark_scars" in result["actions"][0]["reason"]
+
+
+def test_trial_recipe_uses_exact_validated_mark_scars_settings():
+    plan = {
+        "actions": [{
+            "operation": "mark_scars",
+            "parameters": {
+                "polarity": "negative",
+                "hard_threshold_rms": 0.8,
+                "soft_threshold_rms": 0.4,
+                "min_length_px": 24,
+                "max_width_px": 3,
+                "update": False,
+            },
+            "output_mask_ref": "scar-neg",
+        }],
+    }
+    recipe = recipe_from_iterative_plan(plan)
+    job = recipe.to_job()
+    assert job[0]["gwy_func"] == "scars_mark"
+    assert job[0]["settings"]["/module/scars/type"] == 4
+    assert job[0]["settings"]["/module/scars/threshold_high"] == 0.8
+    assert job[0]["settings"]["/module/scars/threshold_low"] == 0.4
+    assert job[0]["settings"]["/module/scars/min_len"] == 24
+    assert job[0]["settings"]["/module/scars/max_width"] == 3
+    assert job[0]["settings"]["/module/scars/update"] is False
