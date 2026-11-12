@@ -14,15 +14,89 @@ $Workspace = Join-Path $Root "workspace"
 $Legacy = Join-Path $Root "legacy"
 $Marker = Join-Path $Root ".layout-v2"
 
-function Move-CheckedDirectory([string]$Source, [string]$Destination) {
+function Ensure-Directory([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) {
+        New-Item -ItemType Directory -Force -Path $Path | Out-Null
+    } elseif (-not (Test-Path -LiteralPath $Path -PathType Container)) {
+        throw "Expected directory but found another item: $Path"
+    }
+}
+
+function New-DirectoryJunction([string]$Link, [string]$Target) {
+    if (Test-Path -LiteralPath $Link) {
+        return
+    }
+    Ensure-Directory (Split-Path -Parent $Link)
+    New-Item -ItemType Junction -Path $Link -Target $Target | Out-Null
+}
+
+function New-FileHardLink([string]$Link, [string]$Target) {
+    if (Test-Path -LiteralPath $Link) {
+        return
+    }
+    Ensure-Directory (Split-Path -Parent $Link)
+    New-Item -ItemType HardLink -Path $Link -Target $Target | Out-Null
+}
+
+function Merge-TreeByLinks([string]$Source, [string]$Destination) {
+    # Recovery-safe union of a partially moved tree.
+    # Existing destination content wins. Missing directories become junctions
+    # to the untouched source; missing files become hard links. No source data
+    # are copied, deleted, renamed or permission-modified.
+    if (-not (Test-Path -LiteralPath $Source -PathType Container)) {
+        return
+    }
+    Ensure-Directory $Destination
+
+    Get-ChildItem -LiteralPath $Source -Force | ForEach-Object {
+        $src = $_.FullName
+        $dst = Join-Path $Destination $_.Name
+
+        if (-not (Test-Path -LiteralPath $dst)) {
+            if ($_.PSIsContainer) {
+                New-DirectoryJunction $dst $src
+            } else {
+                New-FileHardLink $dst $src
+            }
+            return
+        }
+
+        $dstItem = Get-Item -LiteralPath $dst -Force
+        if ($_.PSIsContainer -and $dstItem.PSIsContainer) {
+            # If destination is already a junction/reparse point, it already
+            # represents a complete subtree; do not recurse through it.
+            if (($dstItem.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0) {
+                Merge-TreeByLinks $src $dst
+            }
+            return
+        }
+
+        if (-not $_.PSIsContainer -and -not $dstItem.PSIsContainer) {
+            # A partial Move-Item can leave the same file on both sides.
+            # Accept only byte-identical duplicates; otherwise stop.
+            if ($_.Length -ne $dstItem.Length) {
+                throw "Conflicting files after partial migration: $src <> $dst"
+            }
+            $a = (Get-FileHash -LiteralPath $src -Algorithm SHA256).Hash
+            $b = (Get-FileHash -LiteralPath $dst -Algorithm SHA256).Hash
+            if ($a -ne $b) {
+                throw "Conflicting files after partial migration: $src <> $dst"
+            }
+            return
+        }
+
+        throw "File/directory type conflict after partial migration: $src <> $dst"
+    }
+}
+
+function Move-IfSafe([string]$Source, [string]$Destination) {
     if (-not (Test-Path -LiteralPath $Source -PathType Container)) {
         return
     }
     if (Test-Path -LiteralPath $Destination) {
-        throw "Destination already exists: $Destination"
+        return
     }
-    $parent = Split-Path -Parent $Destination
-    New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    Ensure-Directory (Split-Path -Parent $Destination)
     Move-Item -LiteralPath $Source -Destination $Destination
 }
 
@@ -40,7 +114,9 @@ function Rewrite-TextPaths([string]$Base, $Map) {
             $new = $text
             foreach ($old in $Map.Keys) {
                 $new = $new.Replace($old, $Map[$old])
-                $new = $new.Replace($old.Replace("\", "\\"), $Map[$old].Replace("\", "\\"))
+                $new = $new.Replace(
+                    $old.Replace("\", "\\"),
+                    $Map[$old].Replace("\", "\\"))
             }
             if ($new -ne $text) {
                 [System.IO.File]::WriteAllText($path, $new, $utf8)
@@ -55,93 +131,100 @@ if (Test-Path -LiteralPath $Marker) {
     exit 0
 }
 
-if (-not (Test-Path -LiteralPath $OldRepo -PathType Container)) {
-    throw "Expected current repository not found: $OldRepo"
+if (-not (Test-Path -LiteralPath $OldRepo -PathType Container) -and
+    -not (Test-Path -LiteralPath $App -PathType Container)) {
+    throw "Neither old nor consolidated AFM Copilot app directory exists."
 }
 
-New-Item -ItemType Directory -Force -Path $Root | Out-Null
-New-Item -ItemType Directory -Force -Path $Legacy | Out-Null
+Ensure-Directory $Root
+Ensure-Directory $Legacy
+Ensure-Directory $Data
+Ensure-Directory $Workspace
 
-# Preserve anything that already lived in C:\AFM_Copilot before consolidation.
-$pre = Join-Path $Legacy "pre-consolidation"
-New-Item -ItemType Directory -Force -Path $pre | Out-Null
-Get-ChildItem -LiteralPath $Root -Force |
-    Where-Object { $_.Name -ne "legacy" -and $_.Name -ne ".layout-v2" } |
-    ForEach-Object {
-        $dest = Join-Path $pre $_.Name
-        if (Test-Path -LiteralPath $dest) {
-            throw "Cannot preserve existing AFM_Copilot content because destination exists: $dest"
-        }
-        Move-Item -LiteralPath $_.FullName -Destination $dest
-    }
-
-# Extract the active workspace from the old data tree first.
+# If the first migration attempt already moved the workspace, keep it.
+# Otherwise move only this small controlled tree; never move the AFM archive.
 $oldWorkspace = Join-Path $OldData "AFM_Copilot_Workspace"
-Move-CheckedDirectory $oldWorkspace $Workspace
-
-# Compact old workspace names without deleting anything.
-if (Test-Path -LiteralPath $Workspace -PathType Container) {
-    $renames = [ordered]@{
-        "02_Automatic_Results" = "runs"
-        "03_Approved" = "approved"
-        "04_Reports" = "reports"
-        "05_Benchmark_Corpus" = "benchmark"
+if (-not (Test-Path -LiteralPath $Workspace -PathType Container) -or
+    -not (Get-ChildItem -LiteralPath $Workspace -Force -ErrorAction SilentlyContinue)) {
+    if (Test-Path -LiteralPath $oldWorkspace -PathType Container) {
+        if (Test-Path -LiteralPath $Workspace) {
+            Remove-Item -LiteralPath $Workspace -Force
+        }
+        Move-Item -LiteralPath $oldWorkspace -Destination $Workspace
     }
-    foreach ($name in $renames.Keys) {
-        $src = Join-Path $Workspace $name
-        $dst = Join-Path $Workspace $renames[$name]
-        if (Test-Path -LiteralPath $src -PathType Container) {
-            if (Test-Path -LiteralPath $dst) {
-                throw "Workspace target already exists: $dst"
-            }
+}
+
+# Compact legacy workspace names idempotently.
+$renames = [ordered]@{
+    "02_Automatic_Results" = "runs"
+    "03_Approved" = "approved"
+    "04_Reports" = "reports"
+    "05_Benchmark_Corpus" = "benchmark"
+}
+foreach ($name in $renames.Keys) {
+    $src = Join-Path $Workspace $name
+    $dst = Join-Path $Workspace $renames[$name]
+    if (Test-Path -LiteralPath $src -PathType Container) {
+        if (-not (Test-Path -LiteralPath $dst)) {
             Move-Item -LiteralPath $src -Destination $dst
         }
     }
+}
+foreach ($name in @("runs", "approved", "reports", "benchmark")) {
+    Ensure-Directory (Join-Path $Workspace $name)
+}
 
-    $oldReview = Join-Path $Workspace "01_Manual_To_Review"
-    if (Test-Path -LiteralPath $oldReview -PathType Container) {
-        $legacyWorkspace = Join-Path $Legacy "workspace-old"
-        New-Item -ItemType Directory -Force -Path $legacyWorkspace | Out-Null
-        Move-Item -LiteralPath $oldReview -Destination (Join-Path $legacyWorkspace "01_Manual_To_Review")
+$oldReview = Join-Path $Workspace "01_Manual_To_Review"
+if (Test-Path -LiteralPath $oldReview -PathType Container) {
+    $legacyWorkspace = Join-Path $Legacy "workspace-old"
+    Ensure-Directory $legacyWorkspace
+    $reviewDest = Join-Path $legacyWorkspace "01_Manual_To_Review"
+    if (-not (Test-Path -LiteralPath $reviewDest)) {
+        Move-Item -LiteralPath $oldReview -Destination $reviewDest
     }
 }
 
-# The remaining AFM_Automation tree becomes the single data tree.
-Move-CheckedDirectory $OldData $Data
+# IMPORTANT: do NOT move C:\AFM_Automation again.
+# The previous attempt hit an ACL-protected archive directory. Build a single
+# logical data view under C:\AFM_Copilot\data using existing partially moved
+# content plus junctions/hardlinks to anything that remains in AFM_Automation.
+Merge-TreeByLinks $OldData $Data
 
-# Preserve the old separate Codex environment; do not delete it yet.
+# Preserve the separate Codex environment. If it moves, keep a compatibility
+# junction so any old absolute references continue to work.
 if (Test-Path -LiteralPath $OldCodexVenv -PathType Container) {
-    Move-CheckedDirectory $OldCodexVenv (Join-Path $Legacy "AFM_codex_venv")
+    $codexDest = Join-Path $Legacy "AFM_codex_venv"
+    if (-not (Test-Path -LiteralPath $codexDest)) {
+        Move-Item -LiteralPath $OldCodexVenv -Destination $codexDest
+        New-DirectoryJunction $OldCodexVenv $codexDest
+    }
 }
 
-# Move the Git checkout last, after leaving its working directory.
-Set-Location C:\
-Move-CheckedDirectory $OldRepo $App
-
-# Compact directories should always exist.
-foreach ($folder in @(
-    $Data,
-    $Workspace,
-    (Join-Path $Workspace "runs"),
-    (Join-Path $Workspace "approved"),
-    (Join-Path $Workspace "reports"),
-    (Join-Path $Workspace "benchmark")
-)) {
-    New-Item -ItemType Directory -Force -Path $folder | Out-Null
+# Move the Git checkout only if it has not already moved. Then leave a
+# compatibility junction at C:\AFM_image_wizard so moved venv/editable paths
+# continue to resolve during verification.
+if (-not (Test-Path -LiteralPath $App -PathType Container)) {
+    Set-Location C:\
+    Move-Item -LiteralPath $OldRepo -Destination $App
+}
+if (-not (Test-Path -LiteralPath $OldRepo)) {
+    New-DirectoryJunction $OldRepo $App
 }
 
 # Back up path-bearing private state before rewriting absolute locations.
 $private = Join-Path $env:USERPROFILE "AFM_Copilot_Private_Audits"
 $backup = Join-Path $Legacy "private-path-backup"
-New-Item -ItemType Directory -Force -Path $backup | Out-Null
+Ensure-Directory $backup
 if (Test-Path -LiteralPath $private -PathType Container) {
     Get-ChildItem -LiteralPath $private -Recurse -File -ErrorAction SilentlyContinue |
         Where-Object { $_.Extension -in ".json", ".jsonl", ".sqlite3" } |
         ForEach-Object {
             $relative = $_.FullName.Substring($private.Length).TrimStart("\")
             $dest = Join-Path $backup $relative
-            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dest) | Out-Null
-            Copy-Item -LiteralPath $_.FullName -Destination $dest -Force
+            Ensure-Directory (Split-Path -Parent $dest)
+            if (-not (Test-Path -LiteralPath $dest)) {
+                Copy-Item -LiteralPath $_.FullName -Destination $dest
+            }
         }
 }
 
@@ -153,7 +236,6 @@ $map = [ordered]@{
     "C:\AFM_Automation\AFM_Copilot_Workspace" = $Workspace
     "C:\AFM_Automation" = $Data
     "C:\AFM_image_wizard" = $App
-    "C:\AFM_codex_venv" = (Join-Path $Legacy "AFM_codex_venv")
 }
 
 $privateChanged = Rewrite-TextPaths $private $map
@@ -162,9 +244,10 @@ $workspaceChanged = Rewrite-TextPaths $Workspace $map
 # Rewrite the path column in the private label database.
 $db = Join-Path $private "labeling\labels.sqlite3"
 $python = Join-Path $App ".venv\Scripts\python.exe"
+$dbChanged = 0
 if (Test-Path -LiteralPath $db -PathType Leaf) {
     if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
-        throw "Moved app has no .venv Python; private SQLite path migration was not attempted."
+        throw "Moved app has no .venv Python; SQLite path migration cannot continue."
     }
     $mapFile = Join-Path $Legacy "path-map.json"
     $map | ConvertTo-Json | Set-Content -LiteralPath $mapFile -Encoding UTF8
@@ -187,18 +270,15 @@ con.close()
 print(changed)
 '@
     $dbChanged = $py | & $python - $db $mapFile
-} else {
-    $dbChanged = 0
 }
 
-# One obvious launcher at the single root.
+# One launcher at the root.
 $launcher = Join-Path $Root "AFM Copilot.bat"
 $launcherText = '@echo off' + [Environment]::NewLine +
     'call "%~dp0app\AFM Copilot.bat"' + [Environment]::NewLine
 [System.IO.File]::WriteAllText(
     $launcher, $launcherText, (New-Object System.Text.ASCIIEncoding))
 
-# Persist the chosen root for future shells; code also defaults to this path.
 [Environment]::SetEnvironmentVariable("AFM_COPILOT_HOME", $Root, "User")
 
 [System.IO.File]::WriteAllText(
@@ -210,12 +290,14 @@ Write-Host ""
 Write-Host "AFM Copilot consolidation completed."
 Write-Host "Root:       $Root"
 Write-Host "App:        $App"
-Write-Host "Data:       $Data"
+Write-Host "Data view:  $Data"
 Write-Host "Workspace:  $Workspace"
 Write-Host "Legacy:     $Legacy"
 Write-Host "Private JSON/JSONL files rewritten: $privateChanged"
 Write-Host "Workspace JSON/JSONL files rewritten: $workspaceChanged"
 Write-Host "SQLite scan paths rewritten: $dbChanged"
 Write-Host ""
-Write-Host "Nothing was deleted. Previous C:\AFM_Copilot contents and old Codex venv are under legacy."
+Write-Host "IMPORTANT: C:\AFM_Automation may remain as backing storage for junctions."
+Write-Host "Do not delete it yet. No archive permissions were changed and no raw data were copied."
+Write-Host "Compatibility junction retained at C:\AFM_image_wizard during verification."
 Write-Host "Launcher: $launcher"
