@@ -223,8 +223,10 @@ def validate_iterative_plan(
             reasons.append(f"{key} is manual-only")
         elif op.planner_policy == "review":
             if status == "execute":
-                status = "review"
-            reasons.append(f"{key} requires stronger evidence/review")
+                status = "trial_only"
+            reasons.append(
+                f"{key} may run only as a reversible derivative trial; "
+                "acceptance requires stronger evidence/review")
 
         failure = str(action.get("on_failure") or "rollback")
         if failure not in FAILURE_POLICIES:
@@ -237,18 +239,18 @@ def validate_iterative_plan(
             reasons.append("expected_checks must be a list")
             checks = []
         if op.provenance_effect != "mask_only" and not checks:
-            if status == "execute":
+            if status in ("execute", "trial_only"):
                 status = "review"
             reasons.append("Data-changing action needs explicit post-checks")
 
         if op.provenance_effect == "reconstructed_mixed":
             if not bool(action.get("accept_reconstruction")):
-                if status == "execute":
+                if status in ("execute", "trial_only"):
                     status = "review"
                 reasons.append(
                     "Reconstructed pixels require explicit accept_reconstruction")
             if not action.get("reconstruction_mask_ref"):
-                if status == "execute":
+                if status in ("execute", "trial_only"):
                     status = "review"
                 reasons.append(
                     "Reconstruction requires a mask reference for provenance")
@@ -271,7 +273,7 @@ def validate_iterative_plan(
         })
         current = out_state
 
-        if status != "execute":
+        if status not in ("execute", "trial_only"):
             all_headless = False
         decisions.append({
             "index": index,
@@ -299,31 +301,40 @@ def validate_iterative_plan(
         "states": states,
         "stop_conditions": stop_conditions,
         "can_execute_headless": bool(all_headless),
-        "requires_review": any(d["status"] == "review" for d in decisions),
+        "requires_review": any(
+            d["status"] in ("trial_only", "review") for d in decisions),
         "blocked": any(d["status"] == "blocked" for d in decisions),
         "image_modified": False,
     }
 
 
 def recipe_from_iterative_plan(plan: dict, *, key: str = "planner-trial") -> Recipe:
-    """Create a normal Recipe only when every action is headless and verified.
+    """Create ONE normal Recipe for the next validated planner action.
 
-    This deliberately reuses the existing Gwyddion executor instead of
-    introducing a parallel processing path.
+    Iterative planning means reinspection after every data-changing step. A
+    multi-action plan is therefore a proposal graph, not something to send to
+    Gwyddion in one batch. The caller executes one action, inspects its new
+    state, and only then validates the next action.
     """
+    actions = plan.get("actions") if isinstance(plan, dict) else None
+    if not isinstance(actions, list) or len(actions) != 1:
+        raise ValueError(
+            "Iterative execution requires exactly one action per Gwyddion trial")
     validation = validate_iterative_plan(plan)
     if not validation["can_execute_headless"] or validation["blocked"]:
         reasons = [
             f"{d['operation']}: {d['reason']}"
-            for d in validation["actions"] if d["status"] != "execute"
+            for d in validation["actions"]
+            if d["status"] not in ("execute", "trial_only")
         ]
-        raise ValueError("Planner trial is not headless-safe: " + " | ".join(reasons))
-    steps = tuple(d["operation"] for d in validation["actions"])
+        raise ValueError(
+            "Planner trial is not headless-runnable: " + " | ".join(reasons))
+    step = validation["actions"][0]["operation"]
     return Recipe(
         key=key,
-        title="Validated planner trial",
-        purpose="One bounded iterative trial proposed by the planner.",
-        when_to_use="Only after validation of every operation and post-check.",
-        when_not_to_use="When any step is interactive, manual, unverified or blocked.",
-        steps=steps,
+        title="Validated planner trial step",
+        purpose="One reversible planner action followed by mandatory reinspection.",
+        when_to_use="Only after validation of operation, mask semantics and post-checks.",
+        when_not_to_use="Never chain planner actions without inspecting the new state.",
+        steps=(step,),
     )
