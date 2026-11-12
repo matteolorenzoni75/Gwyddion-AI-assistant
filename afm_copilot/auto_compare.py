@@ -168,8 +168,11 @@ def run_batch(
     scratch: Path | None = None, processor=process_one,
 ) -> dict:
     rows = _manifest_rows(manifest)
-    if len(rows) > 16:
-        raise ValueError("Comparison run limited to 16 operator-reviewed candidate pairs")
+    # Keep this workflow intentionally bounded: it is for the curated
+    # comparison corpus, never the 97k-file archive. Existing automatic
+    # associations are skipped by process_one(), so reruns fill only gaps.
+    if len(rows) > 64:
+        raise ValueError("Comparison run limited to 64 operator-reviewed candidate pairs")
     if output.expanduser().resolve() == manifest.parent.resolve():
         raise ValueError("Output cannot be the private manifest folder")
     counts = {}
@@ -206,7 +209,11 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=MANIFEST)
     parser.add_argument("--output", type=Path, default=OUTPUT)
-    parser.add_argument("--confirm", choices=("RUN_8_CANDIDATES",), required=True)
+    parser.add_argument(
+        "--confirm",
+        choices=("RUN_COMPARISON_CANDIDATES", "RUN_8_CANDIDATES"),
+        required=True,
+        help="Explicit opt-in for the bounded private comparison corpus.")
     args = parser.parse_args(argv)
     if not args.manifest.is_file():
         print(json.dumps({"error": "private_comparison_manifest_missing"}))
