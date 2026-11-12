@@ -15,6 +15,8 @@ import re
 import secrets
 from datetime import datetime, timezone
 from pathlib import Path
+
+from afm_copilot.paths import HISTORICAL_RAW
 from typing import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -22,7 +24,7 @@ STORE_DIR = Path.home() / "AFM_Copilot_Private_Audits" / "learning_feedback"
 # The original lab scan folder contains the declared 244-image evaluation set.
 # Its source files must not become training labels, even by operator checkbox.
 TEST_CORPUS_ROOT = Path(os.environ.get(
-    "AFM_TEST_CORPUS_ROOT", r"C:\AFM_Automation\OLD input IMAGES"))
+    "AFM_TEST_CORPUS_ROOT", str(HISTORICAL_RAW)))
 # Deliberate, separate opt-in training location. Never infer from file names.
 TRAINING_ROOT = Path(os.environ.get(
     "AFM_TRAINING_ROOT", str(Path.home() / "AFM_Copilot_Training_Approved")))
