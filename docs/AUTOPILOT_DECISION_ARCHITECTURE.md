@@ -92,6 +92,24 @@ Evaluate three configurations on the same frozen cases: deterministic baseline, 
 4. Add interchangeable local VLM/API planning providers in observation mode, comparing their proposed plans against the same evidence before enabling candidate execution.
 5. Integrate the automatic workflow as the primary UI action; retain recipes and threshold editing in the advanced controls.
 
+
+## 8. Blind 20-case planner benchmark (2026-11-12)
+
+A first frozen comparison was run on 20 anonymized height maps. The external planner committed its plans and numerical outputs before manual references or deterministic AFM Copilot outputs were revealed. Manual corrections are still candidate expert references rather than certified ground truth, so these numbers are a proxy for agreement with existing expert work, not a physical-accuracy claim.
+
+Deterministic AFM Copilot generated 16 candidates and held 4 because of the large-RMS-change gate. On the 16 cases where both systems produced a result, median manual-vs-candidate shape RMSE was about 20.0 nm for the deterministic candidate and 15.5 nm for the external planner result; mean RMSE was about 46.5 nm versus 31.6 nm. By the same simple RMSE-to-manual criterion, the external planner was closer on 9/16 cases and the deterministic candidate on 7/16.
+
+The aggregate score hides the more important pattern:
+
+- The external planner was substantially better on several hard routing cases involving whole-row offsets, repeated row/background correction, interrupted scans/cropping and cases where a no-change decision was appropriate.
+- The deterministic path was safer or closer on several conservative cases, including a failed scar-repair attempt by the external planner and a strongly curved/featureless scan where the deterministic system correctly held instead of accepting an aggressive correction.
+- Of the four deterministic holds, the external planner found useful partial corrections on three, but one hold was clearly safer than the external planner output. Therefore the large-RMS gate is not simply "too conservative"; it needs operation-specific evidence rather than global relaxation.
+- Several cases showed that pixel RMSE alone is misleading: two outputs can preserve essentially identical morphology while differing mainly by a fitted plane, and a visually smoother result can still be scientifically inferior if it damages line/feature structure.
+
+Decision: do not replace AFM Copilot with a free-form model and do not keep expanding the deterministic recipe router as the sole intelligence layer. The preferred architecture is hybrid: multimodal/LLM planning for diagnosis, routing, mask-role selection and trial proposals; deterministic Gwyddion execution; operation-specific verification and rollback; conservative hold/review when the verifier cannot defend the result.
+
+The next engineering priority is therefore consolidation around one shared processing service and one case/plan schema. Benchmark helpers remain test tooling rather than a second application workflow. New directories or parallel processing paths require explicit justification and should not be added merely to support one experiment.
+
 ## Research and implementation references
 
 These references support capabilities and engineering choices; they do not validate an AFM-specific model for this application.
