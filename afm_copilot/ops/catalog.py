@@ -45,6 +45,7 @@ class Operation:
     settings: dict = field(default_factory=dict)
     needs_mask: bool = False
     creates_mask: bool = False
+    creates_mask_role: str = ""
     # Planner/executor contract. "process" means a gwy_process_func callable
     # headlessly; "interactive_tool" needs a Gwyddion selection/tool; "human"
     # is an explicit operator action such as manual mask editing.
@@ -82,6 +83,7 @@ class Operation:
             "planner_policy": self.planner_policy,
             "needs_mask": self.needs_mask,
             "creates_mask": self.creates_mask,
+            "creates_mask_role": self.creates_mask_role or None,
             "required_mask_role": self.required_mask_role or None,
             "provenance_effect": self.provenance_effect,
             "selection_kind": self.selection_kind or None,
@@ -159,6 +161,8 @@ _ALL: list[Operation] = [
                 "length ratio of 15, a 3rd-order fit underestimates roughness by "
                 "about 40%. Use the lowest order that removes the bow, and treat "
                 "roughness measured afterwards as a lower bound.",
+        planner_policy="review",
+        planner_tags=("background", "curvature", "reinspect"),
     ),
     Operation(
         key="flatten_base",
@@ -247,6 +251,9 @@ _ALL: list[Operation] = [
                 "ones. No threshold on mask coverage separates the 30 from "
                 "the rest, so it is out of the automatic recipes.",
         needs_mask=True,
+        planner_policy="review",
+        required_mask_role="protect_structure",
+        planner_tags=("line_artifact", "masked_fit", "reinspect"),
         settings={
             "/module/linematch/method": LINEMATCH_MEDIAN_OF_DIFF,
             "/module/linematch/do_extract": False,
@@ -303,6 +310,8 @@ _ALL: list[Operation] = [
                 "also more than 3 sigma from the mean and will be masked. This "
                 "is for cleaning noise, not for segmenting objects.",
         creates_mask=True,
+        creates_mask_role="repair_defect",
+        planner_tags=("mask_candidate", "outlier"),
     ),
     Operation(
         key="interpolate_under_mask",
@@ -344,6 +353,8 @@ _ALL: list[Operation] = [
                 "only a fifth of the image left to sit on, and levelling "
                 "around the object came out worse than not masking at all.",
         creates_mask=True,
+        creates_mask_role="protect_structure",
+        planner_tags=("mask_candidate", "objects", "background"),
         settings={
             "/module/grain_mark/isheight": True,
             "/module/grain_mark/isslope": False,
@@ -392,6 +403,9 @@ _ALL: list[Operation] = [
                 "structure along with the bow. Use the lowest order that "
                 "flattens the background.",
         needs_mask=True,
+        planner_policy="review",
+        required_mask_role="protect_structure",
+        planner_tags=("background", "masked_fit", "reinspect"),
         settings={
             "/module/polylevel/col_degree": 2,
             "/module/polylevel/row_degree": 2,
@@ -419,6 +433,9 @@ _ALL: list[Operation] = [
         caution="If the background genuinely bows, this leaves the bow. The "
                 "order comes from what was measured, not from the recipe.",
         needs_mask=True,
+        planner_policy="review",
+        required_mask_role="protect_structure",
+        planner_tags=("background", "masked_fit", "reinspect"),
         settings={
             "/module/polylevel/col_degree": 1,
             "/module/polylevel/row_degree": 1,
@@ -441,6 +458,7 @@ _ALL: list[Operation] = [
         caution="Real thin horizontal structures can also satisfy the detector. "
                 "Treat the result as a repair_defect candidate, not truth.",
         creates_mask=True,
+        creates_mask_role="repair_defect",
         executor_ready=False,
         planner_policy="review",
         required_mask_role="repair_defect",
