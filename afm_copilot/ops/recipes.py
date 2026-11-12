@@ -18,7 +18,7 @@ app can explain its choice rather than just making one.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from afm_copilot.ops.catalog import Operation, get_operation
 
@@ -33,6 +33,7 @@ class Recipe:
     when_to_use: str
     when_not_to_use: str
     steps: tuple[str, ...]
+    overrides: dict[str, dict] = field(default_factory=dict)
 
     @property
     def operations(self) -> list[Operation]:
@@ -60,21 +61,47 @@ class Recipe:
         return "\n".join(lines)
 
     def to_job(self) -> list[dict]:
-        """The machine-readable form handed to the Python 2.7 side."""
+        """The machine-readable form handed to the Python 2.7 side.
+
+        Interactive tools and human actions are planner capabilities too, but
+        they are never smuggled into the headless Gwyddion executor.
+        """
+        operations = self.operations
+        blocked = [op.key for op in operations if not op.headless]
+        if blocked:
+            raise ValueError(
+                "Recipe contains non-headless or unverified operations: "
+                + ", ".join(blocked))
         return [
             {
                 "key": op.key,
                 "gwy_func": op.gwy_func,
                 "title": op.title,
-                "settings": dict(op.settings),
+                "settings": dict(self.overrides.get(op.key, op.settings)),
                 "needs_mask": op.needs_mask,
                 "creates_mask": op.creates_mask,
             }
-            for op in self.operations
+            for op in operations
         ]
 
 
 _ALL: list[Recipe] = [
+    Recipe(
+        key="facet-terraces",
+        title="Level distinct terraces by their facets",
+        purpose="Orient a stepped or terraced surface with its facets upright, "
+                "without fitting a curved background through its step heights.",
+        when_to_use="Only when the strict height-histogram test finds two or "
+                    "more narrow, clearly separated levels.",
+        when_not_to_use="Particle fields, fibre networks, broad slopes or a "
+                        "single rough population.  These are not terraces even "
+                        "when their height range is large.",
+        steps=(
+            "facet_level",
+            "remove_scars",
+            "fix_zero",
+        ),
+    ),
     Recipe(
         key="quick-clean",
         title="Quick clean",

@@ -32,3 +32,32 @@ export/argued-about.json
 # data/reference_samples.json stays tracked -- that one is the owner's own
 # catalog with no third party in it, and it is the acceptance test.
 data/real_labels.json
+
+# External raw-data audits are private; never commit outputs or raw inputs.
+AFM_Copilot_Private_Audits/
+PRIVATE_manifest.csv
+PRIVATE_probe_job.json
+CHATGPT_REVIEW.zip
+
+# Local human-label evidence is private, never source-controlled.
+.afm-copilot-reviews.json
+operator_feedback.jsonl
+.private_hmac_key
+learning_feedback/
+private_source_index.jsonl
+
+# Original instrument scans are private; public repo uses only reviewed .gwy corpus.
+*.ibw
+*.tif
+*.tiff
+*.spm
+*.jpk
+*.sxm
+*.nid
+*.mi
+
+# Expert labeling archives (private, even when custom configured).
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.db-journal

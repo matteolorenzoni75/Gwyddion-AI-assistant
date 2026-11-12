@@ -1,9 +1,11 @@
 """
 The operation catalog: Gwyddion functions with their meaning attached.
 
-Each entry pairs a real, verified Gwyddion process function (every `gwy_func`
-below was confirmed present by tools/introspect_pygwy.py) with the three things
-a non-expert actually needs:
+Each entry describes a Gwyddion capability. Headless process functions are
+verified against tools/introspect_pygwy.py; interactive tools and explicit
+human actions are represented too, but are marked non-headless so the planner
+cannot silently execute them. Every capability carries the things a non-expert
+actually needs:
 
     what     what the operation does to the data
     why      the reason you would reach for it
@@ -43,18 +45,135 @@ class Operation:
     settings: dict = field(default_factory=dict)
     needs_mask: bool = False
     creates_mask: bool = False
+    creates_mask_role: str = ""
+    # Planner/executor contract. "process" means a gwy_process_func callable
+    # headlessly; "interactive_tool" needs a Gwyddion selection/tool; "human"
+    # is an explicit operator action such as manual mask editing.
+    execution_mode: str = "process"
+    # False means the capability is known and can be proposed, but its full
+    # deterministic parameter contract has not yet been verified locally.
+    executor_ready: bool = True
+    # candidate = may enter bounded automatic trials; review = needs stronger
+    # evidence/operator validation; manual = cannot be autonomously executed.
+    planner_policy: str = "candidate"
+    # Semantic mask role required by the operation. Empty means no semantic
+    # role is required beyond any legacy Gwyddion mask presence.
+    required_mask_role: str = ""
+    # Describes how the operation changes provenance of the height values.
+    # measured_transform preserves measured pixels under a deterministic
+    # transform; reconstructed_mixed means some output pixels are no longer
+    # measured values; mask_only changes only selection state.
+    provenance_effect: str = "measured_transform"
+    selection_kind: str = ""
+    planner_tags: tuple[str, ...] = ()
+    # Planner-facing parameter contract. Each entry maps a semantic parameter
+    # name to a Gwyddion settings key plus type/bounds/choices/default.
+    parameters: dict = field(default_factory=dict)
+
+    def resolve_parameters(self, supplied: dict | None = None) -> dict:
+        """Validate planner parameters and return concrete Gwyddion settings."""
+        supplied = {} if supplied is None else supplied
+        if not isinstance(supplied, dict):
+            raise ValueError(f"{self.key} parameters must be an object")
+        unknown = sorted(set(supplied) - set(self.parameters))
+        if unknown:
+            raise ValueError(
+                f"{self.key} unknown parameters: " + ", ".join(unknown))
+
+        resolved = dict(self.settings)
+        for name, spec in self.parameters.items():
+            value = supplied.get(name, spec.get("default"))
+            if value is None:
+                continue
+            choices = spec.get("choices")
+            if choices:
+                if value in choices:
+                    value = choices[value]
+                elif value not in choices.values():
+                    raise ValueError(
+                        f"{self.key}.{name} must be one of "
+                        + ", ".join(map(str, choices)))
+            kind = spec.get("type", "float")
+            try:
+                if kind == "int":
+                    value = int(value)
+                elif kind == "float":
+                    value = float(value)
+                elif kind == "bool":
+                    if not isinstance(value, bool):
+                        raise ValueError
+                else:
+                    raise ValueError(f"Unsupported parameter type {kind}")
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"{self.key}.{name} has invalid {kind} value") from None
+            if "min" in spec and value < spec["min"]:
+                raise ValueError(
+                    f"{self.key}.{name} below minimum {spec['min']}")
+            if "max" in spec and value > spec["max"]:
+                raise ValueError(
+                    f"{self.key}.{name} above maximum {spec['max']}")
+            setting = spec.get("setting")
+            if setting:
+                resolved[setting] = value
+        return resolved
+
+    @property
+    def headless(self) -> bool:
+        return self.execution_mode == "process" and self.executor_ready
+
+    def capability(self) -> dict:
+        """Machine-readable planner description; never executes anything."""
+        return {
+            "key": self.key,
+            "title": self.title,
+            "gwyddion": self.gwy_func,
+            "menu": self.menu,
+            "execution_mode": self.execution_mode,
+            "executor_ready": self.executor_ready,
+            "planner_policy": self.planner_policy,
+            "needs_mask": self.needs_mask,
+            "creates_mask": self.creates_mask,
+            "creates_mask_role": self.creates_mask_role or None,
+            "required_mask_role": self.required_mask_role or None,
+            "provenance_effect": self.provenance_effect,
+            "selection_kind": self.selection_kind or None,
+            "tags": list(self.planner_tags),
+            "parameters": self.parameters,
+            "what": self.what,
+            "why": self.why,
+            "caution": self.caution,
+        }
 
     def explain(self) -> str:
         """A short human-readable account, for logs, reports and the UI."""
-        lines = [f"{self.title}  (Gwyddion: {self.gwy_func})",
+        target = self.gwy_func or self.execution_mode
+        lines = [f"{self.title}  (Gwyddion: {target})",
                  f"  What: {self.what}",
-                 f"  Why:  {self.why}"]
+                 f"  Why:  {self.why}",
+                 f"  Mode: {self.execution_mode}; policy={self.planner_policy}; "
+                 f"executor_ready={self.executor_ready}"]
         if self.caution:
             lines.append(f"  Note: {self.caution}")
         return "\n".join(lines)
 
 
 _ALL: list[Operation] = [
+    Operation(
+        key="facet_level",
+        gwy_func="facet-level",
+        title="Level facets upright",
+        menu="/Level/Facet Level",
+        what="Finds the prevalent facet orientations and removes the global "
+             "tilt that stops those facets from pointing upward.",
+        why="Terraces and stepped films have definite flat levels, not a "
+            "single background to fit through.  Facet levelling preserves that "
+            "interpretation while bringing the levels into their physical "
+            "orientation.",
+        caution="Use only after the strict terrace test has found distinct "
+                "height levels.  On rounded objects or rough morphology it can "
+                "mistake the sample's slopes for a facet orientation.",
+    ),
     Operation(
         key="plane_level",
         gwy_func="level",
@@ -94,6 +213,8 @@ _ALL: list[Operation] = [
                 "length ratio of 15, a 3rd-order fit underestimates roughness by "
                 "about 40%. Use the lowest order that removes the bow, and treat "
                 "roughness measured afterwards as a lower bound.",
+        planner_policy="review",
+        planner_tags=("background", "curvature", "reinspect"),
     ),
     Operation(
         key="flatten_base",
@@ -182,6 +303,9 @@ _ALL: list[Operation] = [
                 "ones. No threshold on mask coverage separates the 30 from "
                 "the rest, so it is out of the automatic recipes.",
         needs_mask=True,
+        planner_policy="review",
+        required_mask_role="protect_structure",
+        planner_tags=("line_artifact", "masked_fit", "reinspect"),
         settings={
             "/module/linematch/method": LINEMATCH_MEDIAN_OF_DIFF,
             "/module/linematch/do_extract": False,
@@ -220,6 +344,9 @@ _ALL: list[Operation] = [
                 "rows. Genuinely thin, horizontal, real features can match that "
                 "description -- check the result if your sample has fine "
                 "horizontal structure.",
+        planner_policy="review",
+        provenance_effect="reconstructed_mixed",
+        planner_tags=("line_artifact", "repair", "reinspect"),
     ),
     Operation(
         key="mark_outliers",
@@ -235,6 +362,8 @@ _ALL: list[Operation] = [
                 "also more than 3 sigma from the mean and will be masked. This "
                 "is for cleaning noise, not for segmenting objects.",
         creates_mask=True,
+        creates_mask_role="repair_defect",
+        planner_tags=("mask_candidate", "outlier"),
     ),
     Operation(
         key="interpolate_under_mask",
@@ -249,6 +378,10 @@ _ALL: list[Operation] = [
         caution="The repaired pixels are interpolated, not measured. Do not "
                 "quote measurements taken from them.",
         needs_mask=True,
+        planner_policy="review",
+        required_mask_role="repair_defect",
+        provenance_effect="reconstructed_mixed",
+        planner_tags=("repair", "interpolation", "reinspect"),
     ),
     Operation(
         key="mark_raised_objects",
@@ -272,6 +405,8 @@ _ALL: list[Operation] = [
                 "only a fifth of the image left to sit on, and levelling "
                 "around the object came out worse than not masking at all.",
         creates_mask=True,
+        creates_mask_role="protect_structure",
+        planner_tags=("mask_candidate", "objects", "background"),
         settings={
             "/module/grain_mark/isheight": True,
             "/module/grain_mark/isslope": False,
@@ -320,6 +455,9 @@ _ALL: list[Operation] = [
                 "structure along with the bow. Use the lowest order that "
                 "flattens the background.",
         needs_mask=True,
+        planner_policy="review",
+        required_mask_role="protect_structure",
+        planner_tags=("background", "masked_fit", "reinspect"),
         settings={
             "/module/polylevel/col_degree": 2,
             "/module/polylevel/row_degree": 2,
@@ -347,6 +485,9 @@ _ALL: list[Operation] = [
         caution="If the background genuinely bows, this leaves the bow. The "
                 "order comes from what was measured, not from the recipe.",
         needs_mask=True,
+        planner_policy="review",
+        required_mask_role="protect_structure",
+        planner_tags=("background", "masked_fit", "reinspect"),
         settings={
             "/module/polylevel/col_degree": 1,
             "/module/polylevel/row_degree": 1,
@@ -356,6 +497,197 @@ _ALL: list[Operation] = [
             # 0 is MASK_EXCLUDE: the marked pixels take no part in the fit.
             "/module/polylevel/masking": 0,
         },
+    ),
+    Operation(
+        key="mark_scars",
+        gwy_func="scars_mark",
+        title="Mark horizontal scars for review",
+        menu="/Correct Data/Mark Scars",
+        what="Creates a mask of thin horizontal line defects using Gwyddion's "
+             "scar detector, leaving the height data unchanged.",
+        why="Separates detection from repair: the proposed defect mask can be "
+            "inspected or edited before any pixels are reconstructed.",
+        caution="Real thin horizontal structures can also satisfy the detector. "
+                "Treat the result as a repair_defect candidate, not truth.",
+        creates_mask=True,
+        creates_mask_role="repair_defect",
+        executor_ready=True,
+        planner_policy="review",
+        provenance_effect="mask_only",
+        planner_tags=("line_artifact", "mask_candidate", "reinspect"),
+        parameters={
+            "polarity": {
+                "type": "int",
+                "default": "both",
+                "choices": {"positive": 1, "negative": 4, "both": 5},
+                "setting": "/module/scars/type",
+            },
+            "hard_threshold_rms": {
+                "type": "float", "default": 0.666, "min": 0.0, "max": 2.0,
+                "setting": "/module/scars/threshold_high",
+            },
+            "soft_threshold_rms": {
+                "type": "float", "default": 0.25, "min": 0.0, "max": 2.0,
+                "setting": "/module/scars/threshold_low",
+            },
+            "min_length_px": {
+                "type": "int", "default": 16, "min": 1, "max": 1024,
+                "setting": "/module/scars/min_len",
+            },
+            "max_width_px": {
+                "type": "int", "default": 4, "min": 1, "max": 16,
+                "setting": "/module/scars/max_width",
+            },
+            "update": {
+                "type": "bool", "default": True,
+                "setting": "/module/scars/update",
+            },
+        },
+    ),
+    Operation(
+        key="step_line_correction",
+        gwy_func="line_correct_step",
+        title="Step line correction",
+        menu="/Correct Data/Step Line Correction",
+        what="Detects height jumps inside scan rows and shifts the affected "
+             "segments to repair discontinuities within a line.",
+        why="Useful when the defect is not a whole-row offset but a jump partway "
+            "through a row, where ordinary Align Rows cannot describe the error.",
+        caution="Gwyddion documents this method as experimental and notes that "
+                "it also aligns rows similarly to a mean correction. It can "
+                "therefore remove real row structure and must be trialled with "
+                "rollback and structural checks.",
+        executor_ready=True,
+        planner_policy="review",
+        provenance_effect="measured_transform",
+        planner_tags=("line_artifact", "segment_jump", "reinspect"),
+    ),
+    Operation(
+        key="block_line_correction",
+        gwy_func="block_correct_step",
+        title="Block line correction",
+        menu="/Correct Data/Step Block Correction",
+        what="Detects sudden height jumps and shifts entire row blocks between "
+             "them while preserving the mutual height relations inside each block.",
+        why="A less aggressive alternative to Step Line Correction when the goal "
+            "is to remove jumps without flattening every row.",
+        caution="Jump detection parameters still need deterministic verification. "
+                "Trial only after confirming the defect is instrumental rather "
+                "than a real step boundary.",
+        executor_ready=True,
+        planner_policy="review",
+        provenance_effect="measured_transform",
+        planner_tags=("line_artifact", "segment_jump", "structure_preserving", "reinspect"),
+    ),
+    Operation(
+        key="mark_disconnected",
+        gwy_func="mark_disconn",
+        title="Mark locally disconnected values",
+        menu="/Correct Data/Mask of Disconnected",
+        what="Builds a mask of values that deviate from their local neighbourhood "
+             "after estimating a local background.",
+        why="Can find local dropouts or defects that a global 3-sigma outlier "
+            "mask misses.",
+        caution="Its radius and threshold define what counts as a defect; real "
+                "small objects can also be marked. Use as a repair_defect "
+                "candidate, never as automatic permission to interpolate.",
+        creates_mask=True,
+        creates_mask_role="repair_defect",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="mask_only",
+        planner_tags=("mask_candidate", "local_defect", "reinspect"),
+    ),
+    Operation(
+        key="fractal_interpolate",
+        gwy_func="fraccor",
+        title="Fractal correction under mask",
+        menu="/Correct Data/Fractal Correction",
+        what="Replaces masked data with a synthetic rough surface estimated "
+             "from the image's fractal statistics.",
+        why="Offers an alternative to smooth Laplace interpolation when the "
+            "surrounding surface is genuinely rough and fractal-like.",
+        caution="Gwyddion explicitly warns this can produce unrealistic data "
+                "when the surface is not fractal. Reconstructed pixels are not "
+                "measurements and must remain provenance-masked.",
+        needs_mask=True,
+        required_mask_role="repair_defect",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="reconstructed_mixed",
+        planner_tags=("repair", "interpolation", "high_risk", "reinspect"),
+    ),
+    Operation(
+        key="trimmed_mean_level",
+        gwy_func="trimmed_mean",
+        title="Trimmed Mean levelling",
+        menu="/Level/Trimmed Mean",
+        what="Levels or filters using a trimmed mean that suppresses a chosen "
+             "fraction of extreme values.",
+        why="Provides a continuum between mean-like and median-like robustness "
+            "when ordinary plane or row statistics are dominated by outliers.",
+        caution="The trim fraction changes the physical meaning of the fit and "
+                "must be explicit. Do not use default persistent GUI settings "
+                "as hidden planner parameters.",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="measured_transform",
+        planner_tags=("background", "robust_fit", "reinspect"),
+    ),
+    Operation(
+        key="revolve_arc",
+        gwy_func="arc_revolve",
+        title="Revolve Arc background subtraction",
+        menu="/Level/Revolve Arc",
+        what="Builds a background by rolling a virtual arc horizontally or "
+             "vertically over or under the surface and subtracts that envelope.",
+        why="Provides a non-polynomial background model when broad scanner shape "
+            "or morphology makes a global polynomial a poor description.",
+        caution="Features broader than the chosen arc radius are treated as "
+                "background and can be removed. Radius, direction and polarity "
+                "must be explicit and verified before headless execution.",
+        executor_ready=False,
+        planner_policy="review",
+        provenance_effect="measured_transform",
+        planner_tags=("background", "non_polynomial", "reinspect"),
+    ),
+    Operation(
+        key="path_level",
+        gwy_func="GwyToolPathLevel",
+        title="Path Level using selected line intersections",
+        menu="/Tools/Path Level",
+        what="Levels an arbitrary subset of rows from the intersections of "
+             "operator- or planner-selected straight paths with those rows.",
+        why="On complicated stepped or object-rich images it can use trusted "
+            "background trajectories where automatic row statistics fail.",
+        caution="This is an interactive Gwyddion tool, not a process function. "
+                "Bad paths impose bad row offsets. The selected paths are part "
+                "of the scientific provenance and must be stored.",
+        execution_mode="interactive_tool",
+        executor_ready=False,
+        planner_policy="manual",
+        provenance_effect="measured_transform",
+        selection_kind="line_paths",
+        planner_tags=("line_artifact", "trusted_background", "human_selection"),
+    ),
+    Operation(
+        key="manual_mask_edit",
+        gwy_func="",
+        title="Manual mask edit",
+        menu="/Mask/Mask Editor",
+        what="Lets the operator add, remove, intersect or otherwise refine a "
+             "candidate mask before another operation uses it.",
+        why="Some boundaries require sample knowledge that cannot be inferred "
+            "safely from height statistics alone. The planner can request a "
+            "targeted edit instead of guessing.",
+        caution="The edited mask is an operator decision. Record the exact mask, "
+                "its semantic role and the image state on which it was drawn.",
+        execution_mode="human",
+        executor_ready=False,
+        planner_policy="manual",
+        provenance_effect="mask_only",
+        selection_kind="mask_pixels",
+        planner_tags=("mask_edit", "human_selection", "reinspect"),
     ),
     Operation(
         key="remove_mask",
@@ -390,6 +722,11 @@ _ALL: list[Operation] = [
 ]
 
 OPERATIONS: dict[str, Operation] = {op.key: op for op in _ALL}
+
+
+def capability_registry() -> list[dict]:
+    """All planner-visible primitives, including manual/interactive tools."""
+    return [OPERATIONS[key].capability() for key in sorted(OPERATIONS)]
 
 
 def get_operation(key: str) -> Operation:

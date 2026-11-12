@@ -182,6 +182,37 @@ def save_height(channel: Channel, path: str | Path,
     return path
 
 
+def load_mask(path: str | Path, channel: Channel | None = None) -> np.ndarray | None:
+    """Read an operator mask saved beside a Gwyddion data channel.
+
+    An operator mask is evidence about the background region, not merely a
+    display overlay.  It remains separate from :func:`load_height` so callers
+    must explicitly choose to use it.  ``channel`` selects the matching data
+    id in a multi-channel file; a shape mismatch is refused rather than being
+    stretched onto another map.
+    """
+    path = Path(path)
+    try:
+        obj = gwyfile.load(str(path))
+    except (OSError, ValueError, AssertionError):
+        return None
+
+    channel_id = "0"
+    if channel is not None:
+        for key in obj.keys():
+            match = re.fullmatch(r"/(\d+)/data/title", str(key))
+            if match and str(obj[key]) == channel.name:
+                channel_id = match.group(1)
+                break
+    try:
+        mask = np.asarray(obj[f"/{channel_id}/mask"].data, dtype=float) > 0.5
+    except (KeyError, AttributeError, TypeError):
+        return None
+    if channel is not None and mask.shape != channel.data.shape:
+        return None
+    return mask
+
+
 def load_height(path: str | Path) -> Channel:
     """
     Read the one channel most likely to be surface topography.

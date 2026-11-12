@@ -41,7 +41,9 @@ from mcp.server.mcpserver import Image, MCPServer
 from afm_copilot import __version__
 from afm_copilot.analysis import aggregate, measure_film_thickness
 from afm_copilot.bridge import BridgeError, GwyBridge
+from afm_copilot.decide import plan_for
 from afm_copilot.gwy_io import Channel, load_channels, load_height
+from afm_copilot.morphology import EFFECTS, FAMILIES, MorphologyReview
 from afm_copilot.ops import RECIPES, get_recipe
 from afm_copilot.profile import profile_across
 from afm_copilot.render import RenderStyle, render_channel, common_color_scale
@@ -59,11 +61,14 @@ server = MCPServer(
         "1. `list_scans` to see what is in a folder.\n"
         "2. `inspect_scan` to look at one -- it returns the image, so judge it "
         "visually before deciding anything.\n"
-        "3. `list_recipes` / `explain_recipe` to choose a processing recipe, "
-        "and tell the user WHY that recipe rather than another.\n"
-        "4. `process_scans` to apply it. The result reports what each step "
-        "changed.\n"
-        "5. `measure_thickness` for a film step, `render_batch` for figures.\n\n"
+        "3. `plan_scan` after looking: give it only morphology you can defend "
+        "from the image. Use a restrictive continuous-granular review when "
+        "there is no separate background; it can only make the plan safer.\n"
+        "4. `list_recipes` / `explain_recipe` to understand the recipe the "
+        "plan returned, and tell the user WHY it fits.\n"
+        "5. `process_scans` to apply that recipe, never a stronger one. The "
+        "result reports what each step changed.\n"
+        "6. `measure_thickness` for a film step, `render_batch` for figures.\n\n"
         "Two habits matter. First, a large drop in RMS is not automatically "
         "good -- levelling always removes some real roughness along with the "
         "artifact, so do not present it as an improvement without saying so. "
@@ -211,6 +216,61 @@ def inspect_scan(path: str) -> list:
 
 
 @server.tool(
+    description="Build the guarded processing plan for one scan after visual "
+                "inspection. Optionally records a morphology family, review "
+                "effect and visual evidence. A restrictive review can only "
+                "veto unsafe masking or flattening; it cannot authorise a "
+                "stronger correction. Returns the image again so the plan "
+                "can be checked against what is actually visible.")
+def plan_scan(path: str, morphology_family: str = "",
+              review_effect: str = "advisory", evidence: str = "") -> list:
+    files = _to_gwy(path, _scratch())
+    if not files:
+        return [f"Nothing readable at {path}"]
+    try:
+        ch = load_height(files[0])
+    except (ValueError, OSError) as exc:
+        return [f"Could not read a height channel: {exc}"]
+
+    family = morphology_family.strip()
+    review = None
+    if family:
+        if family not in FAMILIES:
+            return [
+                f"Unknown morphology family {family!r}. Choose one of: "
+                + ", ".join(sorted(FAMILIES))]
+        if review_effect not in EFFECTS:
+            return [
+                f"Unknown review effect {review_effect!r}. Choose one of: "
+                + ", ".join(sorted(EFFECTS))]
+        observations = tuple(
+            part.strip() for part in evidence.split(";") if part.strip())
+        review = MorphologyReview(
+            scan=files[0].stem,
+            family=family,
+            effect=review_effect,
+            source="mcp-vision",
+            evidence=observations,
+        )
+
+    plan = plan_for(ch, morphology_review=review)
+    audit = [
+        plan.explain(),
+        "",
+        "Review audit:",
+        f"  morphology family : {plan.morphology_family or 'not asserted'}",
+        f"  review source     : {plan.morphology_review_source or 'none'}",
+        f"  restriction used  : {'yes' if plan.morphology_restricted else 'no'}",
+        f"  automatic mask    : {'yes' if plan.has_objects else 'no'}",
+        f"  permitted recipe  : {plan.recipe_key}",
+        "",
+        "Nothing was processed. Apply no recipe stronger than the permitted "
+        "one without operator evidence.",
+    ]
+    return ["\n".join(audit), _preview(ch)]
+
+
+@server.tool(
     description="List the one-click recipes. Each bundles the four or five "
                 "Gwyddion operations normally run together.")
 def list_recipes() -> str:
@@ -237,7 +297,9 @@ def explain_recipe(name: str) -> str:
 
 @server.tool(
     description="Apply a recipe to a file or folder. Reports what each step "
-                "changed to the roughness, so the processing is auditable.")
+                "changed to the roughness, so the processing is auditable. "
+                "Call plan_scan first and use the permitted recipe it returns; "
+                "do not replace it with a stronger correction.")
 def process_scans(path: str, recipe: str = "quick-clean",
                   output_folder: str = "") -> str:
     try:

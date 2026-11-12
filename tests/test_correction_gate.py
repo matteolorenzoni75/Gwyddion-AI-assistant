@@ -1,0 +1,342 @@
+"""Safety decisions explain proposed AFM clean-up without altering data."""
+from types import SimpleNamespace
+
+from afm_copilot.bridge import GwyBridge
+from afm_copilot.correction_gate import (
+    gate_recipe, planner_contract, recipe_from_iterative_plan,
+    validate_iterative_plan,
+)
+
+
+def _plan(recipe="quick-clean", **kwargs):
+    values = dict(recipe_key=recipe, has_terraces=False,
+                  morphology_restricted=False, rows_are_structure=False,
+                  needs_despike=False)
+    values.update(kwargs)
+    return SimpleNamespace(**values)
+
+
+def test_row_structure_vetoes_row_alignment():
+    plan = _plan(rows_are_structure=True)
+    q = SimpleNamespace(checks=[])
+    result = gate_recipe(plan, q, calibration_verified=True)
+    alignment = next(x for x in result["operations"]
+                     if x["operation"] == "align_rows_median_diff")
+    assert alignment["status"] == "blocked"
+    assert result["safe_to_execute_full_recipe_without_review"] is False
+
+
+def test_object_background_fit_requires_review():
+    q = SimpleNamespace(checks=[])
+    result = gate_recipe(_plan("isolate-objects-flat"), q,
+                         calibration_verified=True)
+    assert any(x["status"] == "review" for x in result["operations"])
+    assert result["image_modified"] is False
+
+
+def test_feedback_diagnostics_are_flagged_not_reconstructed():
+    q = SimpleNamespace(checks=[
+        SimpleNamespace(name="feedback", verdict="fixable"),
+        SimpleNamespace(name="rattle", verdict="fixable")])
+    result = gate_recipe(_plan("level-only"), q,
+                         calibration_verified=True)
+    assert {item["artifact"] for item in result["artifact_warnings"]} == {
+        "feedback", "rattle"}
+    assert all(item["action"] == "flag_not_reconstruct"
+               for item in result["artifact_warnings"])
+
+
+
+def test_contract_exposes_interactive_path_level_and_human_mask_edit():
+    contract = planner_contract()
+    operations = {item["key"]: item for item in contract["operations"]}
+    assert operations["path_level"]["execution_mode"] == "interactive_tool"
+    assert operations["path_level"]["executor_ready"] is False
+    assert operations["manual_mask_edit"]["execution_mode"] == "human"
+    assert operations["interpolate_under_mask"]["required_mask_role"] == "repair_defect"
+
+
+def test_interpolation_cannot_reuse_structure_protection_mask():
+    result = validate_iterative_plan({
+        "actions": [{
+            "operation": "interpolate_under_mask",
+            "mask_role": "protect_structure",
+            "accept_reconstruction": True,
+            "reconstruction_mask_ref": "mask-1",
+            "expected_checks": ["repair region bounded"],
+        }],
+    })
+    assert result["blocked"] is True
+    assert result["can_execute_headless"] is False
+    assert "repair_defect" in result["actions"][0]["reason"]
+
+
+def test_reconstruction_is_recorded_in_state_provenance():
+    result = validate_iterative_plan({
+        "masks": [{
+            "ref": "mask-repair-7",
+            "role": "repair_defect",
+            "state": "state-000",
+        }],
+        "actions": [{
+            "operation": "interpolate_under_mask",
+            "mask_ref": "mask-repair-7",
+            "mask_role": "repair_defect",
+            "accept_reconstruction": True,
+            "reconstruction_mask_ref": "mask-repair-7",
+            "expected_checks": ["feature edges outside mask unchanged"],
+        }],
+    })
+    # It still requires review by policy, but the provenance ledger must be
+    # correct before any later operator approval/execution can occur.
+    assert result["states"][-1]["reconstructed"] is True
+    assert result["states"][-1]["height_provenance"] == "measured_plus_reconstructed"
+    assert result["states"][-1]["reconstruction_mask_ref"] == "mask-repair-7"
+
+
+def test_path_level_is_a_plannable_review_step_not_headless_execution():
+    result = validate_iterative_plan({
+        "actions": [{
+            "operation": "path_level",
+            "expected_checks": ["selected background paths agree after levelling"],
+            "on_failure": "rollback",
+        }],
+    })
+    assert result["blocked"] is False
+    assert result["requires_review"] is True
+    assert result["can_execute_headless"] is False
+    assert result["actions"][0]["execution_mode"] == "interactive_tool"
+
+
+def test_simple_validated_trial_reuses_existing_recipe_executor_one_step_at_a_time():
+    first = {
+        "actions": [{
+            "operation": "plane_level",
+            "expected_checks": ["residual global tilt decreases"],
+        }],
+        "stop_conditions": ["no further defensible artifact reduction"],
+    }
+    validation = validate_iterative_plan(first)
+    assert validation["can_execute_headless"] is True
+    assert validation["states"][-1]["parent"] == "state-000"
+    recipe = recipe_from_iterative_plan(first)
+    assert recipe.steps == ("plane_level",)
+    assert [item["gwy_func"] for item in recipe.to_job()] == ["level"]
+
+
+def test_multi_action_plan_must_be_reinspected_between_steps():
+    plan = {
+        "actions": [
+            {
+                "operation": "plane_level",
+                "expected_checks": ["residual global tilt decreases"],
+            },
+            {
+                "operation": "zero_mean",
+                "expected_checks": ["mean is zero without geometry change"],
+            },
+        ],
+    }
+    validation = validate_iterative_plan(plan)
+    assert validation["can_execute_headless"] is True
+    try:
+        recipe_from_iterative_plan(plan)
+    except ValueError as error:
+        assert "exactly one action" in str(error)
+    else:
+        raise AssertionError("multi-step iterative trial was executed without reinspection")
+
+
+def test_review_operation_can_run_only_as_reversible_trial():
+    result = validate_iterative_plan({
+        "masks": [{
+            "ref": "mask-r1",
+            "role": "repair_defect",
+            "state": "state-000",
+        }],
+        "actions": [{
+            "operation": "interpolate_under_mask",
+            "mask_ref": "mask-r1",
+            "mask_role": "repair_defect",
+            "accept_reconstruction": True,
+            "reconstruction_mask_ref": "mask-r1",
+            "expected_checks": ["outside-mask structure unchanged"],
+        }],
+    })
+    assert result["actions"][0]["status"] == "trial_only"
+    assert result["can_execute_headless"] is True
+    assert result["requires_review"] is True
+
+
+
+def test_mask_generated_in_one_state_can_feed_next_repair_proposal():
+    plan = {
+        "actions": [
+            {
+                "operation": "mark_outliers",
+                "output_mask_ref": "repair-candidate",
+            },
+            {
+                "operation": "interpolate_under_mask",
+                "mask_ref": "repair-candidate",
+                "mask_role": "repair_defect",
+                "accept_reconstruction": True,
+                "reconstruction_mask_ref": "repair-candidate",
+                "expected_checks": ["outside-mask structure unchanged"],
+            },
+        ],
+    }
+    result = validate_iterative_plan(plan)
+    assert result["blocked"] is False
+    assert result["actions"][0]["created_mask_role"] == "repair_defect"
+    assert result["actions"][1]["mask_ref"] == "repair-candidate"
+    assert result["states"][1]["active_masks"] == ["repair-candidate"]
+
+
+def test_mask_becomes_stale_after_data_changing_level_step():
+    plan = {
+        "masks": [{
+            "ref": "objects-v0",
+            "role": "protect_structure",
+            "state": "state-000",
+        }],
+        "actions": [
+            {
+                "operation": "plane_level",
+                "expected_checks": ["global tilt decreases"],
+            },
+            {
+                "operation": "plane_around_objects",
+                "mask_ref": "objects-v0",
+                "mask_role": "protect_structure",
+                "expected_checks": ["background residual decreases"],
+            },
+        ],
+    }
+    result = validate_iterative_plan(plan)
+    assert "objects-v0" in result["states"][1]["stale_masks"]
+    assert result["actions"][1]["status"] == "blocked"
+    assert "stale" in result["actions"][1]["reason"]
+
+
+
+def test_bridge_trial_action_creates_new_state_and_audit_without_overwrite(tmp_path):
+    class DummyBridge:
+        run_trial_action = GwyBridge.run_trial_action
+
+        def run_recipe(self, recipe, paths, out_dir, timeout=900.0):
+            assert recipe.steps == ("plane_level",)
+            assert len(paths) == 1
+            return {"n_ok": 1, "n_total": 1, "results": [{"ok": True}]}
+
+    source = tmp_path / "input.gwy"
+    source.write_bytes(b"gwy-placeholder")
+    plan = {
+        "actions": [{
+            "operation": "plane_level",
+            "output_state": "state-001",
+            "expected_checks": ["global tilt decreases"],
+        }],
+    }
+    bridge = DummyBridge()
+    audit = bridge.run_trial_action(plan, source, tmp_path / "states")
+    state_dir = tmp_path / "states" / "state-001"
+    assert state_dir.is_dir()
+    assert (state_dir / "_trial.json").is_file()
+    assert audit["source_modified"] is False
+    assert audit["validation"]["final_state"] == "state-001"
+
+    try:
+        bridge.run_trial_action(plan, source, tmp_path / "states")
+    except Exception as error:
+        assert "refusing overwrite" in str(error)
+    else:
+        raise AssertionError("existing planner state was overwritten")
+
+
+
+def test_mark_scars_parameters_are_explicit_and_bounded():
+    plan = {
+        "actions": [{
+            "operation": "mark_scars",
+            "parameters": {
+                "polarity": "both",
+                "hard_threshold_rms": 0.7,
+                "soft_threshold_rms": 0.3,
+                "min_length_px": 20,
+                "max_width_px": 5,
+                "update": True,
+            },
+            "output_mask_ref": "scar-mask",
+        }],
+    }
+    result = validate_iterative_plan(plan)
+    action = result["actions"][0]
+    assert action["status"] == "trial_only"
+    assert action["resolved_settings"]["/module/scars/type"] == 5
+    assert action["resolved_settings"]["/module/scars/min_len"] == 20
+    assert action["created_mask_role"] == "repair_defect"
+
+    bad = validate_iterative_plan({
+        "actions": [{
+            "operation": "mark_scars",
+            "parameters": {"max_width_px": 99},
+        }],
+    })
+    assert bad["blocked"] is True
+    assert "maximum 16" in bad["actions"][0]["reason"]
+
+
+def test_step_and_block_line_corrections_are_reversible_headless_trials():
+    for operation in ("step_line_correction", "block_line_correction"):
+        result = validate_iterative_plan({
+            "actions": [{
+                "operation": operation,
+                "expected_checks": [
+                    "row jumps decrease",
+                    "feature geometry outside jumps is preserved",
+                ],
+            }],
+        })
+        assert result["blocked"] is False
+        assert result["can_execute_headless"] is True
+        assert result["requires_review"] is True
+        assert result["actions"][0]["status"] == "trial_only"
+
+
+def test_iterative_planner_blocks_untraceable_remove_scars():
+    result = validate_iterative_plan({
+        "actions": [{
+            "operation": "remove_scars",
+            "accept_reconstruction": True,
+            "expected_checks": ["thin horizontal defect removed"],
+        }],
+    })
+    assert result["blocked"] is True
+    assert "mark_scars" in result["actions"][0]["reason"]
+
+
+def test_trial_recipe_uses_exact_validated_mark_scars_settings():
+    plan = {
+        "actions": [{
+            "operation": "mark_scars",
+            "parameters": {
+                "polarity": "negative",
+                "hard_threshold_rms": 0.8,
+                "soft_threshold_rms": 0.4,
+                "min_length_px": 24,
+                "max_width_px": 3,
+                "update": False,
+            },
+            "output_mask_ref": "scar-neg",
+        }],
+    }
+    recipe = recipe_from_iterative_plan(plan)
+    job = recipe.to_job()
+    assert job[0]["gwy_func"] == "scars_mark"
+    assert job[0]["settings"]["/module/scars/type"] == 4
+    assert job[0]["settings"]["/module/scars/threshold_high"] == 0.8
+    assert job[0]["settings"]["/module/scars/threshold_low"] == 0.4
+    assert job[0]["settings"]["/module/scars/min_len"] == 24
+    assert job[0]["settings"]["/module/scars/max_width"] == 3
+    assert job[0]["settings"]["/module/scars/update"] is False

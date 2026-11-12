@@ -1,26 +1,16 @@
 @echo off
-rem Launch the AFM Copilot desktop application.
-rem
-rem Uses the project's own interpreter by full path on purpose: a bare
-rem "python" on this machine resolves to Gwyddion's Python 2.7, which cannot
-rem run this application.
-
+rem One local entrypoint for AFM Copilot desktop workbench.
+rem All functionality uses this checkout's Python 3 virtual environment.
+rem No archive reorganization, deletion, Git push or batch conversion at startup.
 setlocal
-set "HERE=%~dp0"
-set "PY=%HERE%.venv\Scripts\pythonw.exe"
-
+cd /d "%~dp0"
+set "PY=%~dp0.venv\Scripts\pythonw.exe"
 if not exist "%PY%" (
-    echo.
-    echo Cannot find %PY%
-    echo.
-    echo Set the environment up first, from a PowerShell window:
-    echo     cd "%HERE%"
-    echo     python -m venv .venv
-    echo     .venv\Scripts\python.exe -m pip install -e .
-    echo.
-    pause
-    exit /b 1
+  echo AFM Copilot virtual environment not found.
+  echo Expected: %PY%
+  echo Run Python setup in C:\AFM_image_wizard before launching.
+  pause
+  exit /b 2
 )
-
-start "" "%PY%" -m afm_copilot.gui
-endlocal
+start "" "%PY%" -m afm_copilot.launcher
+exit /b 0

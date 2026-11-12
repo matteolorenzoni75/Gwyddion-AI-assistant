@@ -16,7 +16,10 @@ from PySide6.QtWidgets import (QComboBox, QHBoxLayout, QLabel, QPushButton,
 
 from afm_copilot.bridge import GwyBridge
 from afm_copilot.gui.panels.base import Panel
-from afm_copilot.gwy_io import load_height
+from afm_copilot.decide import plan_for
+from afm_copilot.quality import assess
+from afm_copilot.correction_gate import gate_recipe
+from afm_copilot.gwy_io import load_height, load_mask
 from afm_copilot.ops import RECIPES, get_recipe
 
 
@@ -68,6 +71,9 @@ class RecipesPanel(Panel):
         self.run_selected = QPushButton("Run on selected scans")
         self.run_selected.clicked.connect(self._run)
         run_row.addWidget(self.run_selected)
+        self.review_button = QPushButton("Safety diagnosis (selected scan)")
+        self.review_button.clicked.connect(self._diagnose)
+        run_row.addWidget(self.review_button)
         layout.addLayout(run_row)
 
         self.status = QLabel("")
@@ -79,6 +85,37 @@ class RecipesPanel(Panel):
 
     def _show(self) -> None:
         self.detail.setHtml(_html(get_recipe(self.combo.currentData())))
+
+    # ---------------------------------------------------------- diagnosis
+    def _diagnose(self) -> None:
+        """Preview recommendations; deliberately does not alter the image."""
+        ch = self.ctx.channel
+        if ch is None:
+            self.status.setText("Select and load one topography image first.")
+            return
+        try:
+            plan = plan_for(ch)
+            quality = assess(ch)
+            # Physical dimensions are only a preliminary sanity check; a
+            # trusted calibration must be confirmed separately.
+            dimensions_plausible = bool(ch.xreal > 0 and ch.yreal > 0)
+            report = gate_recipe(
+                plan, quality, calibration_verified=dimensions_plausible,
+                channel_role="height")
+            notes = [
+                f"Acquisition quality: {quality.verdict}",
+                f"Recommended recipe: {plan.recipe_key}",
+                "Calibration: dimensions present (NOT independently verified)",
+                "Proposed operation safety:",
+            ]
+            for operation in report["operations"]:
+                notes.append(f"  {operation['operation']}: "
+                             f"{operation['status']} — {operation['reason']}")
+            notes.append("No operation has been executed by this diagnosis.")
+            self.detail.setPlainText("\n".join(notes))
+            self.status.setText("Diagnosis only. Review all changes before approval.")
+        except (ValueError, OSError, RuntimeError) as error:
+            self.status.setText(f"Cannot diagnose scan: {error}")
 
     # --------------------------------------------------------------- run
     def _run(self) -> None:
@@ -109,6 +146,25 @@ class RecipesPanel(Panel):
         if raw:
             report = bridge.convert_raw(raw, out / "_gwy")
             gwy.extend(Path(r["gwy"]) for r in report["results"] if r["ok"])
+        # A visual veto has to constrain the execution path, not merely appear
+        # in a note.  It may be overruled only by concrete operator evidence:
+        # a mask saved with the reviewed .gwy file.
+        for path in gwy:
+            review = self.ctx.review_for(path.stem)
+            if review is None or not review.restricts_automatic_masking:
+                continue
+            channel = load_height(path)
+            plan = plan_for(
+                channel,
+                operator_mask=load_mask(path, channel),
+                morphology_review=review,
+            )
+            if recipe.key != plan.recipe_key:
+                raise ValueError(
+                    f"{path.name} has a restrictive morphology review. "
+                    f"The permitted recipe is '{plan.recipe_key}', not "
+                    f"'{recipe.key}'. Change the review or export an "
+                    "operator-approved mask first.")
         return bridge.run_recipe(recipe, sorted(set(gwy)), out / "processed")
 
     def _done(self, result: dict) -> None:

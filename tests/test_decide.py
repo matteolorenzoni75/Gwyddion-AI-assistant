@@ -15,6 +15,7 @@ import pytest
 from afm_copilot.decide import (choose_background_degree, detect_objects,
                                 plan_for, residual_after_background)
 from afm_copilot.gwy_io import Channel
+from afm_copilot.morphology import MorphologyReview
 
 RNG = np.random.default_rng(20260902)
 N = 256
@@ -144,6 +145,51 @@ def test_a_clean_flat_scan_is_still_left_alone():
     plan = plan_for(surface(textured()))
     assert not plan.line_defects
     assert plan.recipe_key == "level-only"
+
+
+def test_distinct_terraces_prefer_facet_levelling():
+    """A stepped film is not an object field for the background fitter."""
+    from afm_copilot.gwy_io import Channel
+
+    data = np.random.default_rng(17).normal(0.0, 0.3e-9, (256, 256))
+    data[:, 256 // 3:2 * 256 // 3] += 20e-9
+    data[:, 2 * 256 // 3:] += 40e-9
+    plan = plan_for(Channel(name="Height", data=data,
+                            xreal=10e-6, yreal=10e-6))
+
+    assert plan.has_terraces
+    assert not plan.has_objects
+    assert plan.recipe_key == "facet-terraces"
+
+
+def test_tilted_terraces_are_found_from_the_dominant_local_facet():
+    """A height step must not rotate the plane used to reveal that step."""
+    x, _ = coords()
+    data = textured(0.25e-9, seed=218) + 260e-9 * x
+    data[:, N // 3:2 * N // 3] += 35e-9
+    data[:, 2 * N // 3:] += 70e-9
+
+    plan = plan_for(surface(data))
+
+    assert plan.has_terraces
+    assert not plan.has_objects
+    assert plan.recipe_key == "facet-terraces"
+    assert any("dominant local facet" in note for note in plan.notes)
+
+
+def test_dense_particles_are_not_mistaken_for_terraces():
+    """Repeated compact peaks are morphology, not broad height plateaux."""
+    x, y = coords()
+    data = textured(0.3e-9, seed=219) + 180e-9 * x
+    for cx in np.linspace(-0.4, 0.4, 7):
+        for cy in np.linspace(-0.4, 0.4, 7):
+            radius = (x - cx) ** 2 + (y - cy) ** 2
+            data += 25e-9 * np.exp(-radius / 0.0015)
+
+    plan = plan_for(surface(data))
+
+    assert not plan.has_terraces
+    assert plan.recipe_key != "facet-terraces"
 
 
 def test_a_background_that_dominates_is_taken_even_if_it_never_settles():
@@ -276,6 +322,65 @@ def test_objects_on_a_curved_background_do_get_the_polynomial():
     plan = plan_for(surface(with_object(curved)))
     assert plan.has_objects
     assert plan.recipe_key == "isolate-objects"
+
+
+def test_continuous_morphology_review_vetoes_automatic_object_masking():
+    """Vision may stop a false object interpretation, never strengthen one."""
+    review = MorphologyReview(
+        scan="close-packed",
+        family="granular_continuous",
+        effect="restrict",
+        source="vision-review",
+        evidence=("texture occupies the whole field",),
+    )
+    plan = plan_for(surface(with_object(bowed())), morphology_review=review)
+
+    assert not plan.has_objects
+    assert plan.morphology_restricted
+    assert plan.background_degree <= 1
+    assert plan.recipe_key == "level-only"
+    assert any("Automatic masking" in note for note in plan.notes)
+    assert not any("so the lines are straightened" in note
+                   for note in plan.notes)
+    assert not any("higher order finds no more" in note
+                   for note in plan.notes)
+
+
+def test_advisory_morphology_review_does_not_change_the_recipe():
+    review = MorphologyReview(
+        scan="candidate",
+        family="granular_continuous",
+        effect="advisory",
+        source="vision-review",
+    )
+    ordinary = plan_for(surface(with_object(bowed())))
+    reviewed = plan_for(surface(with_object(bowed())),
+                        morphology_review=review)
+
+    assert not reviewed.morphology_restricted
+    assert reviewed.recipe_key == ordinary.recipe_key
+    assert reviewed.has_objects == ordinary.has_objects
+
+
+def test_operator_mask_overrides_a_semantic_veto():
+    """A hand-drawn correction target is stronger evidence than a label."""
+    data = with_object(flat())
+    operator_mask = np.zeros_like(data, dtype=bool)
+    operator_mask[90:166, 90:166] = True
+    review = MorphologyReview(
+        scan="reviewed",
+        family="granular_continuous",
+        effect="restrict",
+        source="vision-review",
+    )
+
+    plan = plan_for(surface(data), operator_mask=operator_mask,
+                    morphology_review=review)
+
+    assert plan.has_objects
+    assert not plan.morphology_restricted
+    assert plan.operator_mask is not None
+    assert plan.recipe_key == "isolate-objects-flat"
 
 
 def test_objects_are_measured_against_the_majority_surface():

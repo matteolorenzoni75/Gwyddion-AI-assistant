@@ -33,8 +33,9 @@ result["python_version"] = sys.version.split()[0]
 
 # Modules register themselves on import; if they had not, every process
 # function would be missing and nothing else here would work.
-probes = ["level", "align_rows", "scars_remove", "flatten_base", "polylevel",
-          "fft_filter_1d", "outliers", "laplace"]
+probes = ["level", "facet-level", "align_rows", "scars_remove", "flatten_base", "polylevel",
+          "fft_filter_1d", "outliers", "laplace", "grain_mark", "grain_edge",
+          "otsu-threshold", "grain_wshed"]
 missing = [p for p in probes if not gwy.gwy_process_func_exists(p)]
 result["checks"]["modules_registered"] = not missing
 if missing:

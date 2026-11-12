@@ -68,7 +68,7 @@ def test_all_tools_are_registered():
     tools = asyncio.run(server.list_tools())
     names = {t.name for t in tools}
     assert {"check_setup", "list_scans", "inspect_scan", "list_recipes",
-            "explain_recipe", "process_scans", "render_batch",
+            "plan_scan", "explain_recipe", "process_scans", "render_batch",
             "measure_thickness", "search_gwyddion",
             "extract_profile"} <= names
 
@@ -140,3 +140,48 @@ def test_inspect_scan_returns_measurements_and_an_image():
     # The image is the point: Claude has to be able to look at the scan, not
     # just read numbers about it.
     assert image_blocks(result), "inspect_scan returned no image block"
+
+
+def test_plan_scan_turns_visual_continuity_into_a_conservative_veto(tmp_path):
+    import numpy as np
+
+    from afm_copilot.gwy_io import Channel, save_height
+
+    n = 128
+    y, x = np.mgrid[0:n, 0:n].astype(float) / n - 0.5
+    data = 200e-9 * x + np.random.default_rng(7).normal(0, 1e-9, (n, n))
+    data[36:92, 36:92] += 180e-9
+    sample = save_height(
+        Channel(name="Height", data=data, xreal=5e-6, yreal=5e-6),
+        tmp_path / "blind.gwy")
+
+    result = call(
+        "plan_scan",
+        path=str(sample),
+        morphology_family="granular_continuous",
+        review_effect="restrict",
+        evidence="texture occupies the field; no separate flat background",
+    )
+    text = as_text(result)
+
+    assert "Recommended: level-only" in text
+    assert "restriction used  : yes" in text
+    assert "automatic mask    : no" in text
+    assert "mcp-vision" in text
+    assert image_blocks(result), "the semantic plan must remain visually checkable"
+
+
+def test_plan_scan_rejects_an_unknown_visual_label(tmp_path):
+    import numpy as np
+
+    from afm_copilot.gwy_io import Channel, save_height
+
+    sample = save_height(
+        Channel(name="Height", data=np.zeros((32, 32)),
+                xreal=1e-6, yreal=1e-6),
+        tmp_path / "blind.gwy")
+    text = as_text(call(
+        "plan_scan", path=str(sample),
+        morphology_family="looks-kind-of-grainy"))
+
+    assert "Unknown morphology family" in text

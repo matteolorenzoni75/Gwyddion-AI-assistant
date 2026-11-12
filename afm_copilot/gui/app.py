@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -145,6 +146,15 @@ class MainWindow(QMainWindow):
         check = QAction("Check Gwyddion connection", self)
         check.triggered.connect(lambda: self._check_gwyddion(verbose=True))
         tools_menu.addAction(check)
+        tools_menu.addSeparator()
+        label_action = QAction("Expert Labeler (separate window)", self)
+        label_action.triggered.connect(
+            lambda: self._open_companion("afm_copilot.labeler"))
+        tools_menu.addAction(label_action)
+        compare_action = QAction("Synoptic review: raw / manual / automatic", self)
+        compare_action.triggered.connect(
+            lambda: self._open_companion("afm_copilot.compare_gui"))
+        tools_menu.addAction(compare_action)
 
         help_menu = self.menuBar().addMenu("&Help")
         about = QAction("About", self)
@@ -178,6 +188,21 @@ class MainWindow(QMainWindow):
 
         self.runner.submit("Checking Gwyddion", check,
                            on_result=ok, on_failed=failed)
+
+    def _open_companion(self, module: str) -> None:
+        executable = Path(sys.executable)
+        if executable.name.lower() == "python.exe":
+            alternative = executable.with_name("pythonw.exe")
+            if alternative.is_file():
+                executable = alternative
+        try:
+            subprocess.Popen(
+                [str(executable), "-m", module],
+                cwd=str(Path(__file__).resolve().parents[2]),
+                close_fds=True)
+            self.log("Opened: " + module)
+        except OSError as error:
+            QMessageBox.warning(self, "Cannot open companion", str(error))
 
     def _about(self) -> None:
         QMessageBox.about(

@@ -13,6 +13,8 @@ conversation.
 | Batch export to comparable figures | Roughness and spatial length |
 | One-click recipes, each explaining itself | Automatic artifact detection |
 | Profiles: drag, measure, export | Learning from your decisions |
+| Visual morphology review and competing mask proposals | Trained automatic mask selection |
+| Private operator feedback and conflict-safe curation (no model training yet) | Validated supervised learning on independently held-out samples |
 | Film thickness, with honest refusals | |
 
 This project continues [`C:\AFM_Automation`](file:///C:/AFM_Automation), which is
@@ -32,6 +34,8 @@ untouched. Nothing there has been modified or deleted.
 | [`docs/pygwy_api/PYGWY_API.md`](docs/pygwy_api/PYGWY_API.md) | **Complete verified inventory of the PyGwy API on this machine** |
 | [`docs/pygwy_api/pygwy_api.json`](docs/pygwy_api/pygwy_api.json) | The same, machine-readable |
 | [`docs/data_survey/FINDINGS.md`](docs/data_survey/FINDINGS.md) | **What the real files actually contain** — channels, calibration, metadata |
+| [`DEPENDENCIES.md`](DEPENDENCIES.md) | Required Python packages, legacy Gwyddion runtime and what the Windows installer must bundle |
+| [`docs/WINDOWS_PACKAGING.md`](docs/WINDOWS_PACKAGING.md) | Packaging acceptance criteria and the proposed installer path |
 | [`tools/introspect_pygwy.py`](tools/introspect_pygwy.py) | Regenerates the API inventory (Python 2.7) |
 | [`tools/query_api.py`](tools/query_api.py) | Search/browse the inventory |
 | [`tools/survey_channels.py`](tools/survey_channels.py) | Reports channels + metadata in a folder of raw files |
@@ -45,20 +49,26 @@ untouched. Nothing there has been modified or deleted.
 Set up once, **from the project folder**:
 
 ```bash
-cd C:\AFM_Copilot
+cd C:\AFM_image_wizard
 ```
 
 ```bash
-C:\Users\MLorenzoni\AppData\Local\Programs\Python\Python313\python.exe -m venv .venv
+py -3.11 -m venv .venv
 ```
 
 ```bash
-.venv\Scripts\python.exe -m pip install -e .
+.venv\Scripts\python.exe -m pip install -e ".[gui,mcp]"
 ```
 
 That last step is what makes `afm_copilot` importable from any directory. Skip
 it and you get `No module named 'afm_copilot'` everywhere except the project
 folder.
+
+See [`DEPENDENCIES.md`](DEPENDENCIES.md) for the exact core, GUI, MCP and
+legacy Gwyddion requirements. The repository is not yet a self-contained
+Windows installer: source installation still needs the private Python 3
+environment plus Gwyddion 2.70 32-bit and Python 2.7 32-bit for raw conversion
+and Gwyddion processing.
 
 > **Never type a bare `python` on this machine.** It resolves to Gwyddion's
 > Python 2.7, which cannot run this. Always use `.venv\Scripts\python.exe`, or
@@ -69,7 +79,7 @@ folder.
 Double-click **AFM Copilot.bat**, or the desktop shortcut. From a terminal:
 
 ```bash
-C:\AFM_Copilot\.venv\Scripts\python.exe -m afm_copilot.gui
+C:\AFM_image_wizard\.venv\Scripts\python.exe -m afm_copilot.gui
 ```
 
 The window has the scan list on the left, the image in the middle with a
@@ -269,3 +279,19 @@ and testable before they ever touch a real one.
 software to save **both** scan directions for the height channel. See
 [FINDINGS.md §1](docs/data_survey/FINDINGS.md) — it costs nothing at
 acquisition and unlocks detectors that post-processing cannot substitute for.
+
+## Windows: unified AFM Copilot workstation
+
+Start **`AFM Copilot.bat`** from the working copy at
+`C:\AFM_image_wizard`. The unified local launcher provides the main image
+processing GUI, the Expert Labeler, a side-by-side comparison of originals,
+manual corrections and automated outputs, local discovery of previously
+corrected targets, archive preview and safe repository maintenance.
+
+All input scans, expert labels, operator verdicts and private manifests stay
+on the user's Windows PC. Repository maintenance never stages private data
+or merges into `main`.
+
+See [workstation and review guide](docs/WORKSTATION_LAUNCHER.md),
+[archive organizer](docs/ARCHIVE_ORGANIZER.md) and
+[local AFM processing policy](docs/LOCAL_BACKTEST_TAXONOMY_V1.md).
