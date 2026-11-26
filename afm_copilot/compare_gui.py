@@ -24,6 +24,7 @@ from afm_copilot.labeler import _load
 from afm_copilot.manual_pairs import PRIVATE_ROOT, scan_folder
 from afm_copilot.gwy_io import load_height
 from afm_copilot.comparison_metrics import shape_comparison
+from afm_copilot.paths import reconcile_rows, HISTORICAL_RAW
 
 VERDICTS = (
     ("Manual correction preferred", "manual_preferred"),
@@ -142,7 +143,7 @@ class CompareWindow(QMainWindow):
         if candidate_path.is_file():
             try:
                 data = json.loads(candidate_path.read_text(encoding="utf-8"))
-                self._set_rows(data.get("pairs", []))
+                self._set_rows(reconcile_rows(data.get("pairs", [])))
             except (OSError, ValueError):
                 pass
 
@@ -175,7 +176,7 @@ class CompareWindow(QMainWindow):
 
     def _choose(self):
         folder = QFileDialog.getExistingDirectory(
-            self, "Choose original / corrected folder", str(Path.home()))
+            self, "Choose original / corrected folder", str(HISTORICAL_RAW if HISTORICAL_RAW.is_dir() else Path.home()))
         if folder:
             result = scan_folder(Path(folder))
             self._set_rows(result["pairs"])
