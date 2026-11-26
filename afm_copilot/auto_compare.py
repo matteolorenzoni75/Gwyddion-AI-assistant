@@ -27,6 +27,7 @@ from afm_copilot.labeler import _load
 from afm_copilot.manual_pairs import PRIVATE_ROOT, save_private
 from afm_copilot.ops.recipes import get_recipe
 from afm_copilot.quality import assess
+from afm_copilot.paths import reconcile_rows
 
 MANIFEST = PRIVATE_ROOT / "PRIVATE_manual_pair_candidates.json"
 OUTPUT = WORKSPACE / "runs"
@@ -60,7 +61,7 @@ def _manifest_rows(manifest: Path) -> list[dict]:
     if not all(isinstance(row, dict) and row.get("original") and row.get("manual")
                for row in rows):
         raise ValueError("Malformed private original/manual pairs")
-    return rows
+    return reconcile_rows(rows)
 
 
 def _is_source_dir(path: Path, originals: list[Path]) -> bool:
