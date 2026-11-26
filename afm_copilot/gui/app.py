@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (QApplication, QDockWidget, QMainWindow,
                                QVBoxLayout, QWidget)
 
 from afm_copilot import __version__
+from afm_copilot.paths import WORKSPACE
 from afm_copilot.bridge import BridgeError, GwyBridge
 from afm_copilot.gui.panels import PANELS, AppContext
 from afm_copilot.gui.panels.profile import ProfilePanel
@@ -42,8 +43,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"AFM Copilot {__version__}")
         self.resize(1500, 950)
 
-        work_dir = Path(tempfile.gettempdir()) / "afm_copilot_gui"
-        work_dir.mkdir(parents=True, exist_ok=True)
+        runs = WORKSPACE / "runs"
+        runs.mkdir(parents=True, exist_ok=True)
+        work_dir = Path(tempfile.mkdtemp(prefix="gui-", dir=runs))
 
         self.runner = TaskRunner()
         self.ctx = AppContext(runner=self.runner, log=self.log,
