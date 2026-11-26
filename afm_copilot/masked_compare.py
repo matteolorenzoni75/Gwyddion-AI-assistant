@@ -153,11 +153,12 @@ def run_masked(index: int, approval: Path, *, manifest: Path = MANIFEST,
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", type=Path, default=MANIFEST)
     parser.add_argument("--index", type=int, required=True)
     parser.add_argument("--approval", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
-        result = run_masked(args.index, args.approval)
+        result = run_masked(args.index, args.approval, manifest=args.manifest)
     except (OSError, ValueError, RuntimeError, KeyError) as error:
         print(json.dumps({"status": "held", "error": type(error).__name__,
                           "message": str(error)[:200]}))
