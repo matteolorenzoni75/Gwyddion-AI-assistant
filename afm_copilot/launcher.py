@@ -27,6 +27,9 @@ from afm_copilot.paths import RAW_ARCHIVE, HISTORICAL_RAW, WORKSPACE, LEARNING_E
 
 
 WORKFLOW_ACTIONS = (
+    ("Manual Gold Set", "Correzioni manuali su scansioni blind.",
+     "Raccogli riferimenti e controlli, apri copie in Gwyddion e confronta i risultati senza addestramento automatico.",
+     "afm_copilot.manual_gold_gui", "SP_FileDialogContentsView"),
     ("Elaborazione AFM", "Pulizia, rescaling e ricette Gwyddion.",
      "Apre la GUI principale per visualizzare topografie, applicare ricette "
      "e controllare le operazioni. Non modifica i file originali in avvio.",
