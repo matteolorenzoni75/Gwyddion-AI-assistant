@@ -24,7 +24,7 @@ from afm_copilot.gui.viewer import ScanViewer
 from afm_copilot.gui.workers import TaskRunner
 from afm_copilot.gwy_io import load_height
 from afm_copilot.features import measure as measure_features
-from afm_copilot.paths import HISTORICAL_RAW
+from afm_copilot.paths import HISTORICAL_RAW, LEARNING_ENABLED
 from afm_copilot.labeling import (ARTIFACTS, DEFAULT_DB, FAMILIES, QUALITIES,
                                  ROLES, counts, get_scans, register_folder,
                                  save_label)
@@ -112,7 +112,7 @@ class LabelerWindow(QMainWindow):
                 (i for i, row in enumerate(self.rows)
                  if row.get("family") is None), 0)
             self._show(first_unlabeled)
-        elif DEFAULT_FOLDER.is_dir():
+        elif LEARNING_ENABLED and DEFAULT_FOLDER.is_dir():
             self._add_folder(DEFAULT_FOLDER)
 
     def _build(self):
