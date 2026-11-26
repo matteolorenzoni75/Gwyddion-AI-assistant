@@ -115,6 +115,10 @@ class Launcher(QMainWindow):
         configure.setObjectName("smallButton")
         configure.clicked.connect(self._configure_data)
         header.addWidget(configure)
+        verify = QPushButton("Verifica installazione")
+        verify.setObjectName("smallButton")
+        verify.clicked.connect(lambda: self._task(("-m", "afm_copilot.bootstrap", "--verify")))
+        header.addWidget(verify)
         layout.addLayout(header)
 
         scroll = QScrollArea()
@@ -234,7 +238,7 @@ class Launcher(QMainWindow):
         report = build_map()
         self._location_report = report
         wanted = {
-            "raw_archive", "historical_raw", "gui_processed",
+            "raw_archive", "historical_raw",
             "workspace_auto", "workspace_approved"
         }
         shown = [entry for entry in report["locations"]
