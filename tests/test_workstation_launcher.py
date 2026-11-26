@@ -16,8 +16,8 @@ def test_single_batch_entrypoint_launches_workstation():
     root = Path(__file__).resolve().parents[1]
     file = root / "AFM Copilot.bat"
     text = file.read_text(encoding="utf-8")
-    assert "afm_copilot.launcher" in text
-    assert "pythonw.exe" in text
+    assert "afm_copilot.bootstrap" in text
+    assert "python.exe" in text
     assert "git clean" not in text
     assert "git push" not in text
 
