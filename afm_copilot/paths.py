@@ -56,6 +56,14 @@ def save_settings(raw: Path, learning: Path | None, *, path: Path = SETTINGS) ->
         learning = learning.expanduser().resolve(strict=True)
         if not learning.is_dir():
             raise ValueError("Choose an existing learning folder")
+    for source in (raw, learning):
+        if source is None:
+            continue
+        for protected in (WORKSPACE.resolve(), PRIVATE_ROOT.resolve()):
+            if source == protected or source in protected.parents or protected in source.parents:
+                raise ValueError("Data folders must not overlap generated output or private state")
+        if source == PROJECT_ROOT or source in PROJECT_ROOT.parents:
+            raise ValueError("Choose a data folder, not the software checkout")
     path = path.expanduser().resolve()
     if path == PROJECT_ROOT or PROJECT_ROOT in path.parents:
         raise ValueError("Settings must stay outside the Git checkout")
@@ -92,25 +100,28 @@ def resolve_reference(value: str | Path, *, home: Path = HOME,
     original = Path(value).expanduser()
     if original.is_file():
         return original
-    if learning is None:
-        learning = default_locations(home)[1]
     aliases = [home / "data" / "OLD input IMAGES", home / "data" / "learning input data",
                home.parent / "AFM_Automation" / "OLD input IMAGES",
                home.parent / "AFM_Automation" / "learning input data"]
+    candidates = [learning] if learning is not None else aliases
+    matches = {}
     for alias in aliases:
         try:
             suffix = original.relative_to(alias)
         except ValueError:
             continue
-        target = learning / suffix
-        if target.is_file():
-            return target
-    return original
+        for folder in candidates:
+            target = folder / suffix
+            if target.is_file():
+                matches[target.resolve()] = target
+    return next(iter(matches.values())) if len(matches) == 1 else original
 
 
 def reconcile_rows(rows: list[dict]) -> list[dict]:
     result = []
     for item in rows:
+        if not isinstance(item, dict):
+            continue
         row = dict(item)
         for key in ("original", "manual", "automated"):
             if row.get(key):
