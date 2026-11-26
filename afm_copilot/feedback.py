@@ -16,7 +16,7 @@ import secrets
 from datetime import datetime, timezone
 from pathlib import Path
 
-from afm_copilot.paths import HISTORICAL_RAW
+from afm_copilot.paths import HISTORICAL_RAW, BLIND_INPUT, default_locations
 from typing import Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -30,7 +30,7 @@ TRAINING_ROOT = Path(os.environ.get(
     "AFM_TRAINING_ROOT", str(Path.home() / "AFM_Copilot_Training_Approved")))
 VERDICTS = frozenset({"confirmed", "rejected", "uncertain"})
 BLOCKED_PATH_PARTS = frozenset({"blind", "blind_test", "blind-test", "holdout", "test_set", "test-set"})
-ANONYMOUS_STEM = re.compile(r"scan-\d{3,}$", re.I)
+ANONYMOUS_STEM = re.compile(r"(?:scan-\d{3,}|AFM_[A-Z0-9]{8,32})$", re.I)
 
 
 def _private_store(directory: Path) -> Path:
@@ -65,6 +65,8 @@ def _is_holdout(path: Path) -> bool:
     lowered = {part.lower().replace(" ", "_") for part in path.parts}
     export_root = PROJECT_ROOT / "export"
     return (_within(path, TEST_CORPUS_ROOT) or
+            _within(path, default_locations()[1]) or
+            _within(path, BLIND_INPUT) or
             _within(path, export_root) or
             bool(lowered & BLOCKED_PATH_PARTS) or
             any(part.startswith("blind_test") or part.startswith("holdout")

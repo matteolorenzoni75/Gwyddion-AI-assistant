@@ -61,3 +61,15 @@ private_source_index.jsonl
 *.sqlite3-shm
 *.sqlite3-wal
 *.db-journal
+
+# Portable installation: never stage local AFM datasets or generated results.
+/data/All AFM Data/
+/data/OLD input IMAGES/
+/data/learning input data/
+/data/corrected/
+/data/processed/
+/manual_review/
+/workspace/
+/legacy/
+/logs/
+/app/

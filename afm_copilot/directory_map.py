@@ -14,12 +14,12 @@ from collections import Counter
 from pathlib import Path
 
 from afm_copilot.feedback import PROJECT_ROOT
-from afm_copilot.paths import RAW_ARCHIVE, HISTORICAL_RAW as EARLIER_RAW, WORKSPACE
+from afm_copilot.paths import RAW_ARCHIVE, HISTORICAL_RAW as EARLIER_RAW, WORKSPACE, reconcile_rows, LEARNING_ENABLED
 from afm_copilot.labeling import DEFAULT_DB
 from afm_copilot.manual_pairs import PRIVATE_ROOT as MANUAL_PRIVATE
 
 MANUAL_PAIR_MANIFEST = MANUAL_PRIVATE / "PRIVATE_manual_pair_candidates.json"
-GUI_RESULTS = Path(tempfile.gettempdir()) / "afm_copilot_gui" / "processed" / "processed"
+GUI_RESULTS = WORKSPACE / "runs"
 PRIVATE_OUT = Path.home() / "AFM_Copilot_Private_Audits" / "directory_map" / "PRIVATE_locations.json"
 WORKSPACE_FOLDERS = (
     ("runs", "runs", "Derivati e run automatiche"),
@@ -32,11 +32,11 @@ WORKSPACE_FOLDERS = (
 # Categories, not a promise that all data resides in these directories.
 LOCATIONS = (
     ("raw_archive", "Archivio originale AFM", RAW_ARCHIVE,
-     "97.082 file nell'ultimo inventario; non modificare la struttura adesso."),
-    ("historical_raw", "Originali usati per le prove", EARLIER_RAW,
+     "Cartella dati configurata: nessun file originale viene spostato."),
+    ("historical_raw", "Learning input data", EARLIER_RAW,
      "Scansioni storiche e candidate per confronti originali/manuali."),
     ("gui_processed", "Correzioni automatiche della GUI", GUI_RESULTS,
-     "Derivati salvati dalla GUI attuale, se già elaborati."),
+     "Derivati salvati in run separate, senza sovrascrivere le scansioni."),
     ("manual_index", "Indice correzioni manuali", MANUAL_PAIR_MANIFEST,
      "Elenco privato degli abbinamenti trovati; non contiene immagini."),
     ("expert_database", "Database labeling esperto", DEFAULT_DB,
@@ -59,7 +59,7 @@ def _manual_pairs() -> list[dict]:
         contents = json.loads(MANUAL_PAIR_MANIFEST.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return []
-    return contents.get("pairs", []) if isinstance(contents.get("pairs"), list) else []
+    return reconcile_rows(contents["pairs"]) if isinstance(contents.get("pairs"), list) else []
 
 
 def build_map(*, entries=LOCATIONS, pairs=None) -> dict:
@@ -69,7 +69,7 @@ def build_map(*, entries=LOCATIONS, pairs=None) -> dict:
         "key": key, "title": title, "path": str(path),
         "exists": path.exists(), "is_directory": path.is_dir(),
         "description": description,
-    } for key, title, path, description in entries]
+    } for key, title, path, description in entries if key != "historical_raw" or LEARNING_ENABLED]
     manual_dirs = Counter()
     originals_missing = 0
     manual_missing = 0
@@ -129,7 +129,9 @@ def prepare_workspace(root: Path = WORKSPACE) -> dict:
     archive = RAW_ARCHIVE.resolve()
     source = EARLIER_RAW.resolve()
     private = PRIVATE_OUT.parent.parent.resolve()
-    for protected in (git, archive, source, private):
+    if destination == git or destination in git.parents or (git in destination.parents and destination != WORKSPACE.resolve()):
+        raise ValueError("Workspace inside Git must be the configured ignored workspace")
+    for protected in (archive, source, private):
         if destination == protected or protected in destination.parents or destination in protected.parents:
             raise ValueError("Workspace must be separate from AFM raw and private source roots")
     created = 0

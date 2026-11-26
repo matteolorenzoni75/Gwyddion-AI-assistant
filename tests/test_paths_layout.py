@@ -11,8 +11,9 @@ def test_workspace_and_data_paths_share_single_root():
     assert paths.DATA_ROOT.parent == paths.HOME
     assert paths.WORKSPACE.parent == paths.HOME
     assert paths.LEGACY_ROOT.parent == paths.HOME
-    assert paths.RAW_ARCHIVE.parent == paths.DATA_ROOT
-    assert paths.HISTORICAL_RAW.parent == paths.DATA_ROOT
+    assert paths.RAW_ARCHIVE.is_absolute()
+    assert paths.HISTORICAL_RAW.is_absolute()
+    assert paths.APP_ROOT == paths.PROJECT_ROOT
 
 
 def test_consumers_use_centralized_paths():

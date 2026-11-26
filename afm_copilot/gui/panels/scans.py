@@ -9,6 +9,8 @@ label a file "grating" or "noisy" because its name says so.
 from __future__ import annotations
 
 from pathlib import Path
+import hashlib
+from afm_copilot.paths import RAW_ARCHIVE
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QFileDialog, QHBoxLayout,
@@ -62,16 +64,17 @@ class ScansPanel(Panel):
         layout.addWidget(self.count_label)
 
         self._folder: Path | None = None
-        self._converted: dict[Path, Path] = {}
+        self._converted: dict[str, Path] = {}
 
     # ------------------------------------------------------------- loading
     def choose_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Choose a folder of scans")
+        folder = QFileDialog.getExistingDirectory(self, "Choose a folder of scans", str(self._folder or RAW_ARCHIVE))
         if folder:
             self.load_folder(Path(folder))
 
     def load_folder(self, folder: Path) -> None:
         self._folder = folder
+        self._converted.clear()
         self.folder_label.setText(str(folder))
         review_file = folder / ".afm-copilot-reviews.json"
         if review_file.is_file():
@@ -127,14 +130,16 @@ class ScansPanel(Panel):
     def _load_channel(self, path: Path):
         """Convert through Gwyddion if needed, then read the height channel."""
         if path.suffix.lower() != ".gwy":
-            cached = self._converted.get(path)
+            stat = path.stat()
+            identity = hashlib.sha256(f"{path.resolve()}|{stat.st_size}|{stat.st_mtime_ns}".encode()).hexdigest()[:24]
+            cached = self._converted.get(identity)
             if cached is None or not cached.exists():
-                report = GwyBridge().convert_raw([path], self.ctx.work_dir / "_gwy")
+                report = GwyBridge().convert_raw([path], self.ctx.work_dir / "_gwy" / identity)
                 ok = [r for r in report["results"] if r["ok"]]
                 if not ok:
                     raise BridgeError(report["results"][0].get("error", "conversion failed"))
                 cached = Path(ok[0]["gwy"])
-                self._converted[path] = cached
+                self._converted[identity] = cached
             path = cached
         return load_height(path)
 

@@ -11,10 +11,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QProcess, Qt, QUrl, QFileInfo
+from PySide6.QtCore import QProcess, Qt, QUrl, QFileInfo, QTimer
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel, QMainWindow,
+    QApplication, QFrame, QGridLayout, QHBoxLayout, QLabel, QMainWindow, QFileDialog,
     QMessageBox, QPlainTextEdit, QPushButton, QScrollArea, QStyle,
     QFileIconProvider,
     QToolButton, QVBoxLayout, QWidget,
@@ -23,9 +23,13 @@ from PySide6.QtWidgets import (
 from afm_copilot.feedback import PROJECT_ROOT
 from afm_copilot.directory_map import build_map
 from afm_copilot.bridge import DEFAULT_GWYDDION_ROOT
+from afm_copilot.paths import RAW_ARCHIVE, HISTORICAL_RAW, WORKSPACE, LEARNING_ENABLED, save_settings
 
 
 WORKFLOW_ACTIONS = (
+    ("Manual Gold Set", "Correzioni manuali su scansioni blind.",
+     "Raccogli riferimenti e controlli, apri copie in Gwyddion e confronta i risultati senza addestramento automatico.",
+     "afm_copilot.manual_gold_gui", "SP_FileDialogContentsView"),
     ("Elaborazione AFM", "Pulizia, rescaling e ricette Gwyddion.",
      "Apre la GUI principale per visualizzare topografie, applicare ricette "
      "e controllare le operazioni. Non modifica i file originali in avvio.",
@@ -110,6 +114,14 @@ class Launcher(QMainWindow):
         engine = QLabel("Motore: Gwyddion 32-bit  |  PyGwy (Python 2.7)")
         engine.setObjectName("engineLabel")
         header.addWidget(engine)
+        configure = QPushButton("Impostazioni dati")
+        configure.setObjectName("smallButton")
+        configure.clicked.connect(self._configure_data)
+        header.addWidget(configure)
+        verify = QPushButton("Verifica installazione")
+        verify.setObjectName("smallButton")
+        verify.clicked.connect(lambda: self._task(("-m", "afm_copilot.bootstrap", "--verify")))
+        header.addWidget(verify)
         layout.addLayout(header)
 
         scroll = QScrollArea()
@@ -183,6 +195,43 @@ class Launcher(QMainWindow):
         self.setCentralWidget(root)
         self._style()
 
+    def _configure_data(self):
+        raw = QFileDialog.getExistingDirectory(
+            self, "Scegli la cartella dei dati AFM",
+            str(RAW_ARCHIVE if RAW_ARCHIVE.is_dir() else Path.home()))
+        if not raw:
+            return
+        choose = QMessageBox.question(
+            self, "Learning (opzionale)",
+            "Vuoi anche configurare una cartella Learning separata?",
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel,
+            QMessageBox.Yes if LEARNING_ENABLED and HISTORICAL_RAW.is_dir()
+            else QMessageBox.No)
+        if choose == QMessageBox.Cancel:
+            return
+        learning = None
+        if choose == QMessageBox.Yes:
+            selected = QFileDialog.getExistingDirectory(
+                self, "Scegli la cartella Learning",
+                str(HISTORICAL_RAW if HISTORICAL_RAW.is_dir() else Path(raw)))
+            if not selected:
+                return
+            learning = Path(selected)
+        try:
+            save_settings(Path(raw), learning)
+        except (OSError, ValueError) as error:
+            QMessageBox.warning(self, "Impostazioni non salvate", str(error))
+            return
+        QMessageBox.information(self, "Configurazione salvata",
+                                "Riavvio del launcher per applicare i percorsi. Nessun dato spostato.")
+        try:
+            subprocess.Popen([sys.executable, "-m", "afm_copilot.launcher"],
+                             cwd=str(PROJECT_ROOT), close_fds=True)
+        except OSError as error:
+            QMessageBox.warning(self, "Riavvio non riuscito", str(error))
+            return
+        self.close()
+
     def _refresh_locations(self):
         """Only user-facing AFM image directories; never show code or private DB."""
         while self.directory_grid.count():
@@ -192,7 +241,7 @@ class Launcher(QMainWindow):
         report = build_map()
         self._location_report = report
         wanted = {
-            "raw_archive", "historical_raw", "gui_processed",
+            "raw_archive", "historical_raw",
             "workspace_auto", "workspace_approved"
         }
         shown = [entry for entry in report["locations"]
@@ -453,7 +502,7 @@ class Launcher(QMainWindow):
     def _prepare_workspace(self):
         answer = QMessageBox.question(
             self, "Prepara area di lavoro",
-            "Creare le sottocartelle vuote in C:\\AFM_Automation\\AFM_Copilot_Workspace?\\n"
+            f"Creare le sottocartelle vuote in {WORKSPACE}?\n"
             "Nessuna scansione verrà spostata, copiata o cancellata.",
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if answer == QMessageBox.Yes:
@@ -486,6 +535,8 @@ def main(argv=None):
     app.setApplicationName("AFM Copilot Workstation")
     win = Launcher()
     win.show()
+    if not RAW_ARCHIVE.is_dir():
+        QTimer.singleShot(0, win._configure_data)
     return app.exec()
 
 
