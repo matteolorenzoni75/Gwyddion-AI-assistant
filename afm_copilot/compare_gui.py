@@ -5,7 +5,9 @@ training truth until reviewed. No source scans are ever edited or uploaded.
 """
 from __future__ import annotations
 
+import argparse
 import json
+import uuid
 import sys
 import numpy as np
 import tempfile
@@ -36,8 +38,9 @@ VERDICTS = (
 
 
 class CompareWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, manifest=None):
         super().__init__()
+        self.manifest = Path(manifest) if manifest else PRIVATE_ROOT / "PRIVATE_manual_pair_candidates.json"
         self.setWindowTitle("AFM Copilot — Synoptic correction review")
         desktop = QApplication.primaryScreen()
         bounds = desktop.availableGeometry() if desktop else None
@@ -139,7 +142,7 @@ class CompareWindow(QMainWindow):
         self._load_private_manifest()
 
     def _load_private_manifest(self):
-        candidate_path = PRIVATE_ROOT / "PRIVATE_manual_pair_candidates.json"
+        candidate_path = self.manifest
         if candidate_path.is_file():
             try:
                 data = json.loads(candidate_path.read_text(encoding="utf-8"))
@@ -179,7 +182,9 @@ class CompareWindow(QMainWindow):
             self, "Choose original / corrected folder", str(HISTORICAL_RAW if HISTORICAL_RAW.is_dir() else Path.home()))
         if folder:
             result = scan_folder(Path(folder))
+            self.manifest = PRIVATE_ROOT / ("PRIVATE_session_" + uuid.uuid4().hex + ".json")
             self._set_rows(result["pairs"])
+            self._save_private_pairs()
             self.info.setText(
                 f"Found {len(result['pairs'])} candidate pairs among "
                 f"{result['scanned']} files. No input has been modified.")
@@ -187,7 +192,7 @@ class CompareWindow(QMainWindow):
     def _generate_auto(self):
         """Run the limited local comparison job without blocking the GUI."""
         from afm_copilot.manual_pairs import PRIVATE_ROOT
-        manifest = PRIVATE_ROOT / "PRIVATE_manual_pair_candidates.json"
+        manifest = self.manifest
         if not manifest.is_file():
             QMessageBox.warning(
                 self, "Nessuna coppia",
@@ -213,7 +218,7 @@ class CompareWindow(QMainWindow):
                                          else Path(sys.executable)))
         self.auto_process.setArguments([
             "-B", "-m", "afm_copilot.auto_compare",
-            "--confirm", "RUN_COMPARISON_CANDIDATES"])
+            "--manifest", str(self.manifest), "--confirm", "RUN_COMPARISON_CANDIDATES"])
         self.generate_button.setEnabled(False)
         self.info.setText("Elaborazione Gwyddion avviata sulle coppie note...")
         self.auto_process.finished.connect(self._auto_finished)
@@ -280,7 +285,7 @@ class CompareWindow(QMainWindow):
                                          else Path(sys.executable)))
         self.auto_process.setArguments([
             "-B", "-m", "afm_copilot.masked_compare",
-            "--index", str(index), "--approval", str(approved)])
+            "--manifest", str(self.manifest), "--index", str(index), "--approval", str(approved)])
         self.generate_button.setEnabled(False)
         self.mask_button.setEnabled(False)
         self.info.setText("Fit Gwyddion mascherato in esecuzione...")
@@ -326,7 +331,7 @@ class CompareWindow(QMainWindow):
             "pairs": self.rows,
             "source": "operator_confirmed_local_comparison_associations",
             "image_contents_modified": False,
-        })
+        }, self.manifest)
 
     def _channel(self, path, *, operator_corrected=False):
         """Route raw instrument files through the Gwyddion import bridge.
@@ -462,9 +467,12 @@ class CompareWindow(QMainWindow):
 
 
 def main(argv=None):
-    app = QApplication(argv if argv is not None else sys.argv)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--manifest", type=Path)
+    args = parser.parse_args(argv)
+    app = QApplication([sys.argv[0]])
     app.setApplicationName("AFM Copilot — correction review")
-    win = CompareWindow()
+    win = CompareWindow(args.manifest)
     win.show()
     return app.exec()
 
