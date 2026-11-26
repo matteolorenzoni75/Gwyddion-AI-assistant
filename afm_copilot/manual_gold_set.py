@@ -138,11 +138,21 @@ def working_copy(source: Path, root: Path | None = None) -> Path:
     folder = root / identity
     folder.mkdir(exist_ok=True)
     dest = folder / source.name
+    if source.suffix.lower() not in {".gwy", ".ibw", ".tif", ".tiff"}:
+        raise ValueError("This format may need companion files; import it into GWY first")
     if not dest.exists():
-        with source.open("rb") as inp, dest.open("xb") as out:
-            shutil.copyfileobj(inp, out)
-        if sha256(dest) != identity:
-            raise RuntimeError("Working copy could not be verified")
+        fd, temporary = tempfile.mkstemp(dir=folder, prefix="copy-")
+        try:
+            with source.open("rb") as inp, os.fdopen(fd, "wb") as out:
+                shutil.copyfileobj(inp, out)
+            if sha256(Path(temporary)) != identity or sha256(source) != identity:
+                raise RuntimeError("Working copy could not be verified")
+            try:
+                os.link(temporary, dest)
+            except FileExistsError:
+                pass  # Another local window already created the draft.
+        finally:
+            Path(temporary).unlink(missing_ok=True)
     return dest
 
 
