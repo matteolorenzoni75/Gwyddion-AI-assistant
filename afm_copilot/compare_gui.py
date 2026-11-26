@@ -440,10 +440,10 @@ class CompareWindow(QMainWindow):
             return
         row = self.rows[index]
         verdict = self.verdict.currentData()
-        if verdict == "auto_accepted" and not row.get("automated"):
-            QMessageBox.warning(
-                self, "No automatic result",
-                "There is no automatic result to approve for this pair.")
+        required = 2 if verdict == "manual_preferred" else 3
+        if verdict != "needs_review" and any(v.channel is None for v in self.viewers[:required]):
+            QMessageBox.warning(self, "Incomplete comparison",
+                                "Load all required scans before recording this verdict.")
             return
         PRIVATE_ROOT.mkdir(parents=True, exist_ok=True)
         entry = {
