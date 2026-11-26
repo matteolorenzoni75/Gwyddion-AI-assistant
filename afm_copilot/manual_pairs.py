@@ -15,11 +15,12 @@ from collections import Counter
 from pathlib import Path
 
 from afm_copilot.labeling import FORMATS
-from afm_copilot.paths import DATA_ROOT, HISTORICAL_RAW, MANUAL_DATA, PROCESSED_DATA, PROJECT_ROOT, PRIVATE_ROOT as PRIVATE_BASE
+from afm_copilot.paths import DATA_ROOT, HISTORICAL_RAW, MANUAL_DATA, PROCESSED_DATA, PROJECT_ROOT, PRIVATE_ROOT as PRIVATE_BASE, reconcile_rows, LEARNING_ENABLED, MANUAL_CORRECTED
 
 DEFAULT_SEARCH = (
-    HISTORICAL_RAW,
+    *((HISTORICAL_RAW,) if LEARNING_ENABLED else ()),
     MANUAL_DATA,
+    MANUAL_CORRECTED,
     PROCESSED_DATA,
     PROJECT_ROOT / "out",
 )
@@ -143,6 +144,7 @@ def main(argv=None):
         try:
             existing_rows = json.loads(existing_manifest.read_text(
                 encoding="utf-8")).get("pairs", [])
+            existing_rows = reconcile_rows(existing_rows)
             prior = {
                 (r["original"], r["manual"]): r.get("automated")
                 for r in existing_rows
@@ -152,6 +154,12 @@ def main(argv=None):
                 previous = prior.get((row["original"], row["manual"]))
                 if previous and Path(previous).is_file():
                     row["automated"] = previous
+            keys = {(r["original"], r["manual"]) for r in results["pairs"]}
+            for row in existing_rows:
+                key = (row.get("original"), row.get("manual"))
+                if all(key) and key not in keys:
+                    results["pairs"].append(row)
+                    keys.add(key)
         except (ValueError, OSError, KeyError, TypeError):
             pass
     results["summary"] = {
